@@ -1,12 +1,15 @@
 "use client";
 
-import clsx from "clsx";
+import clsx, { type ClassValue } from "clsx";
+import { extendTailwindMerge } from "tailwind-merge";
 import { Loader2, X } from "lucide-react";
 import { forwardRef, useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { brl, fmtNum } from "@/lib/pricing";
 import { parseNumber } from "@/lib/format";
 
-export const cx = clsx;
+const merge = extendTailwindMerge({ extend: { classGroups: { shadow: ["shadow-soft", "shadow-lift", "shadow-glow"] } } });
+/** clsx + tailwind-merge: classes passadas por props sobrescrevem as padrão. */
+export const cx = (...v: ClassValue[]) => merge(clsx(v));
 
 /* ------------------------------------------------------------------ Button */
 

@@ -152,7 +152,7 @@ function leadValue(l: LeadRow) {
 function Kanban({ leads, onMove }: { leads: LeadRow[]; onMove: (id: string, s: LeadStatus) => void }) {
   const [over, setOver] = useState<string | null>(null);
   return (
-    <div className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+    <div className="scrollbar-none -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:-mx-10 lg:snap-none lg:px-10">
       {STAGES.map((s) => {
         const items = leads.filter((l) => l.status === s.id);
         const total = items.reduce((sum, l) => sum + leadValue(l), 0);

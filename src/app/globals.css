@@ -87,7 +87,7 @@
   }
 }
 @utility animate-fade-up {
-  animation: fade-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: fade-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
 
 @keyframes sheet-up {
@@ -99,7 +99,7 @@
   }
 }
 @utility animate-sheet-up {
-  animation: sheet-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: sheet-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
 
 @media print {

@@ -46,7 +46,7 @@ export default function Dashboard() {
     <div className="animate-fade-up">
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-ink-500 capitalize">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
+          <p className="text-sm font-medium text-ink-500 first-letter:uppercase">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
           <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight sm:text-[30px]">
             {greet}
             {firstName && `, ${firstName}`} <span className="inline-block">☀️</span>
@@ -94,7 +94,7 @@ export default function Dashboard() {
                   const count = m.byStage[s.id] ?? 0;
                   const max = Math.max(1, ...Object.values(m.byStage));
                   return (
-                    <Link key={s.id} href={`/leads?etapa=${s.id}`} className="group grid grid-cols-[110px_1fr_28px] items-center gap-3">
+                    <Link key={s.id} href={`/leads?etapa=${s.id}`} className="group grid grid-cols-[132px_1fr_28px] items-center gap-3">
                       <span className="flex items-center gap-2 truncate text-[13px] text-ink-600 group-hover:text-ink-900">
                         <span className={cx("h-2 w-2 shrink-0 rounded-full", s.dot)} />
                         {s.label}
