@@ -26,6 +26,18 @@ preço final  = (custo direto + valores fixos em R$) ÷ (1 − Σ percentuais)
 
 Os percentuais de comissão, imposto e lucro incidem sobre o **preço final de venda** — assim, depois de pagar comissão e imposto, sobra exatamente o lucro definido. Desconto e arredondamento saem do lucro.
 
+### Conta de luz com energia solar (Lei 14.300)
+
+```
+simultâneo  = geração × % de consumo durante o dia        (não passa pelo medidor)
+compensado  = mín(geração − simultâneo, consumo − simultâneo)
+fio B       = compensado × tarifa fio B × % do ano (2025: 45%, 2026: 60%, 2027: 75%, 2028: 90%, 2029+: 100%)
+energia     = (consumo − simultâneo − compensado) × tarifa
+conta       = máx(energia + fio B, taxa mínima 30/50/100 kWh) + iluminação pública
+```
+
+A economia de 25 anos aplica o escalonamento do fio B ano a ano, o reajuste da tarifa e a perda de eficiência das placas.
+
 ## Instalação (≈ 15 minutos, tudo com plano gratuito)
 
 ### 1. Banco de dados — Supabase

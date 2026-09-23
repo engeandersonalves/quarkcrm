@@ -90,6 +90,12 @@
   animation: fade-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
 
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  20%, 60% { transform: rotate(16deg); }
+  40%, 80% { transform: rotate(-8deg); }
+}
+
 @keyframes sheet-up {
   from {
     transform: translateY(100%);

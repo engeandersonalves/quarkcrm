@@ -19,6 +19,7 @@ export interface CompanySettings {
   warranty_modules_performance_years: number;
   warranty_inverter_years: number;
   warranty_installation_years: number;
+  warranty_structure_years: number;
   defaults: Partial<ProposalInputs>;
 }
 
@@ -48,13 +49,15 @@ export const DEFAULT_INPUTS: ProposalInputs = {
   performanceRatio: 0.8,
   tariffIncrease: 6,
   degradation: 0.5,
-  simultaneity: 100,
+  selfConsumption: 30,
+  fioBTariff: 0.28,
+  publicLighting: 25,
   financingRate: 1.49,
   financingTerms: [12, 24, 36, 48, 60, 72],
   cardInstallments: 12,
   cardRate: 1.99,
   validityDays: 10,
-  installationDays: 30,
+  installationDays: 40,
   paymentNotes: "",
   notes: "",
 };
@@ -79,6 +82,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   warranty_modules_performance_years: 25,
   warranty_inverter_years: 10,
   warranty_installation_years: 1,
+  warranty_structure_years: 12,
   defaults: {},
 };
 

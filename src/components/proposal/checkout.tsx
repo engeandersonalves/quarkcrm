@@ -85,14 +85,27 @@ export function Checkout({ inputs, pricing, energy }: { inputs: ProposalInputs; 
         )}
       </div>
 
-      <div className="relative grid grid-cols-2 gap-px border-t border-white/10 bg-white/5 text-center">
-        <div className="bg-ink-950 px-4 py-3.5">
-          <p className="text-[11px] text-ink-500">Economia/mês p/ cliente</p>
-          <p className="tnum mt-0.5 text-sm font-semibold text-emerald-400">{brl(energy.monthlySavings)}</p>
+      <div className="relative border-t border-white/10 px-6 py-5">
+        <p className="mb-3 text-[11px] font-bold tracking-[0.14em] text-ink-500 uppercase">Conta de luz do cliente</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-2xl bg-white/[0.04] p-3 ring-1 ring-white/[0.06]">
+            <p className="text-[11px] text-ink-400">Hoje</p>
+            <p className="tnum text-lg font-semibold">{brl(energy.monthlyBillBefore, 0)}</p>
+          </div>
+          <div className="rounded-2xl bg-emerald-500/10 p-3 ring-1 ring-emerald-400/20">
+            <p className="text-[11px] text-emerald-300/80">Com solar</p>
+            <p className="tnum text-lg font-semibold text-emerald-300">{brl(energy.monthlyBillAfter, 0)}</p>
+          </div>
         </div>
-        <div className="bg-ink-950 px-4 py-3.5">
-          <p className="text-[11px] text-ink-500">Cobertura do consumo</p>
-          <p className="tnum mt-0.5 text-sm font-semibold text-white">{energy.coverage ? pct(energy.coverage, 0) : "—"}</p>
+        <div className="mt-3 grid gap-1 text-[12px]">
+          <MiniRow label={`Fio B (${fmtNum(energy.fioBPct * 100)}%)`} value={energy.bill.fioBCharge} />
+          <MiniRow label="Taxa mínima (complemento)" value={energy.bill.minimumTopUp} />
+          <MiniRow label="Energia comprada da rede" value={energy.bill.energyCharge} />
+          <MiniRow label="Iluminação pública" value={energy.bill.publicLighting} />
+        </div>
+        <div className="mt-3 flex items-center justify-between rounded-xl bg-white/[0.04] px-3 py-2 text-[13px]">
+          <span className="text-ink-400">Economia/mês · {energy.savingsPct ? pct(energy.savingsPct, 0) : "—"}</span>
+          <span className="tnum font-semibold text-emerald-400">{brl(energy.monthlySavings)}</span>
         </div>
       </div>
     </div>
@@ -117,6 +130,97 @@ function Mini({ label, value, highlight }: { label: string; value: string; highl
     <div className="rounded-xl bg-white/[0.04] px-2 py-2">
       <p className="text-[10px] font-semibold tracking-wider text-ink-500 uppercase">{label}</p>
       <p className={cx("tnum mt-0.5 text-[13px] font-semibold", highlight ? "text-rose-400" : "text-ink-100")}>{value}</p>
+    </div>
+  );
+}
+
+function MiniRow({ label, value }: { label: string; value: number }) {
+  if (!value) return null;
+  return (
+    <div className="flex justify-between text-ink-400">
+      <span>{label}</span>
+      <span className="tnum text-ink-200">{brl(value)}</span>
+    </div>
+  );
+}
+
+/** Prévia da conta antes × depois, para o formulário. */
+export function BillPreview({ energy, inputs }: { energy: EnergyResult; inputs: ProposalInputs }) {
+  if (!energy.monthlyBillBefore) return null;
+  const lines = [
+    { label: `Fio B (${fmtNum(energy.fioBPct * 100)}% em ${new Date().getFullYear()})`, value: energy.bill.fioBCharge, tip: `${fmtNum(energy.bill.compensatedKwh)} kWh compensados × ${brl(inputs.fioBTariff, 3)}` },
+    { label: "Complemento da taxa mínima", value: energy.bill.minimumTopUp, tip: `Mínimo de ${energy.availabilityKwh} kWh` },
+    { label: "Energia comprada da rede", value: energy.bill.energyCharge, tip: "Consumo que o sistema não cobre" },
+    { label: "Iluminação pública", value: energy.bill.publicLighting, tip: "Cobrança municipal fixa" },
+  ].filter((l) => l.value > 0.004);
+  const w = Math.max(3, (energy.monthlyBillAfter / energy.monthlyBillBefore) * 100);
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-white p-4 ring-1 ring-emerald-600/15 sm:col-span-2">
+      <div className="grid gap-3">
+        <div>
+          <div className="mb-1 flex justify-between text-sm">
+            <span className="text-ink-600">Conta hoje</span>
+            <b className="tnum">{brl(energy.monthlyBillBefore)}</b>
+          </div>
+          <div className="h-2.5 rounded-full bg-ink-300" />
+        </div>
+        <div>
+          <div className="mb-1 flex justify-between text-sm">
+            <span className="text-ink-600">Conta com energia solar</span>
+            <b className="tnum text-emerald-700">{brl(energy.monthlyBillAfter)}</b>
+          </div>
+          <div className="h-2.5 rounded-full bg-ink-100">
+            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${w}%` }} />
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-1.5 border-t border-emerald-600/10 pt-3">
+        {lines.map((l) => (
+          <div key={l.label} className="flex items-baseline justify-between gap-3 text-[13px]">
+            <span className="text-ink-600">
+              {l.label} <span className="text-[11px] text-ink-400">· {l.tip}</span>
+            </span>
+            <span className="tnum font-medium text-ink-800">{brl(l.value)}</span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 flex items-center justify-between rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white">
+        <span>Economia estimada</span>
+        <span className="tnum">
+          {brl(energy.monthlySavings)}/mês · {pct(energy.savingsPct, 0)}
+        </span>
+      </p>
+    </div>
+  );
+}
+
+/** Navegação por etapas do orçamento (âncoras). */
+export function StepNav({ steps }: { steps: { id: string; label: string; done: boolean }[] }) {
+  const doneCount = steps.filter((s) => s.done).length;
+  return (
+    <div className="sticky top-14 z-20 -mx-4 mb-5 border-b border-ink-200/60 bg-ink-50/90 px-4 py-2.5 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-10 lg:px-10">
+      <div className="flex items-center gap-3">
+        <div className="scrollbar-none flex flex-1 gap-1.5 overflow-x-auto">
+          {steps.map((s, i) => (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              className={cx(
+                "flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold ring-1 transition",
+                s.done ? "bg-white text-ink-800 ring-emerald-500/30" : "bg-white text-ink-500 ring-ink-200 hover:text-ink-800",
+              )}
+            >
+              <span className={cx("grid h-4.5 w-4.5 place-items-center rounded-full text-[10px]", s.done ? "bg-emerald-500 text-white" : "bg-ink-100 text-ink-500")}>
+                {s.done ? "✓" : i + 1}
+              </span>
+              {s.label}
+            </a>
+          ))}
+        </div>
+        <span className="hidden shrink-0 text-xs font-semibold text-ink-500 sm:block">
+          {doneCount}/{steps.length}
+        </span>
+      </div>
     </div>
   );
 }

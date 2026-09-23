@@ -2,40 +2,53 @@
 
 import {
   BadgeCheck,
-  BatteryCharging,
   Calendar,
   Check,
   CheckCircle2,
+  ClipboardCheck,
   Clock,
   CreditCard,
   Download,
   FileSignature,
-  Gauge,
   HardHat,
   Landmark,
-  Leaf,
   Mail,
   MapPin,
   MessageCircle,
+  Package,
+  PartyPopper,
   Phone,
   PiggyBank,
   Ruler,
-  ShieldCheck,
-  Smartphone,
-  Sparkles,
-  Sun,
-  TreePine,
-  TrendingUp,
+  Search,
+  Send,
+  Wallet,
   Wrench,
-  Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { mergeInputs, mergeSettings, type CompanySettings } from "@/lib/defaults";
 import { formatDate, formatPhone, whatsappUrl } from "@/lib/format";
-import { brl, calcEnergy, calcFinancing, fmtNum, irr, pct, pmt, type ProposalInputs } from "@/lib/pricing";
+import { brl, calcEnergy, calcFinancing, fmtNum, irr, pmt, type ProposalInputs } from "@/lib/pricing";
 import { Button, Field, Input, Modal, cx } from "../ui";
 import { CashflowChart, GenerationChart } from "./charts";
+import {
+  BillIllo,
+  CarIllo,
+  GlobeIllo,
+  HeroScene,
+  HouseIllo,
+  InverterIllo,
+  MeterIllo,
+  MoonCoinIllo,
+  PanelIllo,
+  PiggyIllo,
+  ShieldIllo,
+  StructureIllo,
+  SunIllo,
+  ToolsIllo,
+  TreeIllo,
+} from "./illustrations";
 
 export interface PublicProposal {
   proposal: {
@@ -56,33 +69,49 @@ export interface PublicProposal {
   settings: Partial<CompanySettings>;
 }
 
-const MODULE_AREA_M2 = 2.6; // área média ocupada por módulo de ~550–600 W, com espaçamento
+const MODULE_AREA_M2 = 2.6;
+const CAR_KG_CO2_PER_KM = 0.12;
+
+/** Etapas da obra, distribuídas proporcionalmente ao prazo total (padrão ~40 dias). */
+const WORK_STEPS = [
+  { at: 0, icon: FileSignature, color: "bg-amber-400", title: "Pagamento e contrato", text: "Você aprova a proposta e a gente já começa a trabalhar." },
+  { at: 0.05, icon: Search, color: "bg-sky-400", title: "Visita técnica", text: "Nosso técnico vai até a sua casa, mede o telhado e confere a parte elétrica." },
+  { at: 0.12, icon: Ruler, color: "bg-violet-400", title: "Projeto do engenheiro", text: "O engenheiro desenha o seu sistema, do jeitinho certo para o seu telhado." },
+  { at: 0.2, icon: Send, color: "bg-indigo-400", title: "Pedido na concessionária", text: "Enviamos o projeto para a companhia de energia e cuidamos de toda a papelada." },
+  { at: 0.45, icon: Package, color: "bg-orange-400", title: "Chegada dos equipamentos", text: "Placas, inversor e estrutura chegam novinhos, direto da fábrica." },
+  { at: 0.55, icon: HardHat, color: "bg-rose-400", title: "Instalação", text: "Nossa equipe instala tudo em 1 a 3 dias, com segurança e sem sujeira." },
+  { at: 0.72, icon: ClipboardCheck, color: "bg-teal-400", title: "Vistoria e novo medidor", text: "A concessionária vistoria o sistema e troca o seu relógio de luz." },
+  { at: 1, icon: PartyPopper, color: "bg-emerald-500", title: "Sistema ligado!", text: "Homologação concluída: agora é só aproveitar o sol e ver a conta cair." },
+];
 
 export function ProposalDocument({ data, token }: { data: PublicProposal; token: string | null }) {
   const s = mergeSettings(data.settings);
   const inputs = mergeInputs(data.proposal.inputs);
   const price = Number(data.proposal.final_price);
+  const startYear = new Date(data.proposal.created_at).getFullYear();
   const [accepted, setAccepted] = useState<{ at: string; by: string } | null>(
     data.proposal.accepted_at ? { at: data.proposal.accepted_at, by: data.proposal.accepted_by ?? "" } : null,
   );
   const [acceptOpen, setAcceptOpen] = useState(false);
 
   const kwp = (inputs.modulePowerW * inputs.moduleQty) / 1000;
-  const energy = useMemo(() => calcEnergy(inputs, price), [inputs, price]);
+  const energy = useMemo(() => calcEnergy(inputs, price, startYear), [inputs, price, startYear]);
   const financing = useMemo(() => calcFinancing(price, inputs.financingRate, inputs.financingTerms), [price, inputs.financingRate, inputs.financingTerms]);
   const tir = useMemo(() => irr(price, energy.cashflow.map((c) => c.savings)), [price, energy]);
   const cardInstallment = inputs.cardInstallments > 0 ? pmt(price, inputs.cardRate, inputs.cardInstallments) : 0;
 
   const firstName = data.lead.name.split(" ")[0];
-  const savingsPct = energy.monthlyBillBefore > 0 ? energy.monthlySavings / energy.monthlyBillBefore : 0;
+  const hasBill = energy.monthlyBillBefore > 0;
   const expired = !!data.proposal.valid_until && new Date(`${data.proposal.valid_until}T23:59:59`) < new Date() && !accepted;
   const location = [data.lead.city, data.lead.state].filter(Boolean).join(" – ");
   const contactPhone = s.whatsapp || s.phone || data.seller?.phone || "";
   const waText = `Olá! Estou vendo a proposta #${data.proposal.number} de energia solar e gostaria de conversar.`;
   const cheapest = financing.length ? financing[financing.length - 1] : null;
-  const cheaperThanBill = cheapest && energy.monthlyBillBefore > 0 && cheapest.installment < energy.monthlyBillBefore;
+  const cheaperThanBill = !!cheapest && hasBill && cheapest.installment < energy.monthlyBillBefore;
+  const totalDays = Math.max(10, Math.round(inputs.installationDays || 40));
+  const freeMonths = hasBill ? Math.floor(energy.savings25y / energy.monthlyBillBefore) : 0;
+  const carKm = Math.round((energy.co2TonsPerYear * 1000) / CAR_KG_CO2_PER_KM);
 
-  // Registra a visualização (ignorado quando quem abre é alguém logado da equipe).
   useEffect(() => {
     if (!token) return;
     const key = `viewed-${token}`;
@@ -94,218 +123,303 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
   }, [token]);
 
   return (
-    <div className="min-h-dvh bg-[#eceef2] print:bg-white">
-      {/* Barra de ações */}
-      <div className="no-print fixed top-4 right-4 z-40 hidden gap-2 sm:flex">
-        <Button variant="secondary" size="sm" onClick={() => window.print()}>
-          <Download className="h-4 w-4" /> Baixar PDF
-        </Button>
-      </div>
+    <div className="min-h-dvh bg-[#FFF8EC] text-ink-900 print:bg-white">
+      {/* Barra superior */}
+      <header className="no-print sticky top-0 z-40 border-b border-amber-900/5 bg-[#FFF8EC]/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4 sm:px-6">
+          <Brand settings={s} />
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={() => window.print()} className="hidden sm:inline-flex">
+              <Download className="h-4 w-4" /> PDF
+            </Button>
+            {!accepted && !expired && token && (
+              <Button size="sm" variant="sun" onClick={() => setAcceptOpen(true)}>
+                <Check className="h-4 w-4" /> Aceitar
+              </Button>
+            )}
+          </div>
+        </div>
+      </header>
 
-      <div className="mx-auto max-w-[940px] sm:px-6 sm:py-10 print:max-w-none print:p-0">
-        <div className="overflow-hidden bg-white shadow-lift sm:rounded-[28px] print:rounded-none print:shadow-none">
-          {/* ============================================================ CAPA */}
-          <section className="relative overflow-hidden bg-ink-950 px-6 pt-8 pb-10 text-white sm:px-12 sm:pt-12 sm:pb-14 print:min-h-[297mm]">
-            <div className="pointer-events-none absolute -top-40 -right-32 h-[520px] w-[520px] rounded-full bg-sun-500/30 blur-[110px]" />
-            <div className="pointer-events-none absolute -bottom-40 -left-20 h-[360px] w-[360px] rounded-full bg-orange-600/15 blur-[100px]" />
-            <SunRays />
-
-            <div className="relative flex items-center justify-between gap-4">
-              <Brand settings={s} dark />
-              <div className="text-right text-xs text-ink-400">
-                <p className="font-semibold text-ink-200">Proposta nº {data.proposal.number}</p>
-                <p>{formatDate(data.proposal.created_at, { day: "2-digit", month: "long", year: "numeric" })}</p>
-              </div>
-            </div>
-
-            <div className="relative mt-16 sm:mt-24">
-              <p className="text-xs font-bold tracking-[0.2em] text-sun-400 uppercase">Proposta de energia solar</p>
-              <h1 className="mt-4 max-w-[680px] font-display text-[34px] leading-[1.08] font-semibold tracking-tight sm:text-[52px]">
-                {savingsPct > 0.3 ? (
-                  <>
-                    {firstName}, sua conta de luz pode cair <span className="text-sun-gradient">{fmtNum(savingsPct * 100)}%</span>.
-                  </>
-                ) : (
-                  <>
-                    Energia solar sob medida para <span className="text-sun-gradient">{firstName}</span>.
-                  </>
-                )}
-              </h1>
-              <p className="mt-5 max-w-[560px] text-base leading-relaxed text-ink-300 sm:text-lg">
-                Um sistema fotovoltaico de {fmtNum(kwp, 2)} kWp projetado para o seu consumo — gerando em média {fmtNum(energy.monthlyGeneration)} kWh por mês
-                {energy.monthlySavings > 0 && <> e colocando cerca de {brl(energy.monthlySavings, 0)} de volta no seu bolso todos os meses</>}.
-              </p>
-            </div>
-
-            <div className="relative mt-10 grid grid-cols-2 gap-3 sm:mt-14 sm:grid-cols-4">
-              <CoverStat icon={<Zap />} label="Potência instalada" value={fmtNum(kwp, 2)} unit="kWp" />
-              <CoverStat icon={<Sun />} label="Geração média" value={fmtNum(energy.monthlyGeneration)} unit="kWh/mês" />
-              <CoverStat icon={<PiggyBank />} label="Economia mensal" value={brl(energy.monthlySavings, 0)} />
-              <CoverStat icon={<TrendingUp />} label="Retorno em" value={energy.paybackYears ? fmtNum(energy.paybackYears, 1) : "—"} unit="anos" />
-            </div>
-
-            <div className="relative mt-10 flex flex-col gap-4 border-t border-white/10 pt-6 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs text-ink-500">Preparada para</p>
-                <p className="mt-0.5 font-semibold">{data.lead.name}</p>
-                {location && (
-                  <p className="mt-0.5 flex items-center gap-1 text-xs text-ink-400">
-                    <MapPin className="h-3 w-3" /> {location}
-                  </p>
-                )}
-              </div>
-              {data.proposal.valid_until && (
-                <div className="sm:text-right">
-                  <p className="text-xs text-ink-500">Válida até</p>
-                  <p className="mt-0.5 font-semibold">{formatDate(data.proposal.valid_until, { day: "2-digit", month: "long", year: "numeric" })}</p>
-                </div>
+      <main className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
+        {/* ============================================================ CAPA */}
+        <section className="grid items-center gap-8 pt-8 pb-10 sm:pt-12 lg:grid-cols-[1.05fr_1fr] print:min-h-[260mm]">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-bold text-amber-700 shadow-soft ring-1 ring-amber-500/20">
+              ☀️ Proposta nº {data.proposal.number} · {formatDate(data.proposal.created_at)}
+            </p>
+            <h1 className="mt-5 font-display text-[38px] leading-[1.05] font-bold tracking-tight sm:text-[54px]">
+              Olá, {firstName}! <span className="inline-block origin-[70%_70%] animate-[wave_2s_ease-in-out_1]">👋</span>
+              <br />
+              <span className="text-sun-gradient">Vamos transformar sol em economia</span> na sua casa.
+            </h1>
+            <p className="mt-5 max-w-lg text-lg leading-relaxed text-ink-600">
+              Preparamos um sistema de energia solar feito sob medida para você.
+              {hasBill && (
+                <>
+                  {" "}
+                  Sua conta de luz vai de <b className="text-rose-600">{brl(energy.monthlyBillBefore, 0)}</b> para cerca de{" "}
+                  <b className="text-emerald-600">{brl(energy.monthlyBillAfter, 0)}</b> por mês.
+                </>
               )}
-            </div>
-          </section>
-
-          {accepted && (
-            <div className="flex items-center gap-3 bg-emerald-600 px-6 py-4 text-white sm:px-12">
-              <CheckCircle2 className="h-5 w-5 shrink-0" />
-              <p className="text-sm">
-                <b>Proposta aceita</b> por {accepted.by} em {formatDate(accepted.at, { day: "2-digit", month: "long", year: "numeric" })}. Nossa equipe entrará em contato para os próximos passos.
+            </p>
+            {location && (
+              <p className="mt-4 flex items-center gap-1.5 text-sm text-ink-500">
+                <MapPin className="h-4 w-4" /> {data.lead.name} · {location}
               </p>
-            </div>
-          )}
-          {expired && (
-            <div className="flex items-center gap-3 bg-amber-100 px-6 py-4 text-amber-900 sm:px-12">
-              <Clock className="h-5 w-5 shrink-0" />
-              <p className="text-sm">Esta proposta expirou. Fale com a gente para atualizar os valores — normalmente conseguimos manter as mesmas condições.</p>
-            </div>
-          )}
-
-          {/* ====================================================== CONTA DE LUZ */}
-          {energy.monthlyBillBefore > 0 && (
-            <Section eyebrow="01 · Economia" title="Sua conta de luz, antes e depois">
-              <div className="grid gap-6 sm:grid-cols-[1.3fr_1fr]">
-                <div className="grid content-center gap-5">
-                  <BillBar label="Hoje" value={energy.monthlyBillBefore} max={energy.monthlyBillBefore} tone="before" />
-                  <BillBar label="Com energia solar" value={energy.monthlyBillAfter} max={energy.monthlyBillBefore} tone="after" />
-                  <p className="text-xs leading-relaxed text-ink-500">
-                    Com energia solar você continua pagando apenas a taxa mínima da concessionária (custo de disponibilidade de {energy.availabilityKwh} kWh
-                    {inputs.connectionType === "mono" ? ", ligação monofásica" : inputs.connectionType === "bi" ? ", ligação bifásica" : ", ligação trifásica"}) e a iluminação pública.
-                  </p>
-                </div>
-                <div className="relative overflow-hidden rounded-3xl bg-emerald-600 p-6 text-white">
-                  <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10" />
-                  <p className="relative text-sm font-medium text-emerald-100">Você economiza</p>
-                  <p className="tnum relative mt-1 font-display text-4xl font-semibold tracking-tight">{brl(energy.monthlySavings, 0)}</p>
-                  <p className="relative text-sm text-emerald-100">por mês</p>
-                  <div className="relative mt-6 grid gap-3 border-t border-white/20 pt-4 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-emerald-100">No 1º ano</span>
-                      <b className="tnum">{brl(energy.annualSavings, 0)}</b>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-emerald-100">Em 25 anos</span>
-                      <b className="tnum">{brl(energy.savings25y, 0)}</b>
-                    </div>
-                  </div>
-                </div>
+            )}
+          </div>
+          <div className="relative">
+            <HeroScene className="w-full drop-shadow-xl" />
+            {hasBill && (
+              <div className="absolute -bottom-5 left-4 rounded-2xl bg-white px-4 py-3 shadow-lift ring-1 ring-emerald-600/10 sm:left-8">
+                <p className="text-xs font-semibold text-ink-500">Você economiza</p>
+                <p className="tnum font-display text-2xl font-bold text-emerald-600">{Math.round(energy.savingsPct * 100)}% na conta</p>
               </div>
-            </Section>
-          )}
+            )}
+          </div>
+        </section>
 
-          {/* ========================================================= SISTEMA */}
-          <Section eyebrow="02 · Projeto" title="O seu sistema fotovoltaico" subtitle="Equipamentos de primeira linha, dimensionados para o seu perfil de consumo.">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Equipment
-                icon={<SolarPanelIcon />}
-                title={`${inputs.moduleQty} módulos fotovoltaicos`}
-                lines={[`${inputs.moduleBrand || "Marca Tier 1"}${inputs.moduleModel ? ` · ${inputs.moduleModel}` : ""}`, `${fmtNum(inputs.modulePowerW)} W cada · ${fmtNum(kwp, 2)} kWp no total`]}
-                tag={`${s.warranty_modules_years} anos de garantia`}
-              />
-              <Equipment
-                icon={<BatteryCharging className="h-6 w-6" />}
-                title={`${inputs.inverterQty > 1 ? `${inputs.inverterQty} inversores` : "Inversor"} ${inputs.inverterBrand}`.trim()}
-                lines={[inputs.inverterModel || "Inversor on-grid com monitoramento", `${fmtNum(inputs.inverterPowerKw, 1)} kW${inputs.inverterQty > 1 ? " cada" : ""} de potência`]}
-                tag={`${s.warranty_inverter_years} anos de garantia`}
-              />
-              <Equipment icon={<Wrench className="h-6 w-6" />} title="Estrutura de fixação" lines={[inputs.structureType, "Alumínio anodizado e aço inox — resistente à corrosão"]} />
-              <Equipment icon={<Smartphone className="h-6 w-6" />} title="Monitoramento no celular" lines={["Acompanhe a geração em tempo real", "Alertas automáticos de funcionamento"]} />
+        {accepted && (
+          <Banner tone="green" icon={<CheckCircle2 className="h-6 w-6" />}>
+            <b>Proposta aceita</b> por {accepted.by} em {formatDate(accepted.at, { day: "2-digit", month: "long", year: "numeric" })}. Em breve entraremos em contato! 🎉
+          </Banner>
+        )}
+        {expired && (
+          <Banner tone="amber" icon={<Clock className="h-6 w-6" />}>
+            Esta proposta passou da validade. Fale com a gente — normalmente conseguimos manter as mesmas condições.
+          </Banner>
+        )}
+
+        {/* ======================================================= RESUMO */}
+        <Section emoji="⚡" title="Tudo o que importa, em 10 segundos">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <BigStat illo={<PanelIllo className="h-14 w-14" />} value={`${inputs.moduleQty} placas`} label={`Sistema de ${fmtNum(kwp, 2)} kWp`} tone="blue" />
+            <BigStat illo={<SunIllo className="h-14 w-14" />} value={`${fmtNum(energy.monthlyGeneration)} kWh`} label="de energia por mês" tone="amber" />
+            <BigStat illo={<PiggyIllo className="h-14 w-16" />} value={brl(energy.monthlySavings, 0)} label="de economia por mês" tone="pink" />
+            <BigStat
+              illo={<span className="text-5xl">⏳</span>}
+              value={energy.paybackYears ? `${fmtNum(energy.paybackYears, 1)} anos` : "—"}
+              label="para o investimento se pagar"
+              tone="green"
+            />
+          </div>
+        </Section>
+
+        {/* ================================================= COMO FUNCIONA */}
+        <Section emoji="🤔" title="Como a energia solar funciona?" subtitle="É mais simples do que parece. Olha só:">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <HowStep n={1} illo={<SunIllo className="h-20 w-20" />} title="O sol brilha" text="A luz do sol chega todos os dias no seu telhado. De graça!" />
+            <HowStep n={2} illo={<PanelIllo className="h-20 w-20" />} title="As placas captam" text="As placas solares transformam a luz do sol em energia elétrica." />
+            <HowStep n={3} illo={<InverterIllo className="h-20 w-20" />} title="O inversor prepara" text="O inversor deixa essa energia igualzinha à da tomada." />
+            <HowStep n={4} illo={<HouseIllo className="h-20 w-20" />} title="Sua casa usa" text="Geladeira, chuveiro, TV… tudo funciona com energia do sol." />
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Explain illo={<MeterIllo className="h-16 w-16" />} title="E a energia que sobra?">
+              Vai para a rede da concessionária e vira <b>crédito</b> na sua conta. O relógio de luz passa a contar nos dois sentidos.
+            </Explain>
+            <Explain illo={<MoonCoinIllo className="h-16 w-16" />} title="E à noite, ou em dias nublados?">
+              Você usa a energia da rede normalmente e <b>paga com os créditos</b> que acumulou durante o dia. Nada muda na sua rotina!
+            </Explain>
+          </div>
+        </Section>
+
+        {/* ======================================================== CONTA */}
+        {hasBill && (
+          <Section emoji="🧾" title="Sua conta de luz: antes e depois" subtitle="Com os valores de hoje, calculados com as regras atuais (Lei 14.300).">
+            <div className="grid items-center gap-6 rounded-[28px] bg-white p-5 shadow-soft sm:p-8 lg:grid-cols-[1fr_auto_1fr]">
+              <div className="flex flex-col items-center text-center">
+                <p className="mb-2 rounded-full bg-rose-50 px-3 py-1 text-sm font-bold text-rose-600">😟 Hoje</p>
+                <BillIllo amount={brl(energy.monthlyBillBefore, 0)} tone="before" className="w-40" />
+              </div>
+              <div className="flex flex-col items-center gap-1 text-center">
+                <span className="text-4xl">➜</span>
+                <span className="rounded-full bg-emerald-600 px-4 py-1.5 text-sm font-bold text-white shadow-soft">−{brl(energy.monthlySavings, 0)}/mês</span>
+              </div>
+              <div className="flex flex-col items-center text-center">
+                <p className="mb-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-700">😄 Com energia solar</p>
+                <BillIllo amount={brl(energy.monthlyBillAfter, 0)} tone="after" className="w-40" />
+              </div>
             </div>
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <MiniStat icon={<Ruler />} label="Área aproximada" value={`${fmtNum(inputs.moduleQty * MODULE_AREA_M2)} m²`} />
-              <MiniStat icon={<Gauge />} label="Geração anual" value={`${fmtNum(energy.annualGeneration / 1000, 1)} MWh`} />
-              <MiniStat icon={<Sun />} label="Consumo atendido" value={energy.coverage ? pct(Math.min(1, energy.coverage), 0) : "—"} />
+
+            <div className="mt-4 rounded-[28px] bg-white p-5 shadow-soft sm:p-7">
+              <p className="font-display text-lg font-bold">Por que a conta não fica zerada? 🤓</p>
+              <p className="mt-1 text-sm text-ink-500">Algumas cobranças continuam existindo — e já estão incluídas no valor acima:</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <BillItem emoji="🔌" title="Taxa mínima" value={Math.max(energy.bill.minimumTopUp, 0)} always={energy.availabilityKwh * inputs.tariff}>
+                  Todo imóvel ligado à rede paga um mínimo de {energy.availabilityKwh} kWh. É como a “assinatura” da energia.
+                </BillItem>
+                <BillItem emoji="🛣️" title={`Fio B (${fmtNum(energy.fioBPct * 100)}% em ${startYear})`} value={energy.bill.fioBCharge}>
+                  Uma pequena taxa pelo uso dos fios da distribuidora quando você usa seus créditos. Criada pela Lei 14.300.
+                </BillItem>
+                <BillItem emoji="💡" title="Iluminação pública" value={energy.bill.publicLighting}>
+                  Taxa da prefeitura para os postes da sua rua. Ela não muda com a energia solar.
+                </BillItem>
+                {energy.bill.energyCharge > 0.5 && (
+                  <BillItem emoji="⚡" title="Energia extra da rede" value={energy.bill.energyCharge}>
+                    A parte do seu consumo que o sistema não cobre.
+                  </BillItem>
+                )}
+              </div>
             </div>
           </Section>
+        )}
 
-          {/* ========================================================== GERAÇÃO */}
-          <Section eyebrow="03 · Geração" title="Quanto o seu sistema vai produzir" subtitle="Estimativa mês a mês com base na irradiação solar da sua região.">
+        {/* ======================================================= RETORNO */}
+        {energy.monthlySavings > 0 && (
+          <Section emoji="🐷" title="Seu dinheiro de volta (e muito mais)" subtitle="A economia de todo mês vai enchendo o cofrinho até pagar o sistema. Depois disso, é lucro!">
+            <div className="grid gap-4">
+              <div className="flex flex-col gap-5 rounded-[28px] bg-gradient-to-br from-pink-50 to-amber-50 p-6 ring-1 ring-pink-200/60 sm:flex-row sm:items-center sm:p-8">
+                <PiggyIllo className="h-24 w-28 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-ink-500">O sistema se paga em</p>
+                  <p className="tnum font-display text-5xl font-bold tracking-tight text-ink-950">
+                    {fmtNum(energy.paybackYears, 1)} <span className="text-2xl text-ink-500">anos</span>
+                  </p>
+                  <p className="mt-3 text-sm text-ink-600">
+                    Em 25 anos você deixa de pagar <b className="text-emerald-700">{brl(energy.savings25y, 0)}</b>
+                    {freeMonths > 0 && (
+                      <>
+                        {" "}
+                        — é como ficar <b>{fmtNum(freeMonths)} meses</b> sem conta de luz!
+                      </>
+                    )}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:w-64 sm:grid-cols-1">
+                  <MiniStat label="Retorno" value={`${fmtNum(energy.roi25y, 1)}× o valor`} />
+                  <MiniStat label="Rende por mês" value={tir ? `${fmtNum((Math.pow(1 + tir, 1 / 12) - 1) * 100, 2)}%` : "—"} />
+                </div>
+              </div>
+              <div className="rounded-[28px] bg-white p-5 shadow-soft sm:p-6">
+                <p className="font-display font-bold">Seu saldo ao longo dos anos</p>
+                <p className="mb-3 text-xs text-ink-500">Cinza: ainda pagando o sistema · Verde: dinheiro no seu bolso</p>
+                <CashflowChart data={energy.cashflow} payback={energy.paybackYears} />
+              </div>
+            </div>
+          </Section>
+        )}
+
+        {/* ======================================================= GERAÇÃO */}
+        <Section emoji="🌤️" title="Quanto o seu sistema vai produzir" subtitle="No verão o sol é mais forte e ele produz mais. No inverno, um pouco menos — os créditos equilibram tudo.">
+          <div className="rounded-[28px] bg-white p-5 shadow-soft sm:p-6">
             <GenerationChart data={energy.monthly} />
-          </Section>
+          </div>
+        </Section>
 
-          {/* ========================================================= RETORNO */}
-          {energy.monthlySavings > 0 && (
-            <Section eyebrow="04 · Retorno" title="Um investimento que se paga sozinho" subtitle="Saldo acumulado considerando reajustes anuais da tarifa de energia.">
-              <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <KPI label="Payback" value={`${fmtNum(energy.paybackYears, 1)} anos`} />
-                <KPI label="Economia em 25 anos" value={brl(energy.savings25y, 0)} />
-                <KPI label="Retorno sobre o investimento" value={`${fmtNum(energy.roi25y, 1)}×`} />
-                <KPI label="Rentabilidade (TIR)" value={tir ? `${fmtNum(tir * 100, 1)}% a.a.` : "—"} />
+        {/* ======================================================= SISTEMA */}
+        <Section emoji="🧩" title="O que vai no seu telhado" subtitle="Só equipamentos de marcas reconhecidas mundialmente.">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Equipment
+              illo={<PanelIllo className="h-20 w-20" />}
+              title={`${inputs.moduleQty} placas solares`}
+              lines={[`${inputs.moduleBrand || "Tier 1"}${inputs.moduleModel ? ` · ${inputs.moduleModel}` : ""}`, `${fmtNum(inputs.modulePowerW)} W cada · ${fmtNum(kwp, 2)} kWp no total`]}
+              tag={`🛡️ ${s.warranty_modules_years} anos de garantia`}
+            />
+            <Equipment
+              illo={<InverterIllo className="h-20 w-20" />}
+              title={`${inputs.inverterQty > 1 ? `${inputs.inverterQty} inversores` : "Inversor"} ${inputs.inverterBrand}`.trim()}
+              lines={[inputs.inverterModel || "Inversor com monitoramento pelo celular", `${fmtNum(inputs.inverterPowerKw, 1)} kW${inputs.inverterQty > 1 ? " cada" : ""}`]}
+              tag={`🛡️ ${s.warranty_inverter_years} anos de garantia`}
+            />
+            <Equipment illo={<StructureIllo className="h-20 w-20" />} title="Estrutura de fixação" lines={[inputs.structureType, "Alumínio e inox: não enferruja"]} tag={`🛡️ ${s.warranty_structure_years} anos de garantia`} />
+            <Equipment illo={<span className="grid h-20 w-20 place-items-center text-5xl">📱</span>} title="App no celular" lines={["Veja quanto seu sistema produz,", "a qualquer hora, de onde estiver"]} tag="✨ Incluso" />
+          </div>
+          <p className="mt-3 text-center text-sm text-ink-500">
+            📐 Ocupa cerca de <b>{fmtNum(inputs.moduleQty * MODULE_AREA_M2)} m²</b> do telhado e produz <b>{fmtNum(energy.annualGeneration / 1000, 1)} MWh</b> por ano.
+          </p>
+        </Section>
+
+        {/* ===================================================== GARANTIAS */}
+        <Section emoji="🛡️" title="Garantias: pode ficar tranquilo" subtitle="Se algo der errado, a gente resolve. Está tudo no contrato.">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <Warranty years={s.warranty_modules_performance_years} title="Eficiência das placas" text="Produzindo pelo menos 80% após esse tempo" illo={<PanelIllo className="h-12 w-12" />} />
+            <Warranty years={s.warranty_modules_years} title="Placas" text="Contra defeitos de fabricação" illo={<ShieldIllo className="h-12 w-12" />} />
+            <Warranty years={s.warranty_inverter_years} title="Inversor" text="Troca ou conserto pelo fabricante" illo={<InverterIllo className="h-12 w-12" />} />
+            <Warranty years={s.warranty_structure_years} title="Estrutura" text="Contra corrosão e defeitos" illo={<StructureIllo className="h-12 w-12" />} />
+            <Warranty years={s.warranty_installation_years} title="Instalação" text="Nosso serviço, com suporte da equipe" illo={<ToolsIllo className="h-12 w-12" />} />
+          </div>
+        </Section>
+
+        {/* ======================================================== OBRA */}
+        <Section emoji="🗓️" title="Passo a passo da sua obra" subtitle={`Do pagamento até o sistema ligado são cerca de ${totalDays} dias. Você acompanha tudo com a gente.`}>
+          <div className="rounded-[28px] bg-white p-5 shadow-soft sm:p-8">
+            <div className="mb-6 flex items-center gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-500/15">
+              <Calendar className="h-8 w-8 shrink-0 text-amber-600" />
+              <div className="flex-1">
+                <p className="font-display font-bold">~{totalDays} dias do “sim” à energia do sol</p>
+                <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-amber-100">
+                  <div className="h-full w-full rounded-full bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-500" />
+                </div>
               </div>
-              <CashflowChart data={energy.cashflow} payback={energy.paybackYears} />
-              {tir > 0 && (
-                <p className="mt-4 rounded-2xl bg-ink-50 px-4 py-3 text-sm text-ink-600">
-                  <Sparkles className="mr-1.5 inline h-4 w-4 text-sun-600" />
-                  O retorno equivale a uma aplicação rendendo <b className="text-ink-900">{fmtNum((Math.pow(1 + tir, 1 / 12) - 1) * 100, 2)}% ao mês</b>, livre de imposto de renda — e seu imóvel ainda se valoriza.
-                </p>
-              )}
-            </Section>
-          )}
-
-          {/* ======================================================== AMBIENTAL */}
-          <Section eyebrow="05 · Sustentabilidade" title="Energia limpa, todos os dias">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Eco icon={<Leaf />} value={`${fmtNum(energy.co2TonsPerYear, 1)} t`} label="de CO₂ evitadas por ano" />
-              <Eco icon={<TreePine />} value={fmtNum(energy.treesEquivalent)} label="árvores plantadas equivalentes (por ano)" />
-              <Eco icon={<Sun />} value={`${fmtNum((energy.co2TonsPerYear * 25), 0)} t`} label="de CO₂ evitadas em 25 anos" />
             </div>
-          </Section>
+            <ol className="relative grid gap-5">
+              <span className="absolute top-4 bottom-4 left-[19px] w-1 rounded-full bg-gradient-to-b from-amber-300 via-orange-300 to-emerald-400" />
+              {WORK_STEPS.map((step) => {
+                const day = Math.round(step.at * totalDays);
+                return (
+                  <li key={step.title} className="avoid-break relative flex gap-4">
+                    <span className={cx("relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full text-white shadow-soft ring-4 ring-white", step.color)}>
+                      <step.icon className="h-5 w-5" />
+                    </span>
+                    <div className="flex-1 pt-0.5">
+                      <p className="text-xs font-bold tracking-wide text-ink-400 uppercase">{day === 0 ? "Dia 0" : `Dia ${day}`}</p>
+                      <p className="font-display text-base font-bold text-ink-900">{step.title}</p>
+                      <p className="text-sm text-ink-600">{step.text}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </Section>
 
-          {/* ====================================================== INVESTIMENTO */}
-          <section className="print-break relative overflow-hidden bg-ink-950 px-6 py-12 text-white sm:px-12 sm:py-16">
-            <div className="pointer-events-none absolute -right-20 -bottom-40 h-[420px] w-[420px] rounded-full bg-sun-500/20 blur-[100px]" />
-            <p className="relative text-xs font-bold tracking-[0.2em] text-sun-400 uppercase">06 · Investimento</p>
-            <div className="relative mt-4 grid gap-8 sm:grid-cols-[1fr_1.1fr] sm:items-end">
+        {/* ===================================================== PLANETA */}
+        <Section emoji="🌎" title="Você ainda ajuda o planeta" subtitle="Energia do sol é limpa: não polui e não acaba.">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Planet illo={<TreeIllo className="h-16 w-16" />} value={fmtNum(energy.treesEquivalent)} label="árvores plantadas por ano (equivalente)" />
+            <Planet illo={<CarIllo className="h-16 w-16" />} value={`${fmtNum(carKm)} km`} label="de carro que deixam de poluir por ano" />
+            <Planet illo={<GlobeIllo className="h-16 w-16" />} value={`${fmtNum(energy.co2TonsPerYear * 25, 1)} t`} label="de CO₂ a menos em 25 anos" />
+          </div>
+        </Section>
+
+        {/* ================================================= INVESTIMENTO */}
+        <section className="print-break mt-14">
+          <div className="relative overflow-hidden rounded-[32px] bg-ink-950 p-6 text-white sm:p-10">
+            <div className="pointer-events-none absolute -top-24 -right-24 h-80 w-80 rounded-full bg-sun-500/25 blur-3xl" />
+            <p className="relative text-sm font-bold text-sun-400">💰 Investimento</p>
+            <div className="relative mt-3 grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
               <div>
-                <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Investimento total</h2>
-                <p className="mt-2 text-sm text-ink-400">Sistema completo: equipamentos, projeto, homologação, instalação e monitoramento.</p>
+                <h2 className="font-display text-2xl font-bold sm:text-3xl">Tudo incluso, sem surpresas</h2>
+                <p className="mt-2 max-w-md text-sm text-ink-400">Equipamentos, projeto, papelada na concessionária, instalação completa e app de monitoramento.</p>
               </div>
               <div className="sm:text-right">
-                <p className="tnum font-display text-5xl font-semibold tracking-tight text-sun-gradient sm:text-6xl">{brl(price)}</p>
-                <p className="mt-1 text-sm text-ink-400">à vista · {brl(price / Math.max(1, kwp * 1000))}/Wp</p>
+                <p className="tnum font-display text-5xl font-bold tracking-tight text-sun-gradient sm:text-6xl">{brl(price)}</p>
+                <p className="mt-1 text-sm text-ink-400">à vista</p>
               </div>
             </div>
 
-            <div className="relative mt-10 grid gap-4 sm:grid-cols-2">
-              {cardInstallment > 0 && (
-                <PayCard icon={<CreditCard />} title="Cartão de crédito" main={`${inputs.cardInstallments}× de ${brl(cardInstallment)}`} sub={`Total ${brl(cardInstallment * inputs.cardInstallments)}`} />
-              )}
+            <div className="relative mt-8 grid gap-3 sm:grid-cols-3">
+              <PayCard icon={<Wallet />} title="À vista" main={brl(price, 0)} sub="PIX, transferência ou boleto" />
+              {cardInstallment > 0 && <PayCard icon={<CreditCard />} title="Cartão de crédito" main={`${inputs.cardInstallments}× de ${brl(cardInstallment, 0)}`} sub={`Total ${brl(cardInstallment * inputs.cardInstallments, 0)}`} />}
               {cheapest && (
                 <PayCard
                   icon={<Landmark />}
                   title="Financiamento solar"
-                  main={`a partir de ${brl(cheapest.installment)}/mês`}
-                  sub={cheaperThanBill ? `Menor que sua conta atual de ${brl(energy.monthlyBillBefore, 0)}` : `em ${cheapest.months} meses`}
-                  highlight={!!cheaperThanBill}
+                  main={`${cheapest.months}× de ${brl(cheapest.installment, 0)}`}
+                  sub={cheaperThanBill ? `🎉 Menor que sua conta de ${brl(energy.monthlyBillBefore, 0)}` : "Sujeito à aprovação"}
+                  highlight={cheaperThanBill}
                 />
               )}
             </div>
 
-            {financing.length > 0 && (
+            {financing.length > 1 && (
               <div className="relative mt-4 overflow-hidden rounded-2xl ring-1 ring-white/10">
                 <table className="w-full text-sm">
                   <thead className="bg-white/[0.04] text-left text-xs text-ink-400">
                     <tr>
-                      <th className="px-4 py-3 font-medium">Prazo</th>
-                      <th className="px-4 py-3 text-right font-medium">Parcela</th>
-                      <th className="hidden px-4 py-3 text-right font-medium sm:table-cell">Economia no mês</th>
+                      <th className="px-4 py-3 font-medium">Parcelas</th>
+                      <th className="px-4 py-3 text-right font-medium">Valor da parcela</th>
                       <th className="px-4 py-3 text-right font-medium">Parcela − economia</th>
                     </tr>
                   </thead>
@@ -316,9 +430,8 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
                         <tr key={f.months}>
                           <td className="px-4 py-3 text-ink-300">{f.months}×</td>
                           <td className="px-4 py-3 text-right font-semibold">{brl(f.installment)}</td>
-                          <td className="hidden px-4 py-3 text-right text-emerald-400 sm:table-cell">{brl(energy.monthlySavings)}</td>
-                          <td className={cx("px-4 py-3 text-right font-semibold", diff <= 0 ? "text-emerald-400" : "text-ink-200")}>
-                            {diff <= 0 ? `sobra ${brl(-diff)}` : brl(diff)}
+                          <td className={cx("px-4 py-3 text-right font-semibold", diff <= 0 ? "text-emerald-400" : "text-ink-300")}>
+                            {diff <= 0 ? `sobra ${brl(-diff, 0)} 🎉` : `+ ${brl(diff, 0)}`}
                           </td>
                         </tr>
                       );
@@ -326,114 +439,118 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
                   </tbody>
                 </table>
                 <p className="border-t border-white/[0.06] px-4 py-3 text-[11px] text-ink-500">
-                  Simulação com taxa de {fmtNum(inputs.financingRate, 2)}% a.m. — sujeita à aprovação de crédito pela instituição financeira.
+                  “Parcela − economia”: quanto sai do seu bolso por mês, já descontando o que você economiza na conta. Taxa simulada de {fmtNum(inputs.financingRate, 2)}% a.m.
                 </p>
               </div>
             )}
-            {inputs.paymentNotes && <p className="relative mt-5 rounded-2xl bg-white/[0.04] px-4 py-3 text-sm whitespace-pre-line text-ink-300 ring-1 ring-white/10">{inputs.paymentNotes}</p>}
-          </section>
+            {inputs.paymentNotes && <p className="relative mt-4 rounded-2xl bg-white/[0.05] px-4 py-3 text-sm whitespace-pre-line text-ink-300 ring-1 ring-white/10">{inputs.paymentNotes}</p>}
+            {data.proposal.valid_until && (
+              <p className="relative mt-4 text-xs text-ink-500">Condições válidas até {formatDate(data.proposal.valid_until, { day: "2-digit", month: "long", year: "numeric" })}.</p>
+            )}
+          </div>
+        </section>
 
-          {/* ========================================================= GARANTIAS */}
-          <Section eyebrow="07 · Segurança" title="Garantias que dão tranquilidade">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Warranty years={s.warranty_modules_performance_years} label="de eficiência dos módulos" />
-              <Warranty years={s.warranty_modules_years} label="contra defeitos nos módulos" />
-              <Warranty years={s.warranty_inverter_years} label="de garantia do inversor" />
-              <Warranty years={s.warranty_installation_years} label="de garantia da instalação" />
+        {/* ========================================================== FAQ */}
+        <Section emoji="💬" title="Perguntas que todo mundo faz">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Faq q="Se faltar luz na rua, eu fico com energia?">Não. Por segurança, o sistema desliga sozinho quando a rede cai e volta assim que a energia retorna.</Faq>
+            <Faq q="Precisa de manutenção?">Quase nada! Uma limpeza das placas por ano já basta. O app avisa se algo não estiver normal.</Faq>
+            <Faq q="E se eu gastar mais energia no futuro?">Dá para aumentar o sistema depois, adicionando mais placas.</Faq>
+            <Faq q="Minha casa valoriza?">Sim! Imóveis com energia solar são mais procurados e valorizam no mercado.</Faq>
+          </div>
+        </Section>
+
+        {/* ========================================================= SOBRE */}
+        <Section emoji="🤝" title={`Quem somos: ${s.company_name}`}>
+          <div className="grid gap-5 rounded-[28px] bg-white p-6 shadow-soft sm:grid-cols-[1.4fr_1fr] sm:p-8">
+            <p className="leading-relaxed text-ink-600">{s.about}</p>
+            <div className="grid content-start gap-2.5 text-sm">
+              {data.seller?.name && (
+                <p className="flex items-center gap-2.5">
+                  <BadgeCheck className="h-4 w-4 text-sun-600" /> Seu consultor: <b>{data.seller.name}</b>
+                </p>
+              )}
+              {contactPhone && (
+                <p className="flex items-center gap-2.5">
+                  <Phone className="h-4 w-4 text-sun-600" /> {formatPhone(contactPhone)}
+                </p>
+              )}
+              {(s.email || data.seller?.email) && (
+                <p className="flex items-center gap-2.5">
+                  <Mail className="h-4 w-4 text-sun-600" /> {s.email || data.seller?.email}
+                </p>
+              )}
+              {s.address && (
+                <p className="flex items-center gap-2.5">
+                  <MapPin className="h-4 w-4 text-sun-600" /> {s.address}
+                </p>
+              )}
+              {s.cnpj && <p className="text-xs text-ink-400">CNPJ {s.cnpj}</p>}
             </div>
-          </Section>
+          </div>
+        </Section>
 
-          {/* ========================================================== ETAPAS */}
-          <Section eyebrow="08 · Próximos passos" title="Do “sim” à energia gerada" subtitle={`Prazo estimado de até ${inputs.installationDays} dias para instalação após a aprovação do projeto.`}>
-            <ol className="relative grid gap-5 sm:grid-cols-5 sm:gap-3">
-              <div className="absolute top-5 right-[10%] left-[10%] hidden h-px bg-gradient-to-r from-sun-300 via-sun-400 to-emerald-400 sm:block" />
-              {[
-                { icon: <FileSignature />, t: "Contrato", d: "Assinatura e definição do pagamento" },
-                { icon: <HardHat />, t: "Projeto", d: "Engenharia e vistoria técnica" },
-                { icon: <ShieldCheck />, t: "Homologação", d: "Aprovação junto à concessionária" },
-                { icon: <Wrench />, t: "Instalação", d: "Equipe própria e certificada" },
-                { icon: <Zap />, t: "Economia", d: "Troca do medidor e geração" },
-              ].map((step, i) => (
-                <li key={step.t} className="relative flex gap-4 sm:flex-col sm:items-center sm:text-center">
-                  <div className="relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-sun-600 ring-2 ring-sun-300 [&>svg]:h-[18px] [&>svg]:w-[18px]">{step.icon}</div>
-                  <div>
-                    <p className="text-[11px] font-bold text-ink-400">ETAPA {i + 1}</p>
-                    <p className="font-semibold text-ink-900">{step.t}</p>
-                    <p className="text-xs text-ink-500">{step.d}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </Section>
-
-          {/* ============================================================ SOBRE */}
-          <Section eyebrow="09 · Quem somos" title={s.company_name}>
-            <div className="grid gap-6 sm:grid-cols-[1.4fr_1fr]">
-              <p className="leading-relaxed text-ink-600">{s.about}</p>
-              <div className="grid content-start gap-2.5 text-sm">
-                {data.seller?.name && (
-                  <p className="flex items-center gap-2.5 text-ink-700">
-                    <BadgeCheck className="h-4 w-4 text-sun-600" /> Consultor: <b>{data.seller.name}</b>
-                  </p>
-                )}
-                {contactPhone && (
-                  <p className="flex items-center gap-2.5 text-ink-700">
-                    <Phone className="h-4 w-4 text-sun-600" /> {formatPhone(contactPhone)}
-                  </p>
-                )}
-                {(s.email || data.seller?.email) && (
-                  <p className="flex items-center gap-2.5 text-ink-700">
-                    <Mail className="h-4 w-4 text-sun-600" /> {s.email || data.seller?.email}
-                  </p>
-                )}
-                {s.address && (
-                  <p className="flex items-center gap-2.5 text-ink-700">
-                    <MapPin className="h-4 w-4 text-sun-600" /> {s.address}
-                  </p>
-                )}
-                {s.cnpj && <p className="pl-6.5 text-xs text-ink-400">CNPJ {s.cnpj}</p>}
-              </div>
+        {/* ========================================================== CTA */}
+        <section className="no-print mt-14">
+          <div className="relative overflow-hidden rounded-[32px] bg-sun-gradient p-8 text-ink-950 sm:p-12">
+            <div className="absolute -top-16 -right-10 opacity-90">
+              <SunIllo className="h-48 w-48" />
             </div>
-          </Section>
-
-          {/* ============================================================== CTA */}
-          <section className="no-print px-6 pt-12 pb-12 sm:px-12">
-            <div className="relative overflow-hidden rounded-3xl bg-sun-gradient p-8 text-ink-950 sm:p-10">
-              <div className="absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/20" />
-              <h3 className="relative font-display text-2xl font-semibold tracking-tight sm:text-3xl">{accepted ? "Tudo certo! ☀️" : "Pronto para gerar sua própria energia?"}</h3>
-              <p className="relative mt-2 max-w-md text-sm text-ink-900/75">
-                {accepted ? "Recebemos o seu aceite. Em breve entraremos em contato para agendar a vistoria técnica." : "Aceite a proposta online ou fale com a gente para tirar qualquer dúvida."}
-              </p>
-              <div className="relative mt-6 flex flex-col gap-3 sm:flex-row">
-                {!accepted && !expired && token && (
-                  <Button size="lg" onClick={() => setAcceptOpen(true)}>
-                    <Check className="h-5 w-5" /> Aceitar proposta
-                  </Button>
-                )}
-                {contactPhone && (
-                  <a href={whatsappUrl(contactPhone, waText)} target="_blank" rel="noreferrer">
-                    <Button size="lg" variant="secondary" className="w-full">
-                      <MessageCircle className="h-5 w-5 text-emerald-600" /> Falar no WhatsApp
-                    </Button>
-                  </a>
-                )}
-                <Button size="lg" variant="outline" className="ring-ink-950/20 hover:bg-white/30 sm:hidden" onClick={() => window.print()}>
-                  <Download className="h-5 w-5" /> Baixar PDF
-                </Button>
-              </div>
-            </div>
-          </section>
-
-          <footer className="border-t border-ink-100 px-6 py-6 text-[11px] leading-relaxed text-ink-400 sm:px-12">
-            <p>
-              Valores de geração e economia são estimativas baseadas em irradiação média de {fmtNum(inputs.sunHours, 2)} kWh/m²/dia, eficiência global de{" "}
-              {fmtNum(inputs.performanceRatio * 100)}%, tarifa de {brl(inputs.tariff, 3)}/kWh com reajuste de {fmtNum(inputs.tariffIncrease, 1)}% a.a. e degradação dos módulos de{" "}
-              {fmtNum(inputs.degradation, 1)}% a.a. A geração real varia conforme clima, sombreamento e orientação do telhado. Proposta nº {data.proposal.number}
-              {data.proposal.valid_until && <> — válida até {formatDate(data.proposal.valid_until)}</>}.
+            <h3 className="relative max-w-lg font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              {accepted ? "Tudo certo! Obrigado pela confiança ☀️" : "Bora começar a economizar?"}
+            </h3>
+            <p className="relative mt-3 max-w-md text-ink-900/75">
+              {accepted
+                ? "Recebemos o seu aceite. Em breve entraremos em contato para agendar a visita técnica."
+                : "Aceite a proposta aqui mesmo ou chame a gente no WhatsApp para tirar qualquer dúvida."}
             </p>
-          </footer>
+            <div className="relative mt-7 flex flex-col gap-3 sm:flex-row">
+              {!accepted && !expired && token && (
+                <Button size="lg" onClick={() => setAcceptOpen(true)}>
+                  <Check className="h-5 w-5" /> Aceitar proposta
+                </Button>
+              )}
+              {contactPhone && (
+                <a href={whatsappUrl(contactPhone, waText)} target="_blank" rel="noreferrer">
+                  <Button size="lg" variant="secondary" className="w-full">
+                    <MessageCircle className="h-5 w-5 text-emerald-600" /> Falar no WhatsApp
+                  </Button>
+                </a>
+              )}
+              <Button size="lg" variant="outline" className="ring-ink-950/20 hover:bg-white/30" onClick={() => window.print()}>
+                <Download className="h-5 w-5" /> Baixar PDF
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <footer className="mt-10 text-[11px] leading-relaxed text-ink-400">
+          <p>
+            Como calculamos: irradiação média de {fmtNum(inputs.sunHours, 2)} kWh/m²/dia, eficiência de {fmtNum(inputs.performanceRatio * 100)}%, tarifa de {brl(inputs.tariff, 3)}/kWh,
+            fio B de {brl(inputs.fioBTariff, 3)}/kWh conforme a transição da Lei 14.300 ({fmtNum(energy.fioBPct * 100)}% em {startYear}, chegando a 100% em 2029),
+            {` ${fmtNum(inputs.selfConsumption)}%`} de consumo simultâneo, iluminação pública de {brl(inputs.publicLighting)}, reajuste de {fmtNum(inputs.tariffIncrease, 1)}% ao ano e
+            perda de {fmtNum(inputs.degradation, 1)}% ao ano das placas. A geração real varia com o clima, sombras e orientação do telhado. Proposta nº {data.proposal.number}.
+          </p>
+        </footer>
+      </main>
+
+      {/* Barra fixa no celular */}
+      {!accepted && !expired && token && (
+        <div className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-amber-900/10 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
+          <div className="flex gap-2">
+            {contactPhone && (
+              <a href={whatsappUrl(contactPhone, waText)} target="_blank" rel="noreferrer" className="flex-1">
+                <Button variant="secondary" className="w-full">
+                  <MessageCircle className="h-4 w-4 text-emerald-600" /> WhatsApp
+                </Button>
+              </a>
+            )}
+            <Button variant="sun" className="flex-1" onClick={() => setAcceptOpen(true)}>
+              <Check className="h-4 w-4" /> Aceitar
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {token && (
         <AcceptModal
@@ -441,6 +558,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
           onClose={() => setAcceptOpen(false)}
           token={token}
           defaultName={data.lead.name}
+          days={totalDays}
           onAccepted={(by) => {
             setAccepted({ at: new Date().toISOString(), by });
             setAcceptOpen(false);
@@ -453,152 +571,188 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
 
 /* ------------------------------------------------------------ subcomponentes */
 
-function Brand({ settings, dark }: { settings: CompanySettings; dark?: boolean }) {
+function Brand({ settings }: { settings: CompanySettings }) {
   if (settings.logo_url) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={settings.logo_url} alt={settings.company_name} className={cx("h-10 w-auto max-w-[180px] object-contain", dark && "brightness-0 invert")} />;
+    return <img src={settings.logo_url} alt={settings.company_name} className="h-9 w-auto max-w-[160px] object-contain" />;
   }
   return (
     <div className="flex items-center gap-2.5">
-      <div className="grid h-10 w-10 place-items-center rounded-xl bg-sun-gradient shadow-glow">
-        <Sun className="h-5 w-5 text-ink-950" strokeWidth={2.5} />
+      <SunIllo className="h-9 w-9" />
+      <span className="font-display text-[15px] font-bold">{settings.company_name}</span>
+    </div>
+  );
+}
+
+function Section({ emoji, title, subtitle, children }: { emoji: string; title: ReactNode; subtitle?: string; children: ReactNode }) {
+  return (
+    <section className="avoid-break mt-14">
+      <div className="mb-5 flex items-start gap-3">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white text-2xl shadow-soft">{emoji}</span>
+        <div>
+          <h2 className="font-display text-2xl leading-tight font-bold tracking-tight sm:text-[28px]">{title}</h2>
+          {subtitle && <p className="mt-1 max-w-2xl text-ink-500">{subtitle}</p>}
+        </div>
       </div>
-      <span className={cx("font-display text-base font-semibold", dark ? "text-white" : "text-ink-900")}>{settings.company_name}</span>
-    </div>
-  );
-}
-
-function SunRays() {
-  return (
-    <svg className="pointer-events-none absolute -top-24 -right-24 h-[460px] w-[460px] opacity-[0.12]" viewBox="0 0 200 200" aria-hidden>
-      {Array.from({ length: 24 }, (_, i) => (
-        <line key={i} x1="100" y1="100" x2={100 + 100 * Math.cos((i * Math.PI) / 12)} y2={100 + 100 * Math.sin((i * Math.PI) / 12)} stroke="#fbbf24" strokeWidth="0.4" />
-      ))}
-      <circle cx="100" cy="100" r="34" fill="none" stroke="#fbbf24" strokeWidth="0.5" />
-      <circle cx="100" cy="100" r="56" fill="none" stroke="#fbbf24" strokeWidth="0.3" />
-    </svg>
-  );
-}
-
-function CoverStat({ icon, label, value, unit }: { icon: ReactNode; label: string; value: string; unit?: string }) {
-  return (
-    <div className="rounded-2xl bg-white/[0.05] p-4 ring-1 ring-white/[0.08] backdrop-blur">
-      <div className="text-sun-400 [&>svg]:h-5 [&>svg]:w-5">{icon}</div>
-      <p className="mt-3 text-xs text-ink-400">{label}</p>
-      <p className="tnum mt-0.5 font-display text-xl font-semibold tracking-tight sm:text-2xl">
-        {value}
-        {unit && <span className="ml-1 text-sm font-medium text-ink-400">{unit}</span>}
-      </p>
-    </div>
-  );
-}
-
-function Section({ eyebrow, title, subtitle, children }: { eyebrow: string; title: ReactNode; subtitle?: string; children: ReactNode }) {
-  return (
-    <section className="avoid-break border-b border-ink-100 px-6 py-12 sm:px-12 sm:py-14">
-      <p className="text-xs font-bold tracking-[0.2em] text-sun-600 uppercase">{eyebrow}</p>
-      <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight text-ink-950 sm:text-3xl">{title}</h2>
-      {subtitle && <p className="mt-2 max-w-xl text-sm text-ink-500">{subtitle}</p>}
-      <div className="mt-8">{children}</div>
+      {children}
     </section>
   );
 }
 
-function BillBar({ label, value, max, tone }: { label: string; value: number; max: number; tone: "before" | "after" }) {
-  const w = Math.max(4, (value / Math.max(1, max)) * 100);
+function Banner({ tone, icon, children }: { tone: "green" | "amber"; icon: ReactNode; children: ReactNode }) {
   return (
-    <div>
-      <div className="mb-2 flex items-baseline justify-between">
-        <p className="text-sm font-medium text-ink-600">{label}</p>
-        <p className={cx("tnum font-display text-xl font-semibold", tone === "before" ? "text-ink-900" : "text-emerald-600")}>{brl(value, 0)}</p>
-      </div>
-      <div className="h-4 overflow-hidden rounded-full bg-ink-100">
-        <div className={cx("h-full rounded-full", tone === "before" ? "bg-ink-400" : "bg-emerald-500")} style={{ width: `${w}%` }} />
+    <div className={cx("mt-6 flex items-center gap-3 rounded-2xl p-4 text-sm", tone === "green" ? "bg-emerald-600 text-white" : "bg-amber-100 text-amber-900")}>
+      {icon}
+      <p>{children}</p>
+    </div>
+  );
+}
+
+const TONES = {
+  blue: "from-sky-50 to-white ring-sky-200/70",
+  amber: "from-amber-50 to-white ring-amber-200/70",
+  pink: "from-pink-50 to-white ring-pink-200/70",
+  green: "from-emerald-50 to-white ring-emerald-200/70",
+};
+
+function BigStat({ illo, value, label, tone }: { illo: ReactNode; value: string; label: string; tone: keyof typeof TONES }) {
+  return (
+    <div className={cx("flex flex-col gap-3 rounded-[24px] bg-gradient-to-b p-5 ring-1", TONES[tone])}>
+      <div className="h-14">{illo}</div>
+      <div>
+        <p className="tnum font-display text-2xl font-bold tracking-tight sm:text-[28px]">{value}</p>
+        <p className="text-sm text-ink-500">{label}</p>
       </div>
     </div>
   );
 }
 
-function Equipment({ icon, title, lines, tag }: { icon: ReactNode; title: string; lines: string[]; tag?: string }) {
+function HowStep({ n, illo, title, text }: { n: number; illo: ReactNode; title: string; text: string }) {
   return (
-    <div className="flex gap-4 rounded-2xl bg-ink-50 p-5 ring-1 ring-ink-200/60">
-      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white text-sun-600 shadow-soft ring-1 ring-ink-200/60">{icon}</div>
+    <div className="relative rounded-[24px] bg-white p-5 shadow-soft">
+      <span className="absolute top-4 right-4 grid h-7 w-7 place-items-center rounded-full bg-amber-100 text-sm font-bold text-amber-700">{n}</span>
+      <div className="mb-3">{illo}</div>
+      <p className="font-display text-lg font-bold">{title}</p>
+      <p className="mt-1 text-sm leading-relaxed text-ink-600">{text}</p>
+    </div>
+  );
+}
+
+function Explain({ illo, title, children }: { illo: ReactNode; title: string; children: ReactNode }) {
+  return (
+    <div className="flex gap-4 rounded-[24px] bg-sky-50 p-5 ring-1 ring-sky-200/70">
+      <div className="shrink-0">{illo}</div>
+      <div>
+        <p className="font-display font-bold">{title}</p>
+        <p className="mt-1 text-sm leading-relaxed text-ink-600">{children}</p>
+      </div>
+    </div>
+  );
+}
+
+function BillItem({ emoji, title, value, always, children }: { emoji: string; title: string; value: number; always?: number; children: ReactNode }) {
+  return (
+    <div className="flex gap-3 rounded-2xl bg-[#FFF8EC] p-4">
+      <span className="text-2xl">{emoji}</span>
+      <div className="flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="font-semibold">{title}</p>
+          <p className="tnum text-sm font-bold text-ink-700">{value > 0.004 ? brl(value) : always ? `já coberta` : "—"}</p>
+        </div>
+        <p className="mt-0.5 text-[13px] leading-relaxed text-ink-500">{children}</p>
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-white/80 p-3">
+      <p className="text-xs text-ink-500">{label}</p>
+      <p className="tnum font-display font-bold">{value}</p>
+    </div>
+  );
+}
+
+function Equipment({ illo, title, lines, tag }: { illo: ReactNode; title: string; lines: string[]; tag?: string }) {
+  return (
+    <div className="flex items-center gap-4 rounded-[24px] bg-white p-5 shadow-soft">
+      <div className="grid h-24 w-24 shrink-0 place-items-center rounded-2xl bg-sky-50">{illo}</div>
       <div className="min-w-0">
-        <p className="font-semibold text-ink-900">{title}</p>
+        <p className="font-display text-lg font-bold">{title}</p>
         {lines.filter(Boolean).map((l) => (
           <p key={l} className="text-sm text-ink-500">
             {l}
           </p>
         ))}
-        {tag && <p className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-600/15">{tag}</p>}
+        {tag && <p className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700">{tag}</p>}
       </div>
     </div>
   );
 }
 
-function MiniStat({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+function Warranty({ years, title, text, illo }: { years: number; title: string; text: string; illo: ReactNode }) {
   return (
-    <div className="rounded-2xl p-4 ring-1 ring-ink-200/70">
-      <div className="text-ink-400 [&>svg]:h-4 [&>svg]:w-4">{icon}</div>
-      <p className="mt-2 text-[11px] text-ink-500 sm:text-xs">{label}</p>
-      <p className="tnum font-display font-semibold text-ink-900 sm:text-lg">{value}</p>
+    <div className="flex flex-col items-center rounded-[24px] bg-white p-5 text-center shadow-soft">
+      {illo}
+      <p className="mt-2 font-display text-4xl font-bold tracking-tight text-emerald-600">
+        {years}
+        <span className="ml-1 text-base text-ink-400">{years === 1 ? "ano" : "anos"}</span>
+      </p>
+      <p className="font-semibold">{title}</p>
+      <p className="mt-0.5 text-xs text-ink-500">{text}</p>
     </div>
   );
 }
 
-function KPI({ label, value }: { label: string; value: string }) {
+function Planet({ illo, value, label }: { illo: ReactNode; value: string; label: string }) {
   return (
-    <div className="rounded-2xl bg-ink-50 p-4 ring-1 ring-ink-200/60">
-      <p className="text-xs text-ink-500">{label}</p>
-      <p className="tnum mt-1 font-display text-lg font-semibold tracking-tight text-ink-950 sm:text-xl">{value}</p>
-    </div>
-  );
-}
-
-function Eco({ icon, value, label }: { icon: ReactNode; value: string; label: string }) {
-  return (
-    <div className="rounded-2xl bg-emerald-50 p-5 ring-1 ring-emerald-600/10">
-      <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-600 text-white [&>svg]:h-5 [&>svg]:w-5">{icon}</div>
-      <p className="tnum mt-4 font-display text-2xl font-semibold tracking-tight text-emerald-900">{value}</p>
-      <p className="text-sm text-emerald-800/70">{label}</p>
+    <div className="flex items-center gap-4 rounded-[24px] bg-emerald-50 p-5 ring-1 ring-emerald-200/70">
+      {illo}
+      <div>
+        <p className="tnum font-display text-2xl font-bold text-emerald-800">{value}</p>
+        <p className="text-sm text-emerald-900/70">{label}</p>
+      </div>
     </div>
   );
 }
 
 function PayCard({ icon, title, main, sub, highlight }: { icon: ReactNode; title: string; main: string; sub: string; highlight?: boolean }) {
   return (
-    <div className={cx("rounded-2xl p-5 ring-1", highlight ? "bg-emerald-500/10 ring-emerald-400/30" : "bg-white/[0.04] ring-white/10")}>
+    <div className={cx("rounded-2xl p-5 ring-1", highlight ? "bg-emerald-500/15 ring-emerald-400/40" : "bg-white/[0.05] ring-white/10")}>
       <div className="flex items-center gap-2 text-sm text-ink-400 [&>svg]:h-4 [&>svg]:w-4">
         {icon} {title}
       </div>
-      <p className="tnum mt-2 font-display text-xl font-semibold">{main}</p>
-      <p className={cx("mt-0.5 text-xs", highlight ? "font-semibold text-emerald-400" : "text-ink-500")}>{sub}</p>
+      <p className="tnum mt-2 font-display text-xl font-bold">{main}</p>
+      <p className={cx("mt-0.5 text-xs", highlight ? "font-semibold text-emerald-300" : "text-ink-500")}>{sub}</p>
     </div>
   );
 }
 
-function Warranty({ years, label }: { years: number; label: string }) {
+function Faq({ q, children }: { q: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl p-5 text-center ring-1 ring-ink-200/70">
-      <p className="font-display text-4xl font-semibold tracking-tight text-ink-950">
-        {years}
-        <span className="ml-1 text-base font-medium text-ink-400">{years === 1 ? "ano" : "anos"}</span>
-      </p>
-      <p className="mt-1 text-xs text-ink-500">{label}</p>
+    <div className="rounded-[24px] bg-white p-5 shadow-soft">
+      <p className="font-display font-bold">❓ {q}</p>
+      <p className="mt-1.5 text-sm leading-relaxed text-ink-600">{children}</p>
     </div>
   );
 }
 
-function SolarPanelIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
-      <path d="M4 5h16l-2 10H6L4 5Z" />
-      <path d="M5 10h14M9.3 5l-.6 10M14.7 5l.6 10M12 15v4M8 19h8" />
-    </svg>
-  );
-}
-
-function AcceptModal({ open, onClose, token, defaultName, onAccepted }: { open: boolean; onClose: () => void; token: string; defaultName: string; onAccepted: (name: string) => void }) {
+function AcceptModal({
+  open,
+  onClose,
+  token,
+  defaultName,
+  days,
+  onAccepted,
+}: {
+  open: boolean;
+  onClose: () => void;
+  token: string;
+  defaultName: string;
+  days: number;
+  onAccepted: (name: string) => void;
+}) {
   const [name, setName] = useState(defaultName);
   const [loading, setLoading] = useState(false);
   const submit = async (e: React.FormEvent) => {
@@ -612,15 +766,15 @@ function AcceptModal({ open, onClose, token, defaultName, onAccepted }: { open: 
     setLoading(false);
     const json = res ? await res.json().catch(() => null) : null;
     if (!json?.ok) return toast.error("Não foi possível registrar o aceite. Fale com a gente pelo WhatsApp.");
-    toast.success("Proposta aceita! Em breve entraremos em contato.");
+    toast.success("Proposta aceita! Em breve entraremos em contato. ☀️");
     onAccepted(name);
   };
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Aceitar proposta"
-      subtitle="Confirme seu nome para registrar o aceite. Nossa equipe entra em contato para formalizar o contrato."
+      title="Aceitar proposta 🎉"
+      subtitle="Confirme seu nome. Nossa equipe entra em contato para formalizar o contrato."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
@@ -637,8 +791,12 @@ function AcceptModal({ open, onClose, token, defaultName, onAccepted }: { open: 
           <Input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         </Field>
         <p className="mt-3 flex items-start gap-2 text-xs text-ink-500">
-          <Calendar className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <PiggyBank className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           O aceite online não gera cobrança. Ele reserva as condições desta proposta enquanto preparamos o contrato.
+        </p>
+        <p className="mt-2 flex items-start gap-2 text-xs text-ink-500">
+          <Wrench className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          Depois do contrato, são cerca de {days} dias até o sistema estar ligado.
         </p>
       </form>
     </Modal>

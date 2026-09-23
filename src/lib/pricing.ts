@@ -58,7 +58,9 @@ export interface ProposalInputs {
   performanceRatio: number; // 0–1
   tariffIncrease: number; // % ao ano
   degradation: number; // % ao ano
-  simultaneity: number; // % da energia injetada que é compensada (Lei 14.300 – fio B), 0–100
+  selfConsumption: number; // % da geração consumida na hora (simultaneidade), 0–100
+  fioBTariff: number; // R$/kWh da TUSD Fio B da distribuidora (com impostos)
+  publicLighting: number; // R$/mês de contribuição de iluminação pública
 
   // Condições comerciais
   financingRate: number; // % ao mês
@@ -66,7 +68,7 @@ export interface ProposalInputs {
   cardInstallments: number;
   cardRate: number; // % ao mês
   validityDays: number;
-  installationDays: number;
+  installationDays: number; // dias do pagamento até a homologação final
   paymentNotes: string;
   notes: string;
 }
@@ -105,7 +107,10 @@ export interface EnergyResult {
   availabilityKwh: number;
   monthlyBillBefore: number;
   monthlyBillAfter: number;
+  bill: BillBreakdown;
+  fioBPct: number; // percentual do fio B cobrado no 1º ano
   monthlySavings: number;
+  savingsPct: number;
   annualSavings: number;
   savings25y: number;
   paybackYears: number;
@@ -217,13 +222,75 @@ export function calcPricing(i: ProposalInputs): PricingResult {
   };
 }
 
-export function calcEnergy(i: ProposalInputs, investment: number): EnergyResult {
+/**
+ * Percentual do fio B (TUSD Fio B) cobrado sobre a energia compensada — Lei 14.300/2022,
+ * regra de transição para sistemas GD II (conectados a partir de 2023).
+ */
+export const FIO_B_SCHEDULE: Record<number, number> = { 2023: 0.15, 2024: 0.3, 2025: 0.45, 2026: 0.6, 2027: 0.75, 2028: 0.9 };
+export function fioBFactor(year: number) {
+  if (year <= 2022) return 0;
+  return FIO_B_SCHEDULE[year] ?? 1;
+}
+
+export interface BillBreakdown {
+  /** Energia da rede que não foi compensada (cobrada integralmente). */
+  energyCharge: number;
+  /** Fio B sobre a energia compensada pelos créditos. */
+  fioBCharge: number;
+  /** Complemento para atingir o custo de disponibilidade (taxa mínima). */
+  minimumTopUp: number;
+  /** Contribuição de iluminação pública (não muda com energia solar). */
+  publicLighting: number;
+  total: number;
+  selfConsumedKwh: number;
+  injectedKwh: number;
+  compensatedKwh: number;
+  gridKwh: number;
+}
+
+/**
+ * Fatura mensal com energia solar.
+ *  - Parte da geração é consumida na hora (simultaneidade) e nem passa pelo medidor.
+ *  - O excedente vira crédito e compensa a energia puxada da rede, pagando fio B (percentual do ano).
+ *  - A parte de energia nunca fica abaixo do custo de disponibilidade (30/50/100 kWh).
+ *  - Iluminação pública é somada à parte.
+ */
+export function solarBill(
+  p: { consumption: number; generation: number; tariff: number; fioB: number; fioBPct: number; selfPct: number; availabilityKwh: number; publicLighting: number },
+): BillBreakdown {
+  const selfConsumedKwh = Math.min(p.generation * p.selfPct, p.consumption);
+  const gridKwh = p.consumption - selfConsumedKwh;
+  const injectedKwh = p.generation - selfConsumedKwh;
+  const compensatedKwh = Math.min(injectedKwh, gridKwh);
+  const energyCharge = (gridKwh - compensatedKwh) * p.tariff;
+  const fioBCharge = compensatedKwh * p.fioB * p.fioBPct;
+  const minimum = p.availabilityKwh * p.tariff;
+  const minimumTopUp = Math.max(0, minimum - energyCharge - fioBCharge);
+  return {
+    energyCharge,
+    fioBCharge,
+    minimumTopUp,
+    publicLighting: p.publicLighting,
+    total: energyCharge + fioBCharge + minimumTopUp + p.publicLighting,
+    selfConsumedKwh,
+    injectedKwh,
+    compensatedKwh,
+    gridKwh,
+  };
+}
+
+export function calcEnergy(i: ProposalInputs, investment: number, startYear = new Date().getFullYear()): EnergyResult {
   const powerKwp = (n(i.modulePowerW) * n(i.moduleQty)) / 1000;
   const pr = n(i.performanceRatio) || 0.8;
   const hsp = n(i.sunHours);
   const consumption = n(i.consumptionKwh);
   const tariff = n(i.tariff);
+  const fioB = n(i.fioBTariff);
+  const lighting = n(i.publicLighting);
+  const selfPct = Math.min(100, Math.max(0, n(i.selfConsumption))) / 100;
   const availabilityKwh = AVAILABILITY_KWH[i.connectionType] ?? 50;
+  const inc = n(i.tariffIncrease) / 100;
+  const deg = n(i.degradation) / 100;
 
   const monthly = MONTHS.map((month, idx) => ({
     month,
@@ -233,22 +300,36 @@ export function calcEnergy(i: ProposalInputs, investment: number): EnergyResult 
   const annualGeneration = monthly.reduce((s, m) => s + m.generation, 0);
   const monthlyGeneration = annualGeneration / 12;
 
-  const compensationFactor = Math.min(100, Math.max(0, i.simultaneity == null ? 100 : n(i.simultaneity))) / 100;
-  const billBefore = consumption * tariff;
-  // Energia compensável: limitada ao consumo acima do custo de disponibilidade.
-  const offsetKwh = consumption > 0 ? Math.min(monthlyGeneration, Math.max(0, consumption - availabilityKwh)) : monthlyGeneration;
-  const monthlySavings = offsetKwh * tariff * compensationFactor;
-  const billAfter = consumption > 0 ? Math.max(availabilityKwh * tariff, billBefore - monthlySavings) : 0;
+  const billFor = (yearIdx: number) => {
+    const esc = Math.pow(1 + inc, yearIdx);
+    const before = consumption * tariff * esc + lighting * esc;
+    const after = solarBill({
+      consumption,
+      generation: monthlyGeneration * Math.pow(1 - deg, yearIdx),
+      tariff: tariff * esc,
+      fioB: fioB * esc,
+      fioBPct: fioBFactor(startYear + yearIdx),
+      selfPct,
+      availabilityKwh,
+      publicLighting: lighting * esc,
+    });
+    return { before, after };
+  };
+
+  const first = billFor(0);
+  const hasBill = consumption > 0 && tariff > 0;
+  const monthlyBillBefore = hasBill ? first.before : 0;
+  const billAfter = hasBill ? first.after : solarBill({ consumption: 0, generation: 0, tariff: 0, fioB: 0, fioBPct: 0, selfPct: 0, availabilityKwh: 0, publicLighting: 0 });
+  const monthlySavings = hasBill ? Math.max(0, first.before - first.after.total) : 0;
 
   const cashflow: EnergyResult["cashflow"] = [];
   let cumulative = -investment;
   let payback = 0;
   let paid = investment <= 0;
   let savings25y = 0;
-  const inc = n(i.tariffIncrease) / 100;
-  const deg = n(i.degradation) / 100;
   for (let year = 1; year <= 25; year++) {
-    const s = monthlySavings * 12 * Math.pow(1 + inc, year - 1) * Math.pow(1 - deg, year - 1);
+    const b = billFor(year - 1);
+    const s = hasBill ? Math.max(0, b.before - b.after.total) * 12 : 0;
     const prev = cumulative;
     cumulative += s;
     savings25y += s;
@@ -259,6 +340,7 @@ export function calcEnergy(i: ProposalInputs, investment: number): EnergyResult 
     cashflow.push({ year, savings: Math.round(s), cumulative: Math.round(cumulative) });
   }
 
+  // Placas para gerar todo o consumo (a taxa mínima é paga de qualquer forma).
   const perModuleMonthly = (n(i.modulePowerW) / 1000) * hsp * 30.4 * pr;
   const requiredModulesForConsumption =
     perModuleMonthly > 0 && consumption > 0 ? Math.ceil(Math.max(0, consumption - availabilityKwh) / perModuleMonthly) : 0;
@@ -271,9 +353,12 @@ export function calcEnergy(i: ProposalInputs, investment: number): EnergyResult 
     monthly,
     coverage: consumption > 0 ? Math.min(1.5, monthlyGeneration / consumption) : 0,
     availabilityKwh,
-    monthlyBillBefore: billBefore,
-    monthlyBillAfter: billAfter,
+    monthlyBillBefore,
+    monthlyBillAfter: billAfter.total,
+    bill: billAfter,
+    fioBPct: fioBFactor(startYear),
     monthlySavings,
+    savingsPct: monthlyBillBefore > 0 ? monthlySavings / monthlyBillBefore : 0,
     annualSavings: monthlySavings * 12,
     savings25y,
     paybackYears: payback,

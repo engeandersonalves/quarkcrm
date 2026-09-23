@@ -36,11 +36,18 @@ import { must, useLive } from "@/lib/live";
 import { brl, calcEnergy, calcPricing, fmtNum, type AmountMode, type PriceComponent, type ProposalInputs } from "@/lib/pricing";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead, Proposal } from "@/lib/types";
-import { Checkout } from "./checkout";
+import { BillPreview, Checkout, StepNav } from "./checkout";
 
 const MODULE_BRANDS = ["JA Solar", "Jinko Solar", "Trina Solar", "LONGi", "Canadian Solar", "Risen", "Astronergy", "DAH Solar", "BYD", "Sunova", "Osda", "Honor Solar", "Znshine", "TW Solar"];
 const INVERTER_BRANDS = ["Growatt", "Deye", "Sungrow", "SAJ", "GoodWe", "Solis", "Huawei", "Fronius", "WEG", "Chint", "SolarEdge", "Hoymiles", "APsystems", "Enphase", "Livoltek", "Solplanet"];
 const TERMS = [12, 18, 24, 36, 48, 60, 72, 84, 96, 120];
+const MODULE_POWERS = [550, 575, 585, 610, 620, 700];
+const SIMULTANEITY = [
+  { value: 20, emoji: "🌙", label: "Fica fora o dia todo" },
+  { value: 30, emoji: "🏠", label: "Residência comum" },
+  { value: 45, emoji: "☀️", label: "Alguém em casa de dia" },
+  { value: 60, emoji: "🏪", label: "Comércio / empresa" },
+];
 
 export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposal; initialLeadId?: string | null }) {
   const router = useRouter();
@@ -53,6 +60,7 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [sheet, setSheet] = useState(false);
+  const [billValue, setBillValue] = useState(0);
   const current = useRef(proposal);
   current.current = proposal;
 
@@ -78,6 +86,7 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
         structureType: lead.roof_type ?? i.structureType,
       },
     );
+    if (lead.avg_bill) setBillValue(lead.avg_bill);
   }, [lead, inputs]);
 
   const pricing = useMemo(() => (inputs ? calcPricing(inputs) : null), [inputs]);
@@ -189,6 +198,10 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
 
   const status = proposal ? PROPOSAL_STATUS[proposal.status] : null;
   const suggested = energy.requiredModulesForConsumption;
+  const inverterHint =
+    pricing.powerKwp > 0
+      ? `Para ${fmtNum(pricing.powerKwp, 2)} kWp, um inversor entre ${fmtNum(pricing.powerKwp / 1.35, 1)} e ${fmtNum(pricing.powerKwp / 1.05, 1)} kW é o ideal (relação CC/CA 1,05–1,35).`
+      : "";
 
   return (
     <div className="animate-fade-up">
@@ -240,42 +253,98 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
         </div>
       </div>
 
+      <StepNav
+        steps={[
+          { id: "sec-cliente", label: "Cliente", done: !!leadId },
+          { id: "sec-conta", label: "Conta de luz", done: inputs.consumptionKwh > 0 && inputs.tariff > 0 },
+          { id: "sec-kit", label: "Kit", done: inputs.kitPrice > 0 && inputs.moduleQty > 0 && inputs.modulePowerW > 0 },
+          { id: "sec-instalacao", label: "Instalação", done: inputs.laborPerModule > 0 },
+          { id: "sec-preco", label: "Preço", done: pricing.valid && pricing.finalPrice > 0 },
+          { id: "sec-condicoes", label: "Condições", done: inputs.financingTerms.length > 0 },
+        ]}
+      />
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="grid gap-5">
           {/* Cliente */}
-          <Card>
-            <CardHeader icon={<User className="h-[18px] w-[18px]" />} title="Cliente" subtitle="Quem vai receber a proposta" />
+          <Card id="sec-cliente" className="scroll-mt-28">
+            <CardHeader icon={<User className="h-[18px] w-[18px]" />} title="1. Cliente" subtitle="Quem vai receber a proposta" />
             <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
               <Field label="Cliente *" className="sm:col-span-2">
                 <LeadPicker leads={leads ?? []} value={leadId} onChange={(id) => { setLeadId(id); setDirty(true); }} onNew={() => openLead(null, { onCreated: (id) => { setLeadId(id); setDirty(true); } })} />
               </Field>
-              <Field label="Consumo médio mensal" hint={lead?.avg_bill ? `Conta média informada: ${brl(lead.avg_bill)}` : undefined}>
-                <NumberInput value={inputs.consumptionKwh} onChange={(v) => set("consumptionKwh", v)} suffix="kWh" digits={0} />
-              </Field>
-              <Field label="Tarifa com impostos">
-                <NumberInput value={inputs.tariff} onChange={(v) => set("tariff", v)} prefix="R$" suffix="/kWh" digits={3} />
-              </Field>
-              <Field label="Tipo de ligação">
-                <Segmented
-                  className="w-full [&>button]:flex-1"
-                  value={inputs.connectionType}
-                  onChange={(v) => set("connectionType", v)}
-                  options={[
-                    { value: "mono", label: "Monofásica" },
-                    { value: "bi", label: "Bifásica" },
-                    { value: "tri", label: "Trifásica" },
-                  ]}
-                />
-              </Field>
-              <Field label="Título da proposta (opcional)">
+              <Field label="Título da proposta (opcional)" className="sm:col-span-2">
                 <Input value={title} onChange={(e) => { setTitle(e.target.value); setDirty(true); }} placeholder="Ex.: Residência — Telhado principal" />
               </Field>
             </div>
           </Card>
 
+          {/* Conta de luz */}
+          <Card id="sec-conta" className="scroll-mt-28">
+            <CardHeader icon={<Receipt className="h-[18px] w-[18px]" />} title="2. Conta de luz" subtitle="Base da economia real — já considera fio B (Lei 14.300), taxa mínima e iluminação pública" />
+            <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
+              <Field label="Valor médio da conta" hint="Digite o valor e o consumo é calculado pela tarifa">
+                <MoneyInput
+                  value={billValue || null}
+                  digits={0}
+                  placeholder={energy.monthlyBillBefore ? fmtNum(energy.monthlyBillBefore) : "0"}
+                  onChange={(v) => {
+                    setBillValue(v);
+                    if (inputs.tariff > 0 && v > 0) set("consumptionKwh", Math.round(Math.max(0, v - inputs.publicLighting) / inputs.tariff));
+                  }}
+                />
+              </Field>
+              <Field label="Consumo médio mensal" hint={lead?.avg_bill ? `Conta informada no cadastro: ${brl(lead.avg_bill)}` : "Média dos últimos 12 meses da fatura"}>
+                <NumberInput value={inputs.consumptionKwh} onChange={(v) => set("consumptionKwh", v)} suffix="kWh" digits={0} />
+              </Field>
+              <Field label="Tarifa cheia (com impostos)" hint="Total da fatura ÷ kWh consumidos">
+                <NumberInput value={inputs.tariff} onChange={(v) => set("tariff", v)} prefix="R$" suffix="/kWh" digits={3} />
+              </Field>
+              <Field label="Fio B da distribuidora" hint={`Em ${new Date().getFullYear()} o cliente paga ${fmtNum(energy.fioBPct * 100)}% do fio B sobre a energia compensada`}>
+                <NumberInput value={inputs.fioBTariff} onChange={(v) => set("fioBTariff", v)} prefix="R$" suffix="/kWh" digits={3} />
+              </Field>
+              <Field label="Iluminação pública (CIP)" hint="Continua na conta mesmo com energia solar">
+                <MoneyInput value={inputs.publicLighting} onChange={(v) => set("publicLighting", v)} />
+              </Field>
+              <Field label="Tipo de ligação" hint={`Taxa mínima: ${energy.availabilityKwh} kWh (${brl(energy.availabilityKwh * inputs.tariff)})`}>
+                <Segmented
+                  className="w-full [&>button]:flex-1"
+                  value={inputs.connectionType}
+                  onChange={(v) => set("connectionType", v)}
+                  options={[
+                    { value: "mono", label: "Mono" },
+                    { value: "bi", label: "Bifásica" },
+                    { value: "tri", label: "Trifásica" },
+                  ]}
+                />
+              </Field>
+              <Field label="Consumo durante o dia (simultaneidade)" hint="Energia usada na hora em que é gerada não paga fio B" className="sm:col-span-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {SIMULTANEITY.map((o) => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => set("selfConsumption", o.value)}
+                      className={cx(
+                        "rounded-xl px-3 py-2.5 text-left ring-1 transition",
+                        inputs.selfConsumption === o.value ? "bg-ink-900 text-white ring-ink-900" : "bg-white text-ink-700 ring-ink-200 hover:ring-ink-300",
+                      )}
+                    >
+                      <p className="text-sm font-semibold">
+                        {o.emoji} {o.value}%
+                      </p>
+                      <p className={cx("text-[11px]", inputs.selfConsumption === o.value ? "text-ink-300" : "text-ink-500")}>{o.label}</p>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <BillPreview energy={energy} inputs={inputs} />
+            </div>
+          </Card>
+
           {/* Equipamentos */}
-          <Card>
-            <CardHeader icon={<SunMedium className="h-[18px] w-[18px]" />} title="Kit fotovoltaico" subtitle="Equipamentos e preço do distribuidor" />
+          <Card id="sec-kit" className="scroll-mt-28">
+            <CardHeader icon={<SunMedium className="h-[18px] w-[18px]" />} title="3. Kit fotovoltaico" subtitle="Equipamentos e preço do distribuidor" />
             <div className="grid gap-5 px-5 pb-5">
               <Field label="Preço do kit">
                 <MoneyInput value={inputs.kitPrice} onChange={(v) => set("kitPrice", v)} className="[&_input]:h-12 [&_input]:text-lg [&_input]:font-semibold" />
@@ -293,6 +362,22 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
                   <Field label="Quantidade">
                     <Stepper value={inputs.moduleQty} onChange={(v) => set("moduleQty", v)} />
                   </Field>
+                  <div className="flex flex-wrap items-center gap-1.5 sm:col-span-4">
+                    <span className="mr-1 text-xs text-ink-500">Potências comuns:</span>
+                    {MODULE_POWERS.map((w) => (
+                      <button
+                        key={w}
+                        type="button"
+                        onClick={() => set("modulePowerW", w)}
+                        className={cx(
+                          "h-7 rounded-lg px-2.5 text-xs font-semibold ring-1 transition",
+                          inputs.modulePowerW === w ? "bg-ink-900 text-white ring-ink-900" : "bg-white text-ink-600 ring-ink-200 hover:ring-ink-300",
+                        )}
+                      >
+                        {w} W
+                      </button>
+                    ))}
+                  </div>
                   <Field label="Modelo (opcional)" className="sm:col-span-4">
                     <Input value={inputs.moduleModel} onChange={(e) => set("moduleModel", e.target.value)} placeholder="Ex.: JAM72D40 Bifacial" />
                   </Field>
@@ -328,6 +413,11 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
                   <Field label="Modelo (opcional)" className="sm:col-span-2">
                     <Input value={inputs.inverterModel} onChange={(e) => set("inverterModel", e.target.value)} placeholder="Ex.: MIN 6000TL-X" />
                   </Field>
+                  {inverterHint && (
+                    <p className="flex items-center gap-1.5 text-xs text-ink-500 sm:col-span-4">
+                      <Sparkles className="h-3.5 w-3.5 text-sun-500" /> {inverterHint}
+                    </p>
+                  )}
                   <Field label="Estrutura / telhado" className="sm:col-span-2">
                     <Select value={inputs.structureType} onChange={(e) => set("structureType", e.target.value)}>
                       {ROOF_TYPES.map((r) => (
@@ -349,8 +439,8 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
           </Card>
 
           {/* Custos */}
-          <Card>
-            <CardHeader icon={<Hammer className="h-[18px] w-[18px]" />} title="Instalação" subtitle="Mão de obra, material elétrico e outros custos" />
+          <Card id="sec-instalacao" className="scroll-mt-28">
+            <CardHeader icon={<Hammer className="h-[18px] w-[18px]" />} title="4. Instalação" subtitle="Mão de obra, material elétrico e outros custos" />
             <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
               <Field label="Mão de obra por placa" hint={<Calc>{fmtNum(inputs.moduleQty)} placas × {brl(inputs.laborPerModule)} = <b>{brl(inputs.laborPerModule * inputs.moduleQty)}</b></Calc>}>
                 <MoneyInput value={inputs.laborPerModule} onChange={(v) => set("laborPerModule", v)} />
@@ -398,8 +488,8 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
           </Card>
 
           {/* Preço */}
-          <Card>
-            <CardHeader icon={<Percent className="h-[18px] w-[18px]" />} title="Formação de preço" subtitle="Percentuais incidem sobre o preço final de venda" />
+          <Card id="sec-preco" className="scroll-mt-28">
+            <CardHeader icon={<Percent className="h-[18px] w-[18px]" />} title="5. Formação de preço" subtitle="Percentuais incidem sobre o preço final de venda" />
             <div className="grid gap-4 px-5 pb-5">
               <PriceComp label="Comissão" value={inputs.commission} amount={pricing.commissionValue} onChange={(v) => set("commission", v)} />
               <PriceComp label="Impostos" value={inputs.tax} amount={pricing.taxValue} onChange={(v) => set("tax", v)} />
@@ -426,13 +516,13 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
           </Card>
 
           {/* Condições */}
-          <Card>
-            <CardHeader icon={<Wallet className="h-[18px] w-[18px]" />} title="Condições comerciais" subtitle="Aparecem na proposta do cliente" />
+          <Card id="sec-condicoes" className="scroll-mt-28">
+            <CardHeader icon={<Wallet className="h-[18px] w-[18px]" />} title="6. Condições comerciais" subtitle="Aparecem na proposta do cliente" />
             <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
               <Field label="Validade da proposta">
                 <NumberInput value={inputs.validityDays} onChange={(v) => set("validityDays", v)} suffix="dias" digits={0} />
               </Field>
-              <Field label="Prazo de instalação">
+              <Field label="Do pagamento à homologação" hint="Cronograma da obra na proposta">
                 <NumberInput value={inputs.installationDays} onChange={(v) => set("installationDays", v)} suffix="dias" digits={0} />
               </Field>
               <Field label="Taxa do financiamento">
@@ -478,9 +568,6 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
               </Field>
               <Field label="Performance ratio" hint="Eficiência global (0,75–0,85)">
                 <NumberInput value={inputs.performanceRatio} onChange={(v) => set("performanceRatio", v)} digits={2} />
-              </Field>
-              <Field label="Energia compensada" hint="Ajuste para fio B (Lei 14.300)">
-                <NumberInput value={inputs.simultaneity} onChange={(v) => set("simultaneity", v)} suffix="%" digits={0} />
               </Field>
               <Field label="Reajuste da tarifa">
                 <NumberInput value={inputs.tariffIncrease} onChange={(v) => set("tariffIncrease", v)} suffix="% a.a." digits={1} />

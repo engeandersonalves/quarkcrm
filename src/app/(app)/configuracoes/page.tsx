@@ -77,12 +77,14 @@ export default function SettingsPage() {
             <DefComp label="Lucro" value={d.profit} onChange={(v) => setDef("profit", v)} />
             <Field label="Irradiação (HSP)"><NumberInput value={d.sunHours} onChange={(v) => setDef("sunHours", v)} suffix="kWh/m²" /></Field>
             <Field label="Performance ratio"><NumberInput value={d.performanceRatio} onChange={(v) => setDef("performanceRatio", v)} /></Field>
-            <Field label="Energia compensada"><NumberInput value={d.simultaneity} onChange={(v) => setDef("simultaneity", v)} suffix="%" digits={0} /></Field>
+            <Field label="Fio B da distribuidora" hint="TUSD Fio B com impostos"><NumberInput value={d.fioBTariff} onChange={(v) => setDef("fioBTariff", v)} prefix="R$" suffix="/kWh" digits={3} /></Field>
+            <Field label="Iluminação pública padrão"><MoneyInput value={d.publicLighting} onChange={(v) => setDef("publicLighting", v)} /></Field>
+            <Field label="Simultaneidade padrão" hint="% da geração consumida na hora"><NumberInput value={d.selfConsumption} onChange={(v) => setDef("selfConsumption", v)} suffix="%" digits={0} /></Field>
             <Field label="Taxa do financiamento"><NumberInput value={d.financingRate} onChange={(v) => setDef("financingRate", v)} suffix="% a.m." /></Field>
             <Field label="Cartão (parcelas)"><NumberInput value={d.cardInstallments} onChange={(v) => setDef("cardInstallments", v)} suffix="x" digits={0} /></Field>
             <Field label="Juros do cartão"><NumberInput value={d.cardRate} onChange={(v) => setDef("cardRate", v)} suffix="% a.m." /></Field>
             <Field label="Validade da proposta"><NumberInput value={d.validityDays} onChange={(v) => setDef("validityDays", v)} suffix="dias" digits={0} /></Field>
-            <Field label="Prazo de instalação"><NumberInput value={d.installationDays} onChange={(v) => setDef("installationDays", v)} suffix="dias" digits={0} /></Field>
+            <Field label="Pagamento → homologação"><NumberInput value={d.installationDays} onChange={(v) => setDef("installationDays", v)} suffix="dias" digits={0} /></Field>
             <Field label="Reajuste anual da tarifa"><NumberInput value={d.tariffIncrease} onChange={(v) => setDef("tariffIncrease", v)} suffix="% a.a." digits={1} /></Field>
             <Field label="Condições de pagamento padrão" className="sm:col-span-3">
               <Textarea value={d.paymentNotes} onChange={(e) => setDef("paymentNotes", e.target.value)} placeholder="Ex.: 50% na assinatura e 50% na instalação." />
@@ -92,10 +94,11 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader icon={<ShieldCheck className="h-[18px] w-[18px]" />} title="Garantias" subtitle="Exibidas na proposta" />
-          <div className="grid grid-cols-2 gap-4 px-5 pb-5 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 px-5 pb-5 sm:grid-cols-5">
             <Field label="Eficiência dos módulos"><NumberInput value={form.warranty_modules_performance_years} onChange={(v) => set("warranty_modules_performance_years", v)} suffix="anos" digits={0} /></Field>
             <Field label="Defeitos nos módulos"><NumberInput value={form.warranty_modules_years} onChange={(v) => set("warranty_modules_years", v)} suffix="anos" digits={0} /></Field>
             <Field label="Inversor"><NumberInput value={form.warranty_inverter_years} onChange={(v) => set("warranty_inverter_years", v)} suffix="anos" digits={0} /></Field>
+            <Field label="Estrutura"><NumberInput value={form.warranty_structure_years} onChange={(v) => set("warranty_structure_years", v)} suffix="anos" digits={0} /></Field>
             <Field label="Instalação"><NumberInput value={form.warranty_installation_years} onChange={(v) => set("warranty_installation_years", v)} suffix="anos" digits={0} /></Field>
           </div>
         </Card>
