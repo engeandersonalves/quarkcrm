@@ -6,6 +6,8 @@ import { Suspense, useState } from "react";
 import { toast } from "sonner";
 import { Button, Field, Input } from "@/components/ui";
 import { supabase } from "@/lib/supabase/client";
+import { CinematicBackdrop } from "@/components/app/cinematic";
+import { DEFAULT_IMAGES, pickDaily } from "@/lib/inspiration";
 
 export default function LoginPage() {
   return (
@@ -47,8 +49,7 @@ function Login() {
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
       <div className="relative hidden overflow-hidden bg-ink-950 p-14 text-white lg:flex lg:flex-col">
-        <div className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-sun-500/25 blur-[120px]" />
-        <div className="absolute bottom-0 left-0 h-[300px] w-[300px] rounded-full bg-orange-600/10 blur-[100px]" />
+        <CinematicBackdrop src={pickDaily(DEFAULT_IMAGES, 2)} />
         <div className="relative flex items-center gap-3">
           <div className="grid h-11 w-11 place-items-center rounded-xl bg-sun-gradient shadow-glow">
             <Sun className="h-5 w-5 text-ink-950" strokeWidth={2.5} />
@@ -56,8 +57,9 @@ function Login() {
           <span className="font-display text-lg font-semibold">Quark CRM</span>
         </div>
         <div className="relative mt-auto max-w-lg">
-          <h1 className="font-display text-5xl leading-[1.05] font-semibold tracking-tight">
-            Propostas solares que <span className="text-sun-gradient">fecham negócio.</span>
+          <p className="text-xs tracking-[0.4em] text-[#f7d774] uppercase">O mundo é seu</p>
+          <h1 className="mt-4 font-serif text-6xl leading-[1.02] italic">
+            Propostas que <span className="text-gold not-italic">fecham negócio.</span>
           </h1>
           <p className="mt-5 text-lg text-ink-400">Orçamento preciso em segundos, proposta digital impecável e todo o funil de vendas em um só lugar.</p>
           <div className="mt-10 grid grid-cols-3 gap-3">

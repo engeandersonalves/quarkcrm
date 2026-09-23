@@ -1,11 +1,13 @@
 "use client";
 
-import { ArrowUpRight, Calculator, CheckCircle2, Eye, FileText, Flame, TrendingUp, Users, Zap } from "lucide-react";
+import { ArrowUpRight, Calculator, CheckCircle2, ChevronRight, Eye, FileText, Flame, Lightbulb, Target, TrendingUp, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useApp } from "@/components/app/app-context";
 import { useQuick } from "@/components/app/shell";
 import { TaskRow } from "@/components/app/task-row";
+import { CinematicBackdrop } from "@/components/app/cinematic";
+import { SALES_TIPS, imagePool, pickDaily, quotePool } from "@/lib/inspiration";
 import { Avatar, Badge, Button, Card, CardHeader, Empty, Skeleton, cx } from "@/components/ui";
 import { OPEN_STAGES, PROPOSAL_STATUS, STAGES } from "@/lib/constants";
 import { relativeTime } from "@/lib/format";
@@ -21,7 +23,7 @@ interface DashData {
 }
 
 export default function Dashboard() {
-  const { profile } = useApp();
+  const { profile, settings } = useApp();
   const { openLead, openTask } = useQuick();
   const { data, loading } = useLive<DashData>(
     async () => {
@@ -44,25 +46,7 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-up">
-      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-ink-500 first-letter:uppercase">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
-          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight sm:text-[30px]">
-            {greet}
-            {firstName && `, ${firstName}`} <span className="inline-block">☀️</span>
-          </h1>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => openLead()}>
-            <Users className="h-4 w-4" /> Novo lead
-          </Button>
-          <Link href="/propostas/nova">
-            <Button variant="sun">
-              <Calculator className="h-4 w-4" /> Novo orçamento
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <HeroBanner greet={greet} firstName={firstName} wonMonth={m?.wonMonth ?? 0} deals={m?.wonMonthCount ?? 0} onNewLead={() => openLead()} />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -77,6 +61,8 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {settings.app.showTips && <TipCard />}
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         {/* Vendas por mês */}
@@ -304,6 +290,95 @@ function SalesBars({ data }: { data: { label: string; value: number; count: numb
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function HeroBanner({ greet, firstName, wonMonth, deals, onNewLead }: { greet: string; firstName: string; wonMonth: number; deals: number; onNewLead: () => void }) {
+  const { settings } = useApp();
+  const prefs = settings.app;
+  const quote = pickDaily(quotePool(prefs.customQuotes, prefs.useDefaultQuotes), 0);
+  const image = pickDaily(imagePool(prefs.images), 1);
+  const pct = prefs.monthlyGoal > 0 ? Math.min(1, wonMonth / prefs.monthlyGoal) : 0;
+  const now = new Date();
+  const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+  const missing = Math.max(0, prefs.monthlyGoal - wonMonth);
+  const R = 42;
+  const C = 2 * Math.PI * R;
+  return (
+    <div className="relative mb-5 overflow-hidden rounded-[28px] text-white shadow-lift">
+      <CinematicBackdrop src={image} dim="medium" />
+      <div className="relative grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div className="max-w-2xl">
+          <p className="text-[11px] font-semibold tracking-[0.35em] text-[#f7d774] uppercase">
+            {now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+          </p>
+          <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+            {greet}
+            {firstName && `, ${firstName}`}.
+          </h1>
+          {quote && (
+            <blockquote className="mt-4">
+              <p className="font-serif text-xl leading-snug italic text-white/90 sm:text-2xl">“{quote.text}”</p>
+              <footer className="mt-2 text-[11px] tracking-[0.2em] text-white/50 uppercase">— {quote.author}</footer>
+            </blockquote>
+          )}
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Link href="/propostas/nova">
+              <Button className="bg-gradient-to-r from-[#f7d774] via-[#e0a93b] to-[#b8862b] text-black shadow-[0_8px_30px_-8px_rgba(224,169,59,0.6)] hover:brightness-110">
+                <Calculator className="h-4 w-4" /> Novo orçamento
+              </Button>
+            </Link>
+            <Button variant="outline" onClick={onNewLead} className="text-white ring-white/25 hover:bg-white/10">
+              <Users className="h-4 w-4" /> Novo lead
+            </Button>
+          </div>
+        </div>
+        {prefs.monthlyGoal > 0 && (
+          <div className="flex items-center gap-5 rounded-3xl bg-white/[0.06] p-5 ring-1 ring-white/10 backdrop-blur-md">
+            <svg viewBox="0 0 100 100" className="h-24 w-24 -rotate-90">
+              <defs>
+                <linearGradient id="goalGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#f7d774" />
+                  <stop offset="1" stopColor="#b8862b" />
+                </linearGradient>
+              </defs>
+              <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="9" />
+              <circle cx="50" cy="50" r={R} fill="none" stroke="url(#goalGrad)" strokeWidth="9" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - pct)} className="transition-all duration-1000" />
+              <text x="50" y="50" transform="rotate(90 50 50)" textAnchor="middle" dominantBaseline="central" className="fill-white font-serif text-[22px]">
+                {Math.round(pct * 100)}%
+              </text>
+            </svg>
+            <div>
+              <p className="flex items-center gap-1.5 text-[11px] tracking-[0.2em] text-white/50 uppercase">
+                <Target className="h-3.5 w-3.5" /> Meta do mês
+              </p>
+              <p className="tnum mt-1 font-serif text-2xl">{brl(wonMonth, 0)}</p>
+              <p className="tnum text-xs text-white/60">de {brl(prefs.monthlyGoal, 0)} · {deals}/{prefs.monthlyGoalDeals} contratos</p>
+              <p className="mt-1 text-xs text-[#f7d774]">{missing > 0 ? `Faltam ${brl(missing, 0)} em ${daysLeft} dias` : "Meta batida! 🏆"}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TipCard() {
+  const [shift, setShift] = useState(0);
+  const tip = pickDaily(SALES_TIPS, shift)!;
+  return (
+    <div className="mt-5 flex items-center gap-4 rounded-2xl bg-gradient-to-r from-amber-50 to-white p-4 ring-1 ring-amber-500/20">
+      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700">
+        <Lightbulb className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-bold tracking-wider text-amber-700 uppercase">Dica de venda · {tip.title}</p>
+        <p className="text-sm text-ink-700">{tip.text}</p>
+      </div>
+      <button onClick={() => setShift((v) => v + 1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-amber-700 hover:bg-amber-100" aria-label="Próxima dica">
+        <ChevronRight className="h-5 w-5" />
+      </button>
     </div>
   );
 }

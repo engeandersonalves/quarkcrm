@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation";
 import { use, useState } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
+import { useCelebrate } from "@/components/app/celebration";
 import { useQuick } from "@/components/app/shell";
 import { TaskRow } from "@/components/app/task-row";
 import { Avatar, Badge, Button, Card, CardHeader, Empty, Input, Textarea, cx } from "@/components/ui";
@@ -54,6 +55,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
   const router = useRouter();
   const { user, profiles } = useApp();
   const { openLead, openTask } = useQuick();
+  const celebrate = useCelebrate();
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState("nota");
   const [lostReason, setLostReason] = useState("");
@@ -97,7 +99,10 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
       .eq("id", lead.id);
     if (error) return toast.error(error.message);
     setAskLost(false);
-    toast.success(`Etapa: ${stageOf(status).label}`);
+    if (status === "ganho") {
+      const best = Math.max(0, ...(data?.proposals ?? []).filter((p) => p.status !== "recusada").map((p) => Number(p.final_price)));
+      celebrate({ title: "Venda fechada!", name: lead.name, amount: best || lead.estimated_value || undefined });
+    } else toast.success(`Etapa: ${stageOf(status).label}`);
   };
 
   const addNote = async (e: React.FormEvent) => {

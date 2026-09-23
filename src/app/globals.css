@@ -2,6 +2,7 @@
 
 @theme {
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-playfair), Georgia, serif;
   --font-display: var(--font-sora), var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 
   --color-ink-950: #070b14;
@@ -88,6 +89,40 @@
 }
 @utility animate-fade-up {
   animation: fade-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+@keyframes ken-burns {
+  from { transform: scale(1.08) translate3d(0, 0, 0); }
+  to { transform: scale(1.22) translate3d(-2%, -2%, 0); }
+}
+@utility animate-ken-burns {
+  animation: ken-burns 24s ease-out both alternate infinite;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(18px); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@utility animate-rise {
+  animation: rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+@utility text-gold {
+  background-image: linear-gradient(100deg, #b8862b 0%, #f7d774 25%, #fff3c4 40%, #e0a93b 60%, #b8862b 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 8s linear infinite;
+}
+
+@keyframes confetti-fall {
+  0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--dx, 0), 110vh, 0) rotate(720deg); opacity: 0.9; }
 }
 
 @keyframes wave {

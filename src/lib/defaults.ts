@@ -21,6 +21,60 @@ export interface CompanySettings {
   warranty_installation_years: number;
   warranty_structure_years: number;
   defaults: Partial<ProposalInputs>;
+  /** Kits salvos para preencher orçamentos com um clique (privado: nunca vai para a proposta). */
+  kits: KitPreset[];
+  /** Preferências do app: abertura, meta, frases e imagens (privado). */
+  app: AppPrefs;
+  /** O que aparece na proposta do cliente (público). */
+  proposal: ProposalPrefs;
+}
+
+export interface KitPreset {
+  id: string;
+  name: string;
+  kitPrice: number;
+  moduleBrand: string;
+  moduleModel: string;
+  modulePowerW: number;
+  moduleQty: number;
+  inverterBrand: string;
+  inverterModel: string;
+  inverterPowerKw: number;
+  inverterQty: number;
+  structureType: string;
+}
+
+export type SplashMode = "always" | "daily" | "off";
+
+export interface AppPrefs {
+  splash: SplashMode;
+  monthlyGoal: number; // R$ vendidos no mês
+  monthlyGoalDeals: number; // nº de contratos no mês
+  showTips: boolean;
+  celebrate: boolean;
+  useDefaultQuotes: boolean;
+  customQuotes: { text: string; author: string }[];
+  images: string[]; // URLs de imagens próprias para a abertura e o painel
+}
+
+export interface ProposalSections {
+  howItWorks: boolean;
+  bill: boolean;
+  payback: boolean;
+  generation: boolean;
+  equipment: boolean;
+  warranties: boolean;
+  timeline: boolean;
+  planet: boolean;
+  faq: boolean;
+  about: boolean;
+}
+
+export interface ProposalPrefs {
+  headline: string; // título da capa (usa {nome})
+  sections: ProposalSections;
+  timeline: { day: number; title: string; text: string }[];
+  faq: { q: string; a: string }[];
 }
 
 export const DEFAULT_INPUTS: ProposalInputs = {
@@ -84,10 +138,65 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   warranty_installation_years: 1,
   warranty_structure_years: 12,
   defaults: {},
+  kits: [],
+  app: {
+    splash: "daily",
+    monthlyGoal: 150000,
+    monthlyGoalDeals: 6,
+    showTips: true,
+    celebrate: true,
+    useDefaultQuotes: true,
+    customQuotes: [],
+    images: [],
+  },
+  proposal: {
+    headline: "",
+    sections: {
+      howItWorks: true,
+      bill: true,
+      payback: true,
+      generation: true,
+      equipment: true,
+      warranties: true,
+      timeline: true,
+      planet: true,
+      faq: true,
+      about: true,
+    },
+    timeline: [],
+    faq: [],
+  },
 };
 
+type StoredDefaults = Partial<ProposalInputs> & { kits?: KitPreset[]; app?: Partial<AppPrefs> };
+
+/**
+ * Converte o JSON salvo no banco em configurações completas.
+ * Kits e preferências do app ficam guardados dentro de "defaults" — chave que a função
+ * pública da proposta remove — para que preços de kit e metas nunca cheguem ao cliente.
+ */
 export function mergeSettings(s: Partial<CompanySettings> | null | undefined): CompanySettings {
-  return { ...DEFAULT_SETTINGS, ...(s ?? {}), defaults: { ...(s?.defaults ?? {}) } };
+  const stored = (s?.defaults ?? {}) as StoredDefaults;
+  const { kits, app, ...defaults } = stored;
+  const proposal = (s?.proposal ?? {}) as Partial<ProposalPrefs>;
+  return {
+    ...DEFAULT_SETTINGS,
+    ...(s ?? {}),
+    defaults,
+    kits: kits ?? s?.kits ?? [],
+    app: { ...DEFAULT_SETTINGS.app, ...(s?.app ?? {}), ...(app ?? {}) },
+    proposal: {
+      ...DEFAULT_SETTINGS.proposal,
+      ...proposal,
+      sections: { ...DEFAULT_SETTINGS.proposal.sections, ...(proposal.sections ?? {}) },
+    },
+  };
+}
+
+/** Formato para salvar no banco (inverso de mergeSettings). */
+export function toStoredSettings(s: CompanySettings) {
+  const { kits, app, defaults, ...rest } = s;
+  return { ...rest, defaults: { ...defaults, kits, app } };
 }
 
 export function mergeInputs(...parts: (Partial<ProposalInputs> | null | undefined)[]): ProposalInputs {

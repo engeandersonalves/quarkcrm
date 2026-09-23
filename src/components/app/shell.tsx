@@ -8,6 +8,9 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { supabase } from "@/lib/supabase/client";
 import type { Lead, Task } from "@/lib/types";
 import { AppProvider, useApp } from "./app-context";
+import { CelebrationProvider } from "./celebration";
+import { Splash } from "./splash";
+import { pickDaily, quotePool } from "@/lib/inspiration";
 import { LeadFormModal } from "./lead-form";
 import { TaskFormModal } from "./task-form";
 import { Avatar, cx } from "../ui";
@@ -30,7 +33,10 @@ export const useQuick = () => useContext(Quick);
 export function Shell({ user, children }: { user: User; children: ReactNode }) {
   return (
     <AppProvider user={user}>
-      <ShellInner>{children}</ShellInner>
+      <CelebrationProvider>
+        <ShellInner>{children}</ShellInner>
+        <Splash />
+      </CelebrationProvider>
     </AppProvider>
   );
 }
@@ -110,6 +116,7 @@ function ShellInner({ children }: { children: ReactNode }) {
             </button>
           </nav>
 
+          <SidebarQuote />
           <div className="relative m-3 flex items-center gap-3 rounded-2xl bg-white/[0.04] p-3">
             <Avatar name={profile?.full_name ?? user.email} />
             <div className="min-w-0 flex-1">
@@ -195,5 +202,17 @@ function FabItem({ icon, title, text, onClick }: { icon: ReactNode; title: strin
         <p className="text-xs text-ink-500">{text}</p>
       </div>
     </button>
+  );
+}
+
+function SidebarQuote() {
+  const { settings } = useApp();
+  const q = pickDaily(quotePool(settings.app.customQuotes, settings.app.useDefaultQuotes), 7);
+  if (!q) return null;
+  return (
+    <div className="relative mx-4 mb-2 border-l-2 border-[#e0a93b]/60 pl-3">
+      <p className="font-serif text-[13px] leading-snug text-ink-300 italic">“{q.text}”</p>
+      <p className="mt-1 text-[10px] tracking-[0.18em] text-ink-500 uppercase">{q.author}</p>
+    </div>
   );
 }

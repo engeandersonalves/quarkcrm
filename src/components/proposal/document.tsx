@@ -32,6 +32,7 @@ import { formatDate, formatPhone, whatsappUrl } from "@/lib/format";
 import { brl, calcEnergy, calcFinancing, fmtNum, irr, pmt, type ProposalInputs } from "@/lib/pricing";
 import { Button, Field, Input, Modal, cx } from "../ui";
 import { CashflowChart, GenerationChart } from "./charts";
+import { DEFAULT_FAQ, DEFAULT_TIMELINE } from "@/lib/proposal-content";
 import {
   BillIllo,
   CarIllo,
@@ -72,16 +73,14 @@ export interface PublicProposal {
 const MODULE_AREA_M2 = 2.6;
 const CAR_KG_CO2_PER_KM = 0.12;
 
-/** Etapas da obra, distribuídas proporcionalmente ao prazo total (padrão ~40 dias). */
-const WORK_STEPS = [
-  { at: 0, icon: FileSignature, color: "bg-amber-400", title: "Pagamento e contrato", text: "Você aprova a proposta e a gente já começa a trabalhar." },
-  { at: 0.05, icon: Search, color: "bg-sky-400", title: "Visita técnica", text: "Nosso técnico vai até a sua casa, mede o telhado e confere a parte elétrica." },
-  { at: 0.12, icon: Ruler, color: "bg-violet-400", title: "Projeto do engenheiro", text: "O engenheiro desenha o seu sistema, do jeitinho certo para o seu telhado." },
-  { at: 0.2, icon: Send, color: "bg-indigo-400", title: "Pedido na concessionária", text: "Enviamos o projeto para a companhia de energia e cuidamos de toda a papelada." },
-  { at: 0.45, icon: Package, color: "bg-orange-400", title: "Chegada dos equipamentos", text: "Placas, inversor e estrutura chegam novinhos, direto da fábrica." },
-  { at: 0.55, icon: HardHat, color: "bg-rose-400", title: "Instalação", text: "Nossa equipe instala tudo em 1 a 3 dias, com segurança e sem sujeira." },
-  { at: 0.72, icon: ClipboardCheck, color: "bg-teal-400", title: "Vistoria e novo medidor", text: "A concessionária vistoria o sistema e troca o seu relógio de luz." },
-  { at: 1, icon: PartyPopper, color: "bg-emerald-500", title: "Sistema ligado!", text: "Homologação concluída: agora é só aproveitar o sol e ver a conta cair." },
+const STEP_STYLES = [
+  { icon: FileSignature, color: "bg-amber-400" },
+  { icon: Search, color: "bg-sky-400" },
+  { icon: Ruler, color: "bg-violet-400" },
+  { icon: Send, color: "bg-indigo-400" },
+  { icon: Package, color: "bg-orange-400" },
+  { icon: HardHat, color: "bg-rose-400" },
+  { icon: ClipboardCheck, color: "bg-teal-400" },
 ];
 
 export function ProposalDocument({ data, token }: { data: PublicProposal; token: string | null }) {
@@ -111,6 +110,13 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
   const totalDays = Math.max(10, Math.round(inputs.installationDays || 40));
   const freeMonths = hasBill ? Math.floor(energy.savings25y / energy.monthlyBillBefore) : 0;
   const carKm = Math.round((energy.co2TonsPerYear * 1000) / CAR_KG_CO2_PER_KM);
+  const show = s.proposal.sections;
+  const steps = s.proposal.timeline.length
+    ? [...s.proposal.timeline].sort((a, b) => a.day - b.day)
+    : DEFAULT_TIMELINE.map((st) => ({ ...st, day: Math.round((st.day / 40) * totalDays) }));
+  const lastDay = steps.length ? steps[steps.length - 1].day : totalDays;
+  const faq = s.proposal.faq.length ? s.proposal.faq : DEFAULT_FAQ;
+  const headline = s.proposal.headline.trim();
 
   useEffect(() => {
     if (!token) return;
@@ -149,9 +155,15 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
               ☀️ Proposta nº {data.proposal.number} · {formatDate(data.proposal.created_at)}
             </p>
             <h1 className="mt-5 font-display text-[38px] leading-[1.05] font-bold tracking-tight sm:text-[54px]">
+              {headline ? (
+                <span className="text-sun-gradient">{headline.replaceAll("{nome}", firstName)}</span>
+              ) : (
+                <>
               Olá, {firstName}! <span className="inline-block origin-[70%_70%] animate-[wave_2s_ease-in-out_1]">👋</span>
               <br />
               <span className="text-sun-gradient">Vamos transformar sol em economia</span> na sua casa.
+                </>
+              )}
             </h1>
             <p className="mt-5 max-w-lg text-lg leading-relaxed text-ink-600">
               Preparamos um sistema de energia solar feito sob medida para você.
@@ -207,7 +219,8 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
         </Section>
 
         {/* ================================================= COMO FUNCIONA */}
-        <Section emoji="🤔" title="Como a energia solar funciona?" subtitle="É mais simples do que parece. Olha só:">
+        {show.howItWorks && (
+<Section emoji="🤔" title="Como a energia solar funciona?" subtitle="É mais simples do que parece. Olha só:">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <HowStep n={1} illo={<SunIllo className="h-20 w-20" />} title="O sol brilha" text="A luz do sol chega todos os dias no seu telhado. De graça!" />
             <HowStep n={2} illo={<PanelIllo className="h-20 w-20" />} title="As placas captam" text="As placas solares transformam a luz do sol em energia elétrica." />
@@ -223,9 +236,10 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             </Explain>
           </div>
         </Section>
+        )}
 
         {/* ======================================================== CONTA */}
-        {hasBill && (
+        {hasBill && show.bill && (
           <Section emoji="🧾" title="Sua conta de luz: antes e depois" subtitle="Com os valores de hoje, calculados com as regras atuais (Lei 14.300).">
             <div className="grid items-center gap-6 rounded-[28px] bg-white p-5 shadow-soft sm:p-8 lg:grid-cols-[1fr_auto_1fr]">
               <div className="flex flex-col items-center text-center">
@@ -266,7 +280,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
         )}
 
         {/* ======================================================= RETORNO */}
-        {energy.monthlySavings > 0 && (
+        {energy.monthlySavings > 0 && show.payback && (
           <Section emoji="🐷" title="Seu dinheiro de volta (e muito mais)" subtitle="A economia de todo mês vai enchendo o cofrinho até pagar o sistema. Depois disso, é lucro!">
             <div className="grid gap-4">
               <div className="flex flex-col gap-5 rounded-[28px] bg-gradient-to-br from-pink-50 to-amber-50 p-6 ring-1 ring-pink-200/60 sm:flex-row sm:items-center sm:p-8">
@@ -301,14 +315,17 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
         )}
 
         {/* ======================================================= GERAÇÃO */}
-        <Section emoji="🌤️" title="Quanto o seu sistema vai produzir" subtitle="No verão o sol é mais forte e ele produz mais. No inverno, um pouco menos — os créditos equilibram tudo.">
+        {show.generation && (
+<Section emoji="🌤️" title="Quanto o seu sistema vai produzir" subtitle="No verão o sol é mais forte e ele produz mais. No inverno, um pouco menos — os créditos equilibram tudo.">
           <div className="rounded-[28px] bg-white p-5 shadow-soft sm:p-6">
             <GenerationChart data={energy.monthly} />
           </div>
         </Section>
+        )}
 
         {/* ======================================================= SISTEMA */}
-        <Section emoji="🧩" title="O que vai no seu telhado" subtitle="Só equipamentos de marcas reconhecidas mundialmente.">
+        {show.equipment && (
+<Section emoji="🧩" title="O que vai no seu telhado" subtitle="Só equipamentos de marcas reconhecidas mundialmente.">
           <div className="grid gap-3 sm:grid-cols-2">
             <Equipment
               illo={<PanelIllo className="h-20 w-20" />}
@@ -329,9 +346,11 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             📐 Ocupa cerca de <b>{fmtNum(inputs.moduleQty * MODULE_AREA_M2)} m²</b> do telhado e produz <b>{fmtNum(energy.annualGeneration / 1000, 1)} MWh</b> por ano.
           </p>
         </Section>
+        )}
 
         {/* ===================================================== GARANTIAS */}
-        <Section emoji="🛡️" title="Garantias: pode ficar tranquilo" subtitle="Se algo der errado, a gente resolve. Está tudo no contrato.">
+        {show.warranties && (
+<Section emoji="🛡️" title="Garantias: pode ficar tranquilo" subtitle="Se algo der errado, a gente resolve. Está tudo no contrato.">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <Warranty years={s.warranty_modules_performance_years} title="Eficiência das placas" text="Produzindo pelo menos 80% após esse tempo" illo={<PanelIllo className="h-12 w-12" />} />
             <Warranty years={s.warranty_modules_years} title="Placas" text="Contra defeitos de fabricação" illo={<ShieldIllo className="h-12 w-12" />} />
@@ -340,14 +359,16 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             <Warranty years={s.warranty_installation_years} title="Instalação" text="Nosso serviço, com suporte da equipe" illo={<ToolsIllo className="h-12 w-12" />} />
           </div>
         </Section>
+        )}
 
         {/* ======================================================== OBRA */}
-        <Section emoji="🗓️" title="Passo a passo da sua obra" subtitle={`Do pagamento até o sistema ligado são cerca de ${totalDays} dias. Você acompanha tudo com a gente.`}>
+        {show.timeline && (
+<Section emoji="🗓️" title="Passo a passo da sua obra" subtitle={`Do pagamento até o sistema ligado são cerca de ${lastDay} dias. Você acompanha tudo com a gente.`}>
           <div className="rounded-[28px] bg-white p-5 shadow-soft sm:p-8">
             <div className="mb-6 flex items-center gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-500/15">
               <Calendar className="h-8 w-8 shrink-0 text-amber-600" />
               <div className="flex-1">
-                <p className="font-display font-bold">~{totalDays} dias do “sim” à energia do sol</p>
+                <p className="font-display font-bold">~{lastDay} dias do “sim” à energia do sol</p>
                 <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-amber-100">
                   <div className="h-full w-full rounded-full bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-500" />
                 </div>
@@ -355,12 +376,14 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             </div>
             <ol className="relative grid gap-5">
               <span className="absolute top-4 bottom-4 left-[19px] w-1 rounded-full bg-gradient-to-b from-amber-300 via-orange-300 to-emerald-400" />
-              {WORK_STEPS.map((step) => {
-                const day = Math.round(step.at * totalDays);
+              {steps.map((step, idx) => {
+                const day = step.day;
+                const last = idx === steps.length - 1;
+                const st = last ? { icon: PartyPopper, color: "bg-emerald-500" } : STEP_STYLES[idx % STEP_STYLES.length];
                 return (
-                  <li key={step.title} className="avoid-break relative flex gap-4">
-                    <span className={cx("relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full text-white shadow-soft ring-4 ring-white", step.color)}>
-                      <step.icon className="h-5 w-5" />
+                  <li key={`${idx}-${step.title}`} className="avoid-break relative flex gap-4">
+                    <span className={cx("relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full text-white shadow-soft ring-4 ring-white", st.color)}>
+                      <st.icon className="h-5 w-5" />
                     </span>
                     <div className="flex-1 pt-0.5">
                       <p className="text-xs font-bold tracking-wide text-ink-400 uppercase">{day === 0 ? "Dia 0" : `Dia ${day}`}</p>
@@ -373,15 +396,18 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             </ol>
           </div>
         </Section>
+        )}
 
         {/* ===================================================== PLANETA */}
-        <Section emoji="🌎" title="Você ainda ajuda o planeta" subtitle="Energia do sol é limpa: não polui e não acaba.">
+        {show.planet && (
+<Section emoji="🌎" title="Você ainda ajuda o planeta" subtitle="Energia do sol é limpa: não polui e não acaba.">
           <div className="grid gap-3 sm:grid-cols-3">
             <Planet illo={<TreeIllo className="h-16 w-16" />} value={fmtNum(energy.treesEquivalent)} label="árvores plantadas por ano (equivalente)" />
             <Planet illo={<CarIllo className="h-16 w-16" />} value={`${fmtNum(carKm)} km`} label="de carro que deixam de poluir por ano" />
             <Planet illo={<GlobeIllo className="h-16 w-16" />} value={`${fmtNum(energy.co2TonsPerYear * 25, 1)} t`} label="de CO₂ a menos em 25 anos" />
           </div>
         </Section>
+        )}
 
         {/* ================================================= INVESTIMENTO */}
         <section className="print-break mt-14">
@@ -451,17 +477,21 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
         </section>
 
         {/* ========================================================== FAQ */}
-        <Section emoji="💬" title="Perguntas que todo mundo faz">
+        {show.faq && (
+<Section emoji="💬" title="Perguntas que todo mundo faz">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Faq q="Se faltar luz na rua, eu fico com energia?">Não. Por segurança, o sistema desliga sozinho quando a rede cai e volta assim que a energia retorna.</Faq>
-            <Faq q="Precisa de manutenção?">Quase nada! Uma limpeza das placas por ano já basta. O app avisa se algo não estiver normal.</Faq>
-            <Faq q="E se eu gastar mais energia no futuro?">Dá para aumentar o sistema depois, adicionando mais placas.</Faq>
-            <Faq q="Minha casa valoriza?">Sim! Imóveis com energia solar são mais procurados e valorizam no mercado.</Faq>
+            {faq.map((f) => (
+              <Faq key={f.q} q={f.q}>
+                {f.a}
+              </Faq>
+            ))}
           </div>
         </Section>
+        )}
 
         {/* ========================================================= SOBRE */}
-        <Section emoji="🤝" title={`Quem somos: ${s.company_name}`}>
+        {show.about && (
+<Section emoji="🤝" title={`Quem somos: ${s.company_name}`}>
           <div className="grid gap-5 rounded-[28px] bg-white p-6 shadow-soft sm:grid-cols-[1.4fr_1fr] sm:p-8">
             <p className="leading-relaxed text-ink-600">{s.about}</p>
             <div className="grid content-start gap-2.5 text-sm">
@@ -489,6 +519,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             </div>
           </div>
         </Section>
+        )}
 
         {/* ========================================================== CTA */}
         <section className="no-print mt-14">
@@ -558,7 +589,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
           onClose={() => setAcceptOpen(false)}
           token={token}
           defaultName={data.lead.name}
-          days={totalDays}
+          days={lastDay}
           onAccepted={(by) => {
             setAccepted({ at: new Date().toISOString(), by });
             setAcceptOpen(false);

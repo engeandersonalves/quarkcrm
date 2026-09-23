@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  BookmarkPlus,
   Check,
   ChevronDown,
   Copy,
@@ -30,7 +31,7 @@ import { useApp } from "@/components/app/app-context";
 import { useQuick } from "@/components/app/shell";
 import { Badge, Button, Card, CardHeader, Field, Input, MoneyInput, NumberInput, Segmented, Select, Textarea, cx } from "@/components/ui";
 import { PROPOSAL_STATUS, ROOF_TYPES } from "@/lib/constants";
-import { mergeInputs } from "@/lib/defaults";
+import { mergeInputs, toStoredSettings, type KitPreset } from "@/lib/defaults";
 import { addDays, formatPhone, whatsappUrl } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, calcEnergy, calcPricing, fmtNum, type AmountMode, type PriceComponent, type ProposalInputs } from "@/lib/pricing";
@@ -196,6 +197,29 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
     }
   }
 
+  async function saveAsKit() {
+    if (!inputs) return;
+    const name = prompt("Nome do kit", `${fmtNum(pricing!.powerKwp, 2)} kWp ${inputs.moduleBrand} + ${inputs.inverterBrand}`.trim());
+    if (!name) return;
+    const kit: KitPreset = {
+      id: crypto.randomUUID(),
+      name,
+      kitPrice: inputs.kitPrice,
+      moduleBrand: inputs.moduleBrand,
+      moduleModel: inputs.moduleModel,
+      modulePowerW: inputs.modulePowerW,
+      moduleQty: inputs.moduleQty,
+      inverterBrand: inputs.inverterBrand,
+      inverterModel: inputs.inverterModel,
+      inverterPowerKw: inputs.inverterPowerKw,
+      inverterQty: inputs.inverterQty,
+      structureType: inputs.structureType,
+    };
+    const { error } = await supabase().from("settings").upsert({ id: 1, data: toStoredSettings({ ...settings, kits: [kit, ...settings.kits] }) });
+    if (error) toast.error(error.message);
+    else toast.success("Kit salvo! Ele aparece em “Usar um kit salvo”.");
+  }
+
   const status = proposal ? PROPOSAL_STATUS[proposal.status] : null;
   const suggested = energy.requiredModulesForConsumption;
   const inverterHint =
@@ -344,8 +368,52 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
 
           {/* Equipamentos */}
           <Card id="sec-kit" className="scroll-mt-28">
-            <CardHeader icon={<SunMedium className="h-[18px] w-[18px]" />} title="3. Kit fotovoltaico" subtitle="Equipamentos e preço do distribuidor" />
+            <CardHeader
+              icon={<SunMedium className="h-[18px] w-[18px]" />}
+              title="3. Kit fotovoltaico"
+              subtitle="Equipamentos e preço do distribuidor"
+              action={
+                <Button size="sm" variant="ghost" onClick={saveAsKit} disabled={!inputs.moduleQty || !inputs.modulePowerW}>
+                  <BookmarkPlus className="h-3.5 w-3.5" /> Salvar como kit
+                </Button>
+              }
+            />
             <div className="grid gap-5 px-5 pb-5">
+              {settings.kits.length > 0 && (
+                <Field label="Usar um kit salvo">
+                  <Select
+                    value=""
+                    onChange={(e) => {
+                      const k = settings.kits.find((x) => x.id === e.target.value);
+                      if (!k) return;
+                      setInputs((i) =>
+                        i && {
+                          ...i,
+                          kitPrice: k.kitPrice,
+                          moduleBrand: k.moduleBrand,
+                          moduleModel: k.moduleModel,
+                          modulePowerW: k.modulePowerW,
+                          moduleQty: k.moduleQty,
+                          inverterBrand: k.inverterBrand,
+                          inverterModel: k.inverterModel,
+                          inverterPowerKw: k.inverterPowerKw,
+                          inverterQty: k.inverterQty,
+                          structureType: k.structureType,
+                        },
+                      );
+                      setDirty(true);
+                      toast.success(`Kit “${k.name || "sem nome"}” aplicado`);
+                    }}
+                  >
+                    <option value="">Escolha um kit para preencher tudo…</option>
+                    {settings.kits.map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {k.name || "Kit sem nome"} · {fmtNum((k.modulePowerW * k.moduleQty) / 1000, 2)} kWp · {brl(k.kitPrice, 0)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
               <Field label="Preço do kit">
                 <MoneyInput value={inputs.kitPrice} onChange={(v) => set("kitPrice", v)} className="[&_input]:h-12 [&_input]:text-lg [&_input]:font-semibold" />
               </Field>

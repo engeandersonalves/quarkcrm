@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useCelebrate } from "@/components/app/celebration";
 import { useQuick } from "@/components/app/shell";
 import { Avatar, Badge, Button, Card, Empty, Input, PageHeader, Segmented, Select, Skeleton, cx } from "@/components/ui";
 import { SOURCES, STAGES, stageOf } from "@/lib/constants";
@@ -27,6 +28,7 @@ export default function LeadsPage() {
 function Leads() {
   const params = useSearchParams();
   const { openLead } = useQuick();
+  const celebrate = useCelebrate();
   const [view, setView] = useState<"kanban" | "lista">("kanban");
   const [q, setQ] = useState("");
   const [source, setSource] = useState("");
@@ -65,6 +67,7 @@ function Leads() {
     setData((rows) => rows?.map((l) => (l.id === id ? { ...l, status, position: Date.now() / 1000 } : l)) ?? null);
     const { error } = await supabase().from("leads").update({ status, position: Date.now() / 1000 }).eq("id", id);
     if (error) toast.error(error.message);
+    else if (status === "ganho") celebrate({ title: "Venda fechada!", name: lead.name, amount: leadValue(lead) || undefined });
     else toast.success(`${lead.name} → ${stageOf(status).label}`);
   };
 
