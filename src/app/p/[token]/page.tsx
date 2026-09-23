@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { ProposalDocument, type PublicProposal } from "@/components/proposal/document";
+import { hasSupabase } from "@/lib/supabase/env";
 import { anonSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 const load = cache(async (token: string) => {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return null;
+  if (!hasSupabase) return null;
   const { data } = await anonSupabase().rpc("get_public_proposal", { p_token: token });
   return (data as PublicProposal | null) ?? null;
 });

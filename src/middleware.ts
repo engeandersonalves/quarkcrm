@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { SUPABASE_ANON_KEY, SUPABASE_URL, hasSupabase } from "@/lib/supabase/env";
 
 const PUBLIC_PREFIXES = ["/login", "/p/", "/captura", "/api/public", "/api/cron"];
 
@@ -8,12 +9,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  if (!hasSupabase) {
     if (isPublic || pathname === "/setup") return response;
     return NextResponse.redirect(new URL("/setup", request.url));
   }
 
-  const sb = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+  const sb = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (list) => {
