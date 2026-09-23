@@ -22,7 +22,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
 import { CinematicBackdrop } from "@/components/app/cinematic";
-import { Button, Card, CardHeader, Field, Input, MoneyInput, NumberInput, PageHeader, Segmented, Select, Switch, Textarea, cx } from "@/components/ui";
+import { Button, Card, CardHeader, Field, ImageField, Input, MoneyInput, NumberInput, PageHeader, Segmented, Select, Switch, Textarea, cx } from "@/components/ui";
 import { ROOF_TYPES } from "@/lib/constants";
 import { DEFAULT_INPUTS, toStoredSettings, type CompanySettings, type KitPreset, type ProposalSections, type SplashMode } from "@/lib/defaults";
 import { imagePool, pickDaily, quotePool } from "@/lib/inspiration";
@@ -195,9 +195,43 @@ export default function SettingsPage() {
           {tab === "proposta" && (
             <>
               <Card>
+                <CardHeader icon={<ImageIcon className="h-[18px] w-[18px]" />} title="Fotos da proposta" subtitle="Fotos reais deixam a proposta muito mais profissional" />
+                <div className="grid gap-5 px-5 pb-5">
+                  <Field label="Foto da capa" hint="Ideal: foto horizontal de uma obra sua, em alta resolução">
+                    <ImageField value={form.proposal.coverImage} onChange={(v) => setProp("coverImage", v)} folder="capa" aspect="aspect-[21/9]" label="Enviar foto da capa" />
+                  </Field>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Foto padrão das placas" hint="Usada quando o orçamento/kit não tem foto própria">
+                      <ImageField value={form.proposal.moduleImage} onChange={(v) => setProp("moduleImage", v)} folder="equipamentos" aspect="aspect-[16/10]" />
+                    </Field>
+                    <Field label="Foto padrão do inversor">
+                      <ImageField value={form.proposal.inverterImage} onChange={(v) => setProp("inverterImage", v)} folder="equipamentos" aspect="aspect-[16/10]" />
+                    </Field>
+                  </div>
+                  <Field label="Obras realizadas (até 6 fotos)" hint="Aparecem na seção “Portfólio” da proposta">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {[...form.proposal.gallery, ""].slice(0, 6).map((src, i) => (
+                        <ImageField
+                          key={`${i}-${src}`}
+                          value={src}
+                          folder="obras"
+                          label="Adicionar obra"
+                          onChange={(v) => {
+                            const g = [...form.proposal.gallery];
+                            if (v) g[i] = v;
+                            else g.splice(i, 1);
+                            setProp("gallery", g.filter(Boolean));
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </Field>
+                </div>
+              </Card>
+              <Card>
                 <CardHeader title="Capa" subtitle="Título grande no topo da proposta" />
                 <div className="px-5 pb-5">
-                  <Field label="Título da capa" hint='Use {nome} para o primeiro nome do cliente. Em branco: “Olá, {nome}! Vamos transformar sol em economia na sua casa.”'>
+                  <Field label="Título da capa" hint="Use {nome} para o primeiro nome do cliente. Em branco: “Energia solar para Nome do Cliente”.">
                     <Input value={form.proposal.headline} onChange={(e) => setProp("headline", e.target.value)} placeholder="Ex.: {nome}, chegou a hora de parar de pagar caro na luz" />
                   </Field>
                 </div>
@@ -386,6 +420,12 @@ function KitsTab({ kits, onChange }: { kits: KitPreset[]; onChange: (k: KitPrese
             <Field label="Modelo"><Input value={k.inverterModel} onChange={(e) => upd(k.id, { inverterModel: e.target.value })} /></Field>
             <Field label="Potência"><NumberInput value={k.inverterPowerKw} onChange={(v) => upd(k.id, { inverterPowerKw: v })} suffix="kW" digits={1} /></Field>
             <Field label="Quantidade"><NumberInput value={k.inverterQty} onChange={(v) => upd(k.id, { inverterQty: v })} suffix="un" digits={0} /></Field>
+            <Field label="Foto das placas" className="sm:col-span-2">
+              <ImageField value={k.moduleImage ?? ""} onChange={(v) => upd(k.id, { moduleImage: v })} folder="equipamentos" aspect="aspect-[16/9]" />
+            </Field>
+            <Field label="Foto do inversor" className="sm:col-span-2">
+              <ImageField value={k.inverterImage ?? ""} onChange={(v) => upd(k.id, { inverterImage: v })} folder="equipamentos" aspect="aspect-[16/9]" />
+            </Field>
           </div>
         </Card>
       ))}

@@ -37,6 +37,8 @@ export interface ProposalInputs {
   modulePowerW: number;
   moduleQty: number;
   structureType: string;
+  moduleImage: string; // foto real das placas (URL)
+  inverterImage: string; // foto real do inversor (URL)
 
   // Custos
   laborPerModule: number;

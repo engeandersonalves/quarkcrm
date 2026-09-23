@@ -29,7 +29,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
 import { useQuick } from "@/components/app/shell";
-import { Badge, Button, Card, CardHeader, Field, Input, MoneyInput, NumberInput, Segmented, Select, Textarea, cx } from "@/components/ui";
+import { Badge, Button, Card, CardHeader, Field, ImageField, Input, MoneyInput, NumberInput, Segmented, Select, Textarea, cx } from "@/components/ui";
 import { PROPOSAL_STATUS, ROOF_TYPES } from "@/lib/constants";
 import { mergeInputs, toStoredSettings, type KitPreset } from "@/lib/defaults";
 import { addDays, formatPhone, whatsappUrl } from "@/lib/format";
@@ -214,6 +214,8 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
       inverterPowerKw: inputs.inverterPowerKw,
       inverterQty: inputs.inverterQty,
       structureType: inputs.structureType,
+      moduleImage: inputs.moduleImage,
+      inverterImage: inputs.inverterImage,
     };
     const { error } = await supabase().from("settings").upsert({ id: 1, data: toStoredSettings({ ...settings, kits: [kit, ...settings.kits] }) });
     if (error) toast.error(error.message);
@@ -399,6 +401,8 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
                           inverterPowerKw: k.inverterPowerKw,
                           inverterQty: k.inverterQty,
                           structureType: k.structureType,
+                          moduleImage: k.moduleImage || i.moduleImage,
+                          inverterImage: k.inverterImage || i.inverterImage,
                         },
                       );
                       setDirty(true);
@@ -492,6 +496,19 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
                         <option key={r}>{r}</option>
                       ))}
                     </Select>
+                  </Field>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-ink-50 p-4 ring-1 ring-ink-200/60">
+                <p className="mb-1 text-xs font-bold tracking-wider text-ink-500 uppercase">Fotos reais dos equipamentos</p>
+                <p className="mb-3 text-xs text-ink-500">Aparecem na proposta. Sem foto, usamos uma imagem ilustrativa do produto.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Placas">
+                    <ImageField value={inputs.moduleImage} onChange={(v) => set("moduleImage", v)} folder="equipamentos" label="Foto das placas" aspect="aspect-[16/10]" />
+                  </Field>
+                  <Field label="Inversor">
+                    <ImageField value={inputs.inverterImage} onChange={(v) => set("inverterImage", v)} folder="equipamentos" label="Foto do inversor" aspect="aspect-[16/10]" />
                   </Field>
                 </div>
               </div>

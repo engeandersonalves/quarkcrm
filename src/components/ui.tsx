@@ -378,3 +378,78 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
     </label>
   );
 }
+
+/* -------------------------------------------------------------- ImageField */
+
+/** Campo de imagem: enviar do computador/celular ou colar um link. */
+export function ImageField({
+  value,
+  onChange,
+  folder,
+  label = "Enviar foto",
+  aspect = "aspect-[4/3]",
+  className,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+  folder?: string;
+  label?: string;
+  aspect?: string;
+  className?: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [paste, setPaste] = useState(false);
+  const pick = async (file?: File | null) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const { uploadImage } = await import("@/lib/upload");
+      onChange(await uploadImage(file, folder));
+    } catch (e) {
+      const { toast } = await import("sonner");
+      toast.error(e instanceof Error ? e.message : "Falha no envio");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className={cx("grid gap-2", className)}>
+      <label
+        className={cx(
+          "group relative grid cursor-pointer place-items-center overflow-hidden rounded-xl bg-ink-50 ring-1 ring-ink-200 transition hover:ring-sun-400",
+          aspect,
+        )}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          pick(e.dataTransfer.files?.[0]);
+        }}
+      >
+        {value ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={value} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <span className="px-3 text-center text-xs font-medium text-ink-500">{busy ? "Enviando…" : `＋ ${label}`}</span>
+        )}
+        {value && (
+          <span className="absolute inset-x-0 bottom-0 bg-ink-950/60 py-1.5 text-center text-[11px] font-semibold text-white opacity-0 transition group-hover:opacity-100">
+            {busy ? "Enviando…" : "Trocar foto"}
+          </span>
+        )}
+        {busy && <Loader2 className="absolute h-5 w-5 animate-spin text-sun-600" />}
+        <input type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+      </label>
+      <div className="flex items-center gap-3 text-[11px]">
+        <button type="button" onClick={() => setPaste((v) => !v)} className="font-semibold text-ink-500 hover:text-ink-900">
+          {paste ? "Fechar" : "Colar link"}
+        </button>
+        {value && (
+          <button type="button" onClick={() => onChange("")} className="font-semibold text-rose-600 hover:text-rose-700">
+            Remover
+          </button>
+        )}
+      </div>
+      {paste && <Input value={value} onChange={(e) => onChange(e.target.value.trim())} placeholder="https://…/foto.jpg" className="h-9 text-xs sm:h-9" />}
+    </div>
+  );
+}

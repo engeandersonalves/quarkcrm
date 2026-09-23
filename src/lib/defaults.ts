@@ -42,6 +42,8 @@ export interface KitPreset {
   inverterPowerKw: number;
   inverterQty: number;
   structureType: string;
+  moduleImage?: string;
+  inverterImage?: string;
 }
 
 export type SplashMode = "always" | "daily" | "off";
@@ -71,6 +73,10 @@ export interface ProposalSections {
 }
 
 export interface ProposalPrefs {
+  coverImage: string; // foto da capa
+  moduleImage: string; // foto padrão das placas
+  inverterImage: string; // foto padrão do inversor
+  gallery: string[]; // fotos de obras realizadas
   headline: string; // título da capa (usa {nome})
   sections: ProposalSections;
   timeline: { day: number; title: string; text: string }[];
@@ -88,6 +94,8 @@ export const DEFAULT_INPUTS: ProposalInputs = {
   modulePowerW: 0,
   moduleQty: 0,
   structureType: "Telhado cerâmico",
+  moduleImage: "",
+  inverterImage: "",
   laborPerModule: 110,
   electricalPerKwp: 120,
   extraCosts: [],
@@ -150,6 +158,10 @@ export const DEFAULT_SETTINGS: CompanySettings = {
     images: [],
   },
   proposal: {
+    coverImage: "",
+    moduleImage: "",
+    inverterImage: "",
+    gallery: [],
     headline: "",
     sections: {
       howItWorks: true,

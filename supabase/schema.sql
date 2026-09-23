@@ -346,3 +346,23 @@ begin
     end loop;
   end if;
 end $$;
+
+-- -----------------------------------------------------------------------------
+-- Fotos (placas, inversores, capa e obras) — Supabase Storage, bucket público "media"
+-- -----------------------------------------------------------------------------
+do $$
+begin
+  if exists (select 1 from information_schema.schemata where schema_name = 'storage') then
+    insert into storage.buckets (id, name, public) values ('media', 'media', true)
+    on conflict (id) do update set public = true;
+
+    drop policy if exists "media_public_read" on storage.objects;
+    create policy "media_public_read" on storage.objects for select using (bucket_id = 'media');
+    drop policy if exists "media_team_insert" on storage.objects;
+    create policy "media_team_insert" on storage.objects for insert to authenticated with check (bucket_id = 'media');
+    drop policy if exists "media_team_update" on storage.objects;
+    create policy "media_team_update" on storage.objects for update to authenticated using (bucket_id = 'media');
+    drop policy if exists "media_team_delete" on storage.objects;
+    create policy "media_team_delete" on storage.objects for delete to authenticated using (bucket_id = 'media');
+  end if;
+end $$;
