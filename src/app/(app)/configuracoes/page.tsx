@@ -12,6 +12,7 @@ import {
   GripVertical,
   ImageIcon,
   Package,
+  PlugZap,
   Plus,
   RotateCcw,
   Sparkles,
@@ -24,18 +25,20 @@ import { useApp } from "@/components/app/app-context";
 import { CinematicBackdrop } from "@/components/app/cinematic";
 import { Button, Card, CardHeader, Field, ImageField, Input, MoneyInput, NumberInput, PageHeader, Segmented, Select, Switch, Textarea, cx } from "@/components/ui";
 import { ROOF_TYPES } from "@/lib/constants";
+import { mergeSave, type SaveInputs } from "@/lib/save";
 import { DEFAULT_INPUTS, toStoredSettings, type CompanySettings, type KitPreset, type ProposalSections, type SplashMode } from "@/lib/defaults";
 import { imagePool, pickDaily, quotePool } from "@/lib/inspiration";
 import { brl, fmtNum, type AmountMode, type PriceComponent, type ProposalInputs } from "@/lib/pricing";
 import { DEFAULT_FAQ, DEFAULT_TIMELINE, SECTION_LABELS } from "@/lib/proposal-content";
 import { supabase } from "@/lib/supabase/client";
 
-type Tab = "empresa" | "orcamento" | "kits" | "proposta" | "app" | "alertas" | "captura" | "perfil";
+type Tab = "empresa" | "orcamento" | "kits" | "save" | "proposta" | "app" | "alertas" | "captura" | "perfil";
 
 const TABS: { id: Tab; label: string; icon: typeof Building2 }[] = [
   { id: "empresa", label: "Empresa", icon: Building2 },
   { id: "orcamento", label: "Orçamento", icon: Calculator },
   { id: "kits", label: "Kits salvos", icon: Package },
+  { id: "save", label: "S.A.V.E", icon: PlugZap },
   { id: "proposta", label: "Proposta", icon: FileText },
   { id: "app", label: "App & inspiração", icon: Sparkles },
   { id: "alertas", label: "Alertas", icon: Bell },
@@ -130,7 +133,11 @@ export default function SettingsPage() {
                 <Field label="CNPJ"><Input value={form.cnpj} onChange={(e) => set("cnpj", e.target.value)} /></Field>
                 <Field label="WhatsApp comercial"><Input value={form.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} placeholder="(00) 00000-0000" /></Field>
                 <Field label="E-mail comercial"><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></Field>
+                <Field label="Instagram"><Input value={form.instagram} onChange={(e) => set("instagram", e.target.value)} placeholder="@suaempresa" /></Field>
+                <Field label="Cidade"><Input value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="Maceió – AL" /></Field>
                 <Field label="Endereço" className="sm:col-span-2"><Input value={form.address} onChange={(e) => set("address", e.target.value)} /></Field>
+                <Field label="Responsável técnico" hint="Assina as propostas S.A.V.E"><Input value={form.tech_name} onChange={(e) => set("tech_name", e.target.value)} placeholder="Eng. / Eletrotécnico Nome Sobrenome" /></Field>
+                <Field label="Registro profissional"><Input value={form.tech_registry} onChange={(e) => set("tech_registry", e.target.value)} placeholder="CFT / CREA nº" /></Field>
                 <Field label="URL do logotipo" hint="PNG ou SVG com fundo transparente" className="sm:col-span-2">
                   <Input value={form.logo_url} onChange={(e) => set("logo_url", e.target.value)} placeholder="https://…/logo.png" />
                 </Field>
@@ -191,6 +198,8 @@ export default function SettingsPage() {
           )}
 
           {tab === "kits" && <KitsTab kits={form.kits} onChange={(k) => set("kits", k)} />}
+
+          {tab === "save" && <SaveTab form={form} onChange={(v) => set("saveDefaults", v)} setProp={setProp} />}
 
           {tab === "proposta" && (
             <>
@@ -535,6 +544,96 @@ function AppTab({ form, setApp }: { form: CompanySettings; setApp: <K extends ke
           )}
         />
       </Card>
+    </>
+  );
+}
+
+function SaveTab({
+  form,
+  onChange,
+  setProp,
+}: {
+  form: CompanySettings;
+  onChange: (v: Partial<SaveInputs>) => void;
+  setProp: <K extends keyof CompanySettings["proposal"]>(k: K, v: CompanySettings["proposal"][K]) => void;
+}) {
+  const v = mergeSave(form.saveDefaults);
+  const set = <K extends keyof SaveInputs>(k: K, val: SaveInputs[K]) => onChange({ ...form.saveDefaults, [k]: val });
+  return (
+    <>
+      <Card>
+        <CardHeader icon={<PlugZap className="h-[18px] w-[18px]" />} title="Custos padrão do S.A.V.E" subtitle="Valores unitários que já vêm em todo orçamento de carregador veicular" />
+        <div className="grid gap-3 px-5 pb-5">
+          {v.extraCosts.map((it) => (
+            <div key={it.id} className="grid items-end gap-3 rounded-xl bg-ink-50 p-3 ring-1 ring-ink-200/60 sm:grid-cols-[1fr_180px]">
+              <Field label="Item">
+                <Input
+                  value={it.label}
+                  onChange={(e) => set("extraCosts", v.extraCosts.map((x) => (x.id === it.id ? { ...x, label: e.target.value } : x)))}
+                />
+              </Field>
+              <Field label={it.key === "infra" ? "Valor por metro" : "Valor unitário"}>
+                <MoneyInput value={it.unit} onChange={(unit) => set("extraCosts", v.extraCosts.map((x) => (x.id === it.id ? { ...x, unit, value: unit * x.qty } : x)))} />
+              </Field>
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-4 border-t border-ink-100 px-5 py-5 sm:grid-cols-3">
+          <DefComp label="Comissão" value={v.commission} onChange={(c) => set("commission", c)} />
+          <DefComp label="Impostos" value={v.tax} onChange={(c) => set("tax", c)} />
+          <DefComp label="Lucro" value={v.profit} onChange={(c) => set("profit", c)} />
+          <Field label="Arredondar preço">
+            <Select value={String(v.roundTo)} onChange={(e) => set("roundTo", Number(e.target.value))}>
+              <option value="0">Não arredondar</option>
+              <option value="10">R$ 10</option>
+              <option value="50">R$ 50</option>
+              <option value="100">R$ 100</option>
+            </Select>
+          </Field>
+          <Field label="Distância padrão"><NumberInput value={v.distanceM} onChange={(x) => set("distanceM", x)} suffix="m" digits={0} /></Field>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="Carregador" subtitle="Especificação que aparece na proposta" />
+        <div className="grid gap-4 px-5 pb-5 sm:grid-cols-3">
+          <Field label="Potência"><NumberInput value={v.chargerPowerKw} onChange={(x) => set("chargerPowerKw", x)} suffix="kW" digits={1} /></Field>
+          <Field label="Corrente"><NumberInput value={v.currentA} onChange={(x) => set("currentA", x)} suffix="A" digits={0} /></Field>
+          <Field label="Conector"><Input value={v.connector} onChange={(e) => set("connector", e.target.value)} /></Field>
+          <Field label="Marcas homologadas" className="sm:col-span-3"><Input value={v.chargerBrands} onChange={(e) => set("chargerBrands", e.target.value)} /></Field>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader icon={<ImageIcon className="h-[18px] w-[18px]" />} title="Fotos da proposta S.A.V.E" />
+        <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
+          <Field label="Foto da capa" hint="Ex.: um carregador instalado por você">
+            <ImageField value={form.proposal.saveCoverImage} onChange={(x) => setProp("saveCoverImage", x)} folder="capa" aspect="aspect-[16/10]" label="Enviar foto da capa" />
+          </Field>
+          <Field label="Foto padrão do carregador">
+            <ImageField value={form.proposal.chargerImage} onChange={(x) => setProp("chargerImage", x)} folder="equipamentos" aspect="aspect-[16/10]" />
+          </Field>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="Condições e garantias" />
+        <div className="grid gap-4 px-5 pb-5 sm:grid-cols-3">
+          <Field label="Execução" hint="após a entrega do equipamento"><NumberInput value={v.executionDays} onChange={(x) => set("executionDays", x)} suffix="dias" digits={0} /></Field>
+          <Field label="Validade da proposta"><NumberInput value={v.validityDays} onChange={(x) => set("validityDays", x)} suffix="dias" digits={0} /></Field>
+          <Field label="Cartão (parcelas)"><NumberInput value={v.cardInstallments} onChange={(x) => set("cardInstallments", x)} suffix="x" digits={0} /></Field>
+          <Field label="Garantia da instalação"><NumberInput value={v.installWarrantyMonths} onChange={(x) => set("installWarrantyMonths", x)} suffix="meses" digits={0} /></Field>
+          <Field label="Garantia de fábrica"><NumberInput value={v.factoryWarrantyYears} onChange={(x) => set("factoryWarrantyYears", x)} suffix="anos" digits={0} /></Field>
+          <Field label="Juros do cartão"><NumberInput value={v.cardRate} onChange={(x) => set("cardRate", x)} suffix="% a.m." /></Field>
+          <Field label="Pagamento" className="sm:col-span-3">
+            <Textarea value={v.paymentNotes} onChange={(e) => set("paymentNotes", e.target.value)} />
+          </Field>
+          <Field label="Condições gerais" hint="Uma por linha · use {distancia} e {potencia}" className="sm:col-span-3">
+            <Textarea value={v.conditions.join("\n")} onChange={(e) => set("conditions", e.target.value.split("\n"))} className="min-h-[160px]" />
+          </Field>
+        </div>
+      </Card>
+
     </>
   );
 }

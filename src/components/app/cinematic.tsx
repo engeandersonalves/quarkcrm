@@ -30,21 +30,10 @@ export function CinematicBackdrop({ src, className, dim = "strong" }: { src?: st
         )}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-[#07080c] via-transparent to-[#07080c]/40" />
-      <Grain />
     </div>
   );
 }
 
-function Grain() {
-  return (
-    <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.07] mix-blend-overlay" aria-hidden>
-      <filter id="grain">
-        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch" />
-      </filter>
-      <rect width="100%" height="100%" filter="url(#grain)" />
-    </svg>
-  );
-}
 
 /** Skyline noturno em preto e ouro — usado como base e reserva das fotos. */
 export function SkylineArt() {

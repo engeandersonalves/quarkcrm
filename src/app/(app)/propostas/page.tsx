@@ -1,42 +1,58 @@
 "use client";
 
-import { Calculator, Copy, Eye, FileText, MoreHorizontal, Search, Trash2 } from "lucide-react";
+import { Calculator, PlugZap, Copy, Eye, FileText, MoreHorizontal, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge, Button, Card, Empty, Input, PageHeader, Segmented, Skeleton, cx } from "@/components/ui";
-import { PROPOSAL_STATUS } from "@/lib/constants";
+import { PRODUCTS, PROPOSAL_STATUS, productOf } from "@/lib/constants";
+import { proposalSummary } from "@/lib/proposal-summary";
 import { formatDate, relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
 import { supabase } from "@/lib/supabase/client";
-import type { Proposal, ProposalStatus } from "@/lib/types";
+import type { Product, Proposal, ProposalStatus } from "@/lib/types";
 
 type Filter = "todas" | ProposalStatus;
 
 export default function ProposalsPage() {
+  return (
+    <Suspense>
+      <Proposals />
+    </Suspense>
+  );
+}
+
+function Proposals() {
   const router = useRouter();
+  const params = useSearchParams();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("todas");
+  const [product, setProduct] = useState<"todos" | Product>(params.get("tipo") === "save" ? "save" : params.get("tipo") === "solar" ? "solar" : "todos");
+  useEffect(() => {
+    const t = params.get("tipo");
+    setProduct(t === "save" ? "save" : t === "solar" ? "solar" : "todos");
+  }, [params]);
   const { data, loading } = useLive(
     async () => must(await supabase().from("proposals").select("*, lead:leads(id,name,city,phone)").order("created_at", { ascending: false })) as Proposal[],
     [],
     ["proposals"],
   );
+  const scoped = useMemo(() => (data ?? []).filter((p) => product === "todos" || productOf(p.inputs) === product), [data, product]);
 
   const rows = useMemo(
     () =>
-      (data ?? []).filter(
+      scoped.filter(
         (p) =>
           (filter === "todas" || p.status === filter) &&
           `${p.number} ${p.lead?.name ?? ""} ${p.title ?? ""} ${p.lead?.city ?? ""}`.toLowerCase().includes(q.toLowerCase()),
       ),
-    [data, q, filter],
+    [scoped, q, filter],
   );
 
   const totals = useMemo(() => {
-    const all = data ?? [];
+    const all = scoped;
     const open = all.filter((p) => ["enviada", "visualizada"].includes(p.status));
     const won = all.filter((p) => p.status === "aceita");
     return {
@@ -46,7 +62,7 @@ export default function ProposalsPage() {
       wonCount: won.length,
       profit: won.reduce((s, p) => s + Number(p.profit_value), 0),
     };
-  }, [data]);
+  }, [scoped]);
 
   const duplicate = async (p: Proposal) => {
     const { id, number, public_token, created_at, updated_at, lead, sent_at, viewed_at, view_count, accepted_at, accepted_by, status, ...rest } = p;
@@ -67,15 +83,40 @@ export default function ProposalsPage() {
   return (
     <div className="animate-fade-up">
       <PageHeader
-        title="Propostas"
-        subtitle="Todos os orçamentos gerados, com status de envio e visualização"
+        title={product === "save" ? "Propostas S.A.V.E" : product === "solar" ? "Propostas solares" : "Propostas"}
+        subtitle={product === "save" ? "Sistemas de abastecimento de veículo elétrico" : "Todos os orçamentos gerados, com status de envio e visualização"}
         actions={
-          <Link href="/propostas/nova">
-            <Button variant="sun">
-              <Calculator className="h-4 w-4" /> Novo orçamento
-            </Button>
-          </Link>
+          <>
+            {product !== "save" && (
+              <Link href="/propostas/nova">
+                <Button variant="sun">
+                  <Calculator className="h-4 w-4" /> Orçamento solar
+                </Button>
+              </Link>
+            )}
+            {product !== "solar" && (
+              <Link href="/propostas/nova?tipo=save">
+                <Button className="bg-sky-600 hover:bg-sky-700">
+                  <PlugZap className="h-4 w-4" /> Orçamento S.A.V.E
+                </Button>
+              </Link>
+            )}
+          </>
         }
+      />
+
+      <Segmented<"todos" | Product>
+        className="mb-4"
+        value={product}
+        onChange={(v) => {
+          setProduct(v);
+          router.replace(v === "todos" ? "/propostas" : `/propostas?tipo=${v}`);
+        }}
+        options={[
+          { value: "todos", label: "Todas" },
+          { value: "solar", label: "☀️ Solar" },
+          { value: "save", label: "⚡ S.A.V.E" },
+        ]}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
@@ -136,10 +177,11 @@ export default function ProposalsPage() {
                   <div className="flex items-center gap-2">
                     <p className="truncate font-semibold text-ink-900">{p.lead?.name ?? "—"}</p>
                     <Badge className={PROPOSAL_STATUS[p.status].cls}>{PROPOSAL_STATUS[p.status].label}</Badge>
+                    {productOf(p.inputs) === "save" && <Badge className={PRODUCTS.save.cls}>⚡ S.A.V.E</Badge>}
                   </div>
                   <p className="mt-0.5 truncate text-[13px] text-ink-500">
                     <span className="sm:hidden">#{p.number} · </span>
-                    {fmtNum(p.power_kwp, 2)} kWp · {fmtNum(p.monthly_generation)} kWh/mês · {formatDate(p.created_at)}
+                    {proposalSummary(p)} · {formatDate(p.created_at)}
                     {p.view_count > 0 && (
                       <span className="ml-2 inline-flex items-center gap-1 text-violet-600">
                         <Eye className="h-3 w-3" /> {p.view_count}× · {relativeTime(p.viewed_at)}

@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ROOF_TYPES, SOURCES, STAGES, UFS } from "@/lib/constants";
+import { ROOF_TYPES, SEGMENTS, SOURCES, STAGES, UFS } from "@/lib/constants";
 import { notify } from "@/lib/live";
 import { supabase } from "@/lib/supabase/client";
-import type { Lead } from "@/lib/types";
+import type { Lead, Segment } from "@/lib/types";
 import { useApp } from "./app-context";
-import { Button, Field, Input, Modal, MoneyInput, NumberInput, Segmented, Select, Textarea } from "../ui";
+import { Button, Field, Input, Modal, MoneyInput, NumberInput, Segmented, Select, Textarea, cx } from "../ui";
 
 type Form = Partial<Lead>;
 
@@ -20,6 +20,7 @@ const empty = (ownerId: string): Form => ({
   state: "",
   source: "Indicação",
   status: "novo",
+  segment: "solar",
   temperature: "morno",
   connection_type: "bi",
   consumption_kwh: null,
@@ -64,13 +65,13 @@ export function LeadFormModal({
     if (lead?.id) {
       const { error } = await sb.from("leads").update(payload).eq("id", lead.id);
       setSaving(false);
-      if (error) return toast.error(error.message);
+      if (error) return toast.error(dbHint(error.message));
       toast.success("Lead atualizado");
       onClose();
     } else {
       const { data, error } = await sb.from("leads").insert(payload).select("id").single();
       setSaving(false);
-      if (error) return toast.error(error.message);
+      if (error) return toast.error(dbHint(error.message));
       toast.success("Lead cadastrado", { description: "Equipe notificada por e-mail." });
       notify("lead", data.id);
       onClose();
@@ -98,6 +99,24 @@ export function LeadFormModal({
       }
     >
       <form id="lead-form" onSubmit={save} className="grid gap-4 sm:grid-cols-2">
+        <Field label="Interesse do cliente" className="sm:col-span-2">
+          <div className="grid grid-cols-3 gap-2">
+            {(Object.keys(SEGMENTS) as Segment[]).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => set("segment", k)}
+                className={cx(
+                  "rounded-xl px-3 py-2.5 text-left ring-1 transition",
+                  (form.segment ?? "solar") === k ? "bg-ink-900 text-white ring-ink-900" : "bg-white text-ink-700 ring-ink-200 hover:ring-ink-300",
+                )}
+              >
+                <p className="text-sm font-semibold">{k === "solar" ? "☀️ Solar" : k === "save" ? "⚡ S.A.V.E" : "☀️⚡ Ambos"}</p>
+                <p className={cx("text-[11px]", (form.segment ?? "solar") === k ? "text-ink-300" : "text-ink-500")}>{SEGMENTS[k].label}</p>
+              </button>
+            ))}
+          </div>
+        </Field>
         <Field label="Nome completo *" className="sm:col-span-2">
           <Input autoFocus value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} placeholder="Ex.: Maria Oliveira" />
         </Field>
@@ -122,6 +141,7 @@ export function LeadFormModal({
           <Input value={form.address ?? ""} onChange={(e) => set("address", e.target.value)} placeholder="Rua, número, bairro" />
         </Field>
 
+        {form.segment !== "save" && (
         <div className="sm:col-span-2 mt-2 border-t border-ink-100 pt-4">
           <p className="mb-3 text-xs font-bold tracking-wider text-ink-400 uppercase">Consumo de energia</p>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -159,6 +179,8 @@ export function LeadFormModal({
             </Field>
           </div>
         </div>
+
+        )}
 
         <div className="sm:col-span-2 mt-2 border-t border-ink-100 pt-4">
           <p className="mb-3 text-xs font-bold tracking-wider text-ink-400 uppercase">Funil</p>
@@ -209,4 +231,9 @@ export function LeadFormModal({
       </form>
     </Modal>
   );
+}
+
+/** Traduz o erro de coluna inexistente (banco sem a atualização mais recente). */
+export function dbHint(message: string) {
+  return /segment|column|coluna/i.test(message) ? "Banco de dados desatualizado: rode novamente o supabase/schema.sql no SQL Editor do Supabase." : message;
 }

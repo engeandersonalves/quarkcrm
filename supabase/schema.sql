@@ -75,6 +75,14 @@ create table if not exists public.leads (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- Segmento do cliente: energia solar, carregador veicular (S.A.V.E) ou ambos.
+alter table public.leads add column if not exists segment text not null default 'solar';
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'leads_segment_check') then
+    alter table public.leads add constraint leads_segment_check check (segment in ('solar', 'save', 'ambos'));
+  end if;
+end $$;
 create index if not exists leads_status_idx on public.leads (status);
 create index if not exists leads_created_idx on public.leads (created_at desc);
 
@@ -130,6 +138,7 @@ create table if not exists public.tasks (
   updated_at timestamptz not null default now()
 );
 create index if not exists tasks_due_idx on public.tasks (done, due_at);
+create index if not exists tasks_lead_idx on public.tasks (lead_id);
 
 -- -----------------------------------------------------------------------------
 -- Histórico de atividades do lead
@@ -300,7 +309,7 @@ begin
   if coalesce(trim(p ->> 'name'), '') = '' or coalesce(trim(p ->> 'phone'), '') = '' then
     raise exception 'nome e telefone são obrigatórios';
   end if;
-  insert into public.leads (name, phone, email, city, state, avg_bill, consumption_kwh, source, notes)
+  insert into public.leads (name, phone, email, city, state, avg_bill, consumption_kwh, source, notes, segment)
   values (
     left(trim(p ->> 'name'), 120),
     left(trim(p ->> 'phone'), 30),
@@ -310,7 +319,8 @@ begin
     nullif(p ->> 'avg_bill', '')::numeric,
     nullif(p ->> 'consumption_kwh', '')::numeric,
     left(coalesce(nullif(trim(p ->> 'source'), ''), 'Site'), 40),
-    left(nullif(trim(p ->> 'notes'), ''), 1000)
+    left(nullif(trim(p ->> 'notes'), ''), 1000),
+    case when p ->> 'segment' in ('solar', 'save', 'ambos') then p ->> 'segment' else 'solar' end
   )
   returning * into new_lead;
 

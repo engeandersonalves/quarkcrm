@@ -724,7 +724,7 @@ function Pill({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Stepper({ value, onChange, min = 0 }: { value: number; onChange: (v: number) => void; min?: number }) {
+export function Stepper({ value, onChange, min = 0 }: { value: number; onChange: (v: number) => void; min?: number }) {
   return (
     <div className="flex h-11 items-center rounded-xl bg-white ring-1 ring-ink-200 focus-within:ring-2 focus-within:ring-sun-500 sm:h-10">
       <button type="button" className="h-full w-9 shrink-0 text-lg text-ink-400 hover:text-ink-900" onClick={() => onChange(Math.max(min, (value || 0) - 1))} aria-label="Menos">
@@ -744,7 +744,7 @@ function Stepper({ value, onChange, min = 0 }: { value: number; onChange: (v: nu
   );
 }
 
-function PriceComp({ label, value, amount, onChange }: { label: string; value: PriceComponent; amount: number; onChange: (v: PriceComponent) => void }) {
+export function PriceComp({ label, value, amount, onChange }: { label: string; value: PriceComponent; amount: number; onChange: (v: PriceComponent) => void }) {
   return (
     <div className="grid items-end gap-3 sm:grid-cols-[1fr_auto_1fr]">
       <Field label={label}>
@@ -772,7 +772,7 @@ function PriceComp({ label, value, amount, onChange }: { label: string; value: P
   );
 }
 
-function Collapsible({ icon, title, subtitle, children }: { icon: ReactNode; title: string; subtitle: string; children: ReactNode }) {
+export function Collapsible({ icon, title, subtitle, children }: { icon: ReactNode; title: string; subtitle: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <Card>
@@ -784,7 +784,7 @@ function Collapsible({ icon, title, subtitle, children }: { icon: ReactNode; tit
   );
 }
 
-function LeadPicker({ leads, value, onChange, onNew }: { leads: Lead[]; value: string | null; onChange: (id: string) => void; onNew: () => void }) {
+export function LeadPicker({ leads, value, onChange, onNew }: { leads: Lead[]; value: string | null; onChange: (id: string) => void; onNew: () => void }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const ref = useRef<HTMLDivElement>(null);

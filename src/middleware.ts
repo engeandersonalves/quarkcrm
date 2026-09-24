@@ -2,15 +2,16 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, hasSupabase } from "@/lib/supabase/env";
 
-const PUBLIC_PREFIXES = ["/login", "/p/", "/captura", "/api/public", "/api/cron"];
+const PUBLIC_PREFIXES = ["/p/", "/captura", "/api/"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+  // Páginas públicas e APIs (que validam o próprio acesso) não precisam de sessão aqui.
+  if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return response;
 
   if (!hasSupabase) {
-    if (isPublic || pathname === "/setup") return response;
+    if (pathname === "/login" || pathname === "/setup") return response;
     return NextResponse.redirect(new URL("/setup", request.url));
   }
 
@@ -25,11 +26,14 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // getSession lê o cookie localmente e só vai à rede quando o token precisa ser renovado.
+  // É apenas o "porteiro" das telas: os dados continuam protegidos pelo RLS do banco.
   const {
-    data: { user },
-  } = await sb.auth.getUser();
+    data: { session },
+  } = await sb.auth.getSession();
+  const user = session?.user;
 
-  if (!user && !isPublic && pathname !== "/setup") {
+  if (!user && pathname !== "/login" && pathname !== "/setup") {
     const url = new URL("/login", request.url);
     if (pathname !== "/") url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);

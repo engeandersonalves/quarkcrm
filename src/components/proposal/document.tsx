@@ -17,7 +17,7 @@ export interface PublicProposal {
     number: number;
     title: string | null;
     status: string;
-    inputs: Partial<ProposalInputs>;
+    inputs: Partial<ProposalInputs> & { product?: "solar" | "save"; [key: string]: unknown };
     final_price: number;
     power_kwp: number;
     valid_until: string | null;
@@ -604,7 +604,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
 
 /* ------------------------------------------------------------ subcomponentes */
 
-function Photo({ src, className, fallback }: { src?: string; className?: string; fallback?: ReactNode }) {
+export function Photo({ src, className, fallback }: { src?: string; className?: string; fallback?: ReactNode }) {
   const [failed, setFailed] = useState(false);
   if (!src || failed) return <div className={className}>{fallback}</div>;
   return (
@@ -626,7 +626,7 @@ function CoverFallback() {
   );
 }
 
-function Brand({ settings }: { settings: CompanySettings }) {
+export function Brand({ settings }: { settings: CompanySettings }) {
   if (settings.logo_url) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={settings.logo_url} alt={settings.company_name} className="h-10 w-auto max-w-[180px] object-contain brightness-0 invert" />;
@@ -634,7 +634,7 @@ function Brand({ settings }: { settings: CompanySettings }) {
   return <p className="font-display text-lg font-semibold tracking-tight">{settings.company_name}</p>;
 }
 
-function CoverKpi({ label, value }: { label: string; value: string }) {
+export function CoverKpi({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-[#0B1B2E]/50 px-4 py-4 sm:px-5">
       <dt className="text-[10px] font-semibold tracking-[0.14em] text-white/55 uppercase sm:text-[11px]">{label}</dt>
@@ -643,7 +643,7 @@ function CoverKpi({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SectionTitle({ num, kicker, title, dark }: { num: string; kicker: string; title: ReactNode; dark?: boolean }) {
+export function SectionTitle({ num, kicker, title, dark }: { num: string; kicker: string; title: ReactNode; dark?: boolean }) {
   return (
     <div className="flex items-start gap-5">
       <span className={cx("tnum font-display text-3xl font-light sm:text-4xl", dark ? "text-white/30" : "text-ink-300")}>{num}</span>
@@ -655,7 +655,7 @@ function SectionTitle({ num, kicker, title, dark }: { num: string; kicker: strin
   );
 }
 
-function Section({ num, kicker, title, children, tone }: { num: string; kicker: string; title: ReactNode; children: ReactNode; tone?: "paper" }) {
+export function Section({ num, kicker, title, children, tone }: { num: string; kicker: string; title: ReactNode; children: ReactNode; tone?: "paper" }) {
   return (
     <section className={cx("avoid-break px-6 py-14 sm:px-14 sm:py-16", tone === "paper" && "bg-[#F6F4EF]/70")}>
       <SectionTitle num={num} kicker={kicker} title={title} />
@@ -664,7 +664,7 @@ function Section({ num, kicker, title, children, tone }: { num: string; kicker: 
   );
 }
 
-function Notice({ tone, icon, children }: { tone: "green" | "amber"; icon: ReactNode; children: ReactNode }) {
+export function Notice({ tone, icon, children }: { tone: "green" | "amber"; icon: ReactNode; children: ReactNode }) {
   return (
     <div className={cx("flex items-center gap-3 px-6 py-4 text-sm sm:px-14", tone === "green" ? "bg-emerald-700 text-white" : "bg-amber-50 text-amber-900")}>
       {icon}
@@ -673,7 +673,7 @@ function Notice({ tone, icon, children }: { tone: "green" | "amber"; icon: React
   );
 }
 
-function Explain({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
+export function Explain({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
   return (
     <div className={cx("rounded-xl border-l-[3px] border-[#B8862B] bg-[#F6F4EF] p-5", className)}>
       <p className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-[#9A6F1E] uppercase">
@@ -700,7 +700,7 @@ function Bar({ label, value, max, color }: { label: string; value: number; max: 
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+export function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div className={cx("rounded-xl border p-4", accent ? "border-transparent text-white" : "border-ink-200 bg-white")} style={accent ? { background: NAVY } : undefined}>
       <p className={cx("text-[11px] font-semibold tracking-[0.1em] uppercase", accent ? "text-white/60" : "text-ink-500")}>{label}</p>
@@ -723,7 +723,7 @@ function BillRow({ label, hint, before, after }: { label: string; hint: string; 
   );
 }
 
-function Product({ image, render, kicker, title, specs }: { image?: string; render: ReactNode; kicker: string; title: string; specs: [string, string][] }) {
+export function Product({ image, render, kicker, title, specs }: { image?: string; render: ReactNode; kicker: string; title: string; specs: [string, string][] }) {
   return (
     <div className="overflow-hidden rounded-xl border border-ink-200 bg-white">
       <div className="relative grid aspect-[16/10] place-items-center overflow-hidden bg-gradient-to-b from-[#EEF1F5] to-[#DDE3EA]">
@@ -747,7 +747,7 @@ function Product({ image, render, kicker, title, specs }: { image?: string; rend
   );
 }
 
-function MiniSpec({ label, value, sub }: { label: string; value: string; sub: string }) {
+export function MiniSpec({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div className="bg-white p-5">
       <p className="text-[11px] font-semibold tracking-[0.12em] text-ink-500 uppercase">{label}</p>
@@ -772,7 +772,7 @@ function Warranty({ years, title, text }: { years: number; title: string; text: 
   );
 }
 
-function PayOption({ title, main, sub, highlight }: { title: string; main: string; sub: string; highlight?: boolean }) {
+export function PayOption({ title, main, sub, highlight }: { title: string; main: string; sub: string; highlight?: boolean }) {
   return (
     <div className={cx("rounded-xl p-5 ring-1", highlight ? "bg-emerald-500/15 ring-emerald-400/40" : "bg-white/[0.06] ring-white/15")}>
       <p className="text-[11px] font-semibold tracking-[0.14em] text-white/55 uppercase">{title}</p>
@@ -782,12 +782,13 @@ function PayOption({ title, main, sub, highlight }: { title: string; main: strin
   );
 }
 
-function AcceptModal({
+export function AcceptModal({
   open,
   onClose,
   token,
   defaultName,
   days,
+  note,
   onAccepted,
 }: {
   open: boolean;
@@ -795,6 +796,7 @@ function AcceptModal({
   token: string;
   defaultName: string;
   days: number;
+  note?: string;
   onAccepted: (name: string) => void;
 }) {
   const [name, setName] = useState(defaultName);
@@ -835,8 +837,8 @@ function AcceptModal({
           <Input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
         </Field>
         <p className="mt-3 text-xs leading-relaxed text-ink-500">
-          O aceite online não gera cobrança: ele reserva as condições desta proposta enquanto o contrato é preparado. Após a assinatura, o prazo estimado até o sistema em
-          operação é de {days} dias.
+          {note ??
+            `O aceite online não gera cobrança: ele reserva as condições desta proposta enquanto o contrato é preparado. Após a assinatura, o prazo estimado até o sistema em operação é de ${days} dias.`}
         </p>
       </form>
     </Modal>

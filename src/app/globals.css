@@ -96,7 +96,8 @@
   to { transform: scale(1.22) translate3d(-2%, -2%, 0); }
 }
 @utility animate-ken-burns {
-  animation: ken-burns 24s ease-out both alternate infinite;
+  animation: ken-burns 30s ease-out both;
+  will-change: transform;
 }
 
 @keyframes rise {
@@ -166,5 +167,15 @@
   section {
     padding-top: 2.25rem !important;
     padding-bottom: 2.25rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
