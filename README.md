@@ -1,5 +1,7 @@
 # ☀️ Quark CRM — Propostas de Energia Solar
 
+> 🏗️ **Quark Locações** (orçamentos, locações de andaimes, estoque e financeiro) está na pasta [`locacoes/`](locacoes/README.md).
+
 App completo para **orçar, gerar propostas premium e acompanhar vendas** de energia solar. Funciona no celular e no computador (pode ser instalado na tela inicial como app), com banco de dados em tempo real e alertas por e-mail.
 
 ## O que tem

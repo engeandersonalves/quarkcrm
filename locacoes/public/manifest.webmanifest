@@ -1,0 +1,9 @@
+{
+  "name": "Quark Locações",
+  "short_name": "Quark Locações",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0b2b",
+  "theme_color": "#0d0b2b",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
