@@ -157,3 +157,6 @@ export function normalizar(s: string): string {
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase();
 }
+
+/** Número da locação sempre no mesmo formato: #0001. */
+export const codigo = (n: number) => `#${String(n || 0).padStart(4, "0")}`;

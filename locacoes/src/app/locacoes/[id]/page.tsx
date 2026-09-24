@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
   BellRing,
   Check,
   CircleDollarSign,
+  Copy,
   ExternalLink,
   FileSignature,
   FileText,
@@ -26,13 +27,14 @@ import {
   XCircle,
 } from "lucide-react";
 import { ProximaAcao } from "@/components/card-locacao";
+import { confirmar } from "@/components/dialogo";
 import { ReceberModal } from "@/components/receber-modal";
 import { Badge, Button, Card, CardHeader, cx, Empty, Field, Input, Modal, MoneyInput, Select, Skeleton, ButtonLink } from "@/components/ui";
 import { useDados } from "@/lib/store";
 import { CATEGORIAS_ENTRADA } from "@/lib/defaults";
-import { diffDias, fmtData, fmtDataCurta, fmtDataHora, fmtDocumento, fmtTelefone, hoje, linkMaps, linkWaze, linkWhatsApp, temEndereco, uid } from "@/lib/format";
+import { addDias, codigo, diffDias, fmtData, fmtDataCurta, fmtDataHora, fmtDocumento, fmtTelefone, hoje, linkMaps, linkWaze, linkWhatsApp, temEndereco, uid } from "@/lib/format";
 import { mensagemCobranca, mensagemEntregador, mensagemVencimento } from "@/lib/mensagens";
-import { brl, descreverModalidade, descreverPartes, subtotalPeriodo, valorAluguel } from "@/lib/pricing";
+import { brl, descreverModalidade, descreverPartes, diasDaLocacao, subtotalPeriodo, valorAluguel } from "@/lib/pricing";
 import { ALERTA_COR, alertaPrazo, saldoLocacao, STATUS } from "@/lib/status";
 import type { Lancamento, Locacao } from "@/lib/types";
 
@@ -42,6 +44,19 @@ const ETAPAS = [
   { id: "na_obra", nome: "Entregue" },
   { id: "finalizada", nome: "Recolhido" },
 ] as const;
+
+/** Campo de data que só salva quando a data está completa (digitar dia/mês/ano não gera 3 alterações). */
+function CampoData({ valor, onSalvar }: { valor: string; onSalvar: (v: string) => void }) {
+  const [v, setV] = useState(valor);
+  useEffect(() => setV(valor), [valor]);
+  useEffect(() => {
+    if (v === valor || !/^20\d\d-\d\d-\d\d$/.test(v)) return;
+    const t = setTimeout(() => onSalvar(v), 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [v]);
+  return <Input type="date" value={v} onChange={(e) => setV(e.target.value)} onBlur={() => !/^20\d\d-\d\d-\d\d$/.test(v) && setV(valor)} />;
+}
 
 function Etapas({ l }: { l: Locacao }) {
   const idx = l.status === "recusada" ? 0 : ETAPAS.findIndex((e) => e.id === l.status);
@@ -98,6 +113,7 @@ export default function DetalheLocacao() {
   const e = l.endereco;
   const ativa = l.status === "agendada" || l.status === "na_obra";
   const diasRestantes = l.data_coleta ? diffDias(hoje(), l.data_coleta) : 0;
+  const diasDoPlano = diasDaLocacao(l.modalidade, l.quantidade_periodos);
 
   async function comBusy(k: string, fn: () => Promise<unknown>) {
     setBusy(k);
@@ -109,22 +125,25 @@ export default function DetalheLocacao() {
   }
 
   function mudarData(campo: "data_entrega" | "data_coleta", v: string) {
-    if (!v) return;
+    if (!v || v === l![campo]) return;
     const n = { ...l!, [campo]: v };
     if (n.data_coleta < n.data_entrega) return toast.error("A coleta não pode ser antes da entrega");
     salvarLocacao(n, `${campo === "data_entrega" ? "Entrega" : "Coleta"} remarcada para ${fmtData(v)}`);
+    toast.success(`${campo === "data_entrega" ? "Entrega" : "Coleta"} remarcada para ${fmtData(v)}`);
   }
 
-  function taxaDesmontagem() {
+  const desmontagemAplicada = saldo.lancamentos.some((x) => x.categoria === "Taxa de desmontagem");
+
+  async function taxaDesmontagem() {
     const base = l!.valor_total;
     const valor = Math.round(base * cfg.taxa_desmontagem_pct) / 100;
-    if (!confirm(`Aplicar taxa de desmontagem de ${cfg.taxa_desmontagem_pct}% (${brl(valor)})? Os itens não estavam desmontados na coleta.`)) return;
+    if (!(await confirmar({ titulo: `Cobrar taxa de desmontagem (${brl(valor)})?`, texto: `${cfg.taxa_desmontagem_pct}% do contrato, porque os itens não estavam desmontados na coleta. A cobrança entra no financeiro.`, ok: "Cobrar taxa" }))) return;
     comBusy("desm", async () => {
       await salvarLancamento({
         id: uid(),
         tipo: "entrada",
         categoria: "Taxa de desmontagem",
-        descricao: `Taxa de desmontagem ${cfg.taxa_desmontagem_pct}% — #${l!.numero}`,
+        descricao: `Taxa de desmontagem ${cfg.taxa_desmontagem_pct}% — ${codigo(l!.numero)}`,
         valor,
         data: hoje(),
         pago: false,
@@ -138,6 +157,30 @@ export default function DetalheLocacao() {
     });
   }
 
+  /** Novo orçamento igual a este (cliente que volta a alugar). */
+  function repetir() {
+    const entrega = addDias(hoje(), 1);
+    const copia: Locacao = {
+      ...l!,
+      id: uid(),
+      numero: 0,
+      status: "orcamento",
+      data_entrega: entrega,
+      data_coleta: addDias(entrega, diffDias(l!.data_entrega, l!.data_coleta) || 30),
+      entregue_em: null,
+      recolhido_em: null,
+      historico: [],
+      criado_em: new Date().toISOString(),
+      atualizado_em: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem("quark-locacoes:rascunho", JSON.stringify(copia));
+    } catch {
+      /* armazenamento bloqueado */
+    }
+    router.push("/");
+  }
+
   return (
     <>
       <Link href="/locacoes" className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-500 hover:text-ink-900">
@@ -148,7 +191,7 @@ export default function DetalheLocacao() {
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-sm font-semibold text-ink-400">#{String(l.numero).padStart(4, "0")}</span>
+            <span className="font-mono text-sm font-semibold text-ink-400">{codigo(l.numero)}</span>
             <Badge className={STATUS[l.status].cor} dot={STATUS[l.status].ponto}>
               {STATUS[l.status].nome}
             </Badge>
@@ -161,8 +204,11 @@ export default function DetalheLocacao() {
         </div>
         <div className="flex flex-wrap gap-2">
           <ButtonLink href={`/?editar=${l.id}`} variant="secondary">
-              <Pencil className="h-4 w-4" /> Editar
-            </ButtonLink>
+            <Pencil className="h-4 w-4" /> Editar
+          </ButtonLink>
+          <Button variant="secondary" onClick={repetir} title="Novo orçamento com os mesmos itens e endereço">
+            <Copy className="h-4 w-4" /> Repetir
+          </Button>
           <ButtonLink href={`/documento/${l.id}?tipo=orcamento`} target="_blank" variant="secondary">
               <FileText className="h-4 w-4" /> Orçamento
             </ButtonLink>
@@ -171,6 +217,12 @@ export default function DetalheLocacao() {
             </ButtonLink>
         </div>
       </div>
+
+      {l.status === "recusada" && (
+        <div className="mb-4 flex items-center gap-2 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-800 ring-1 ring-rose-200">
+          <XCircle className="h-4 w-4 shrink-0" /> {l.historico.at(-1)?.texto ?? "Recusada / cancelada"} — as peças não estão reservadas.
+        </div>
+      )}
 
       {/* Etapas + próxima ação */}
       <Card className="mb-5 p-5">
@@ -191,7 +243,13 @@ export default function DetalheLocacao() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => confirm(l.status === "agendada" ? "Voltar para orçamento? A cobrança em aberto será removida." : "Desfazer a entrega? Volta para “aguardando entrega”.") && voltarEtapa(l)}
+                  onClick={async () =>
+                    (await confirmar(
+                      l.status === "agendada"
+                        ? { titulo: "Voltar para orçamento?", texto: "A aprovação é desfeita e a cobrança em aberto sai do financeiro.", ok: "Voltar para orçamento" }
+                        : { titulo: "Desfazer a entrega?", texto: "A locação volta para “aguardando entrega”.", ok: "Desfazer entrega" },
+                    )) && voltarEtapa(l)
+                  }
                 >
                   <Undo2 className="h-3.5 w-3.5" /> Desfazer etapa
                 </Button>
@@ -202,7 +260,10 @@ export default function DetalheLocacao() {
                 </Button>
               )}
               {l.status === "agendada" && (
-                <Button variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50" onClick={() => confirm("Cancelar esta locação? As peças voltam ao estoque e a cobrança em aberto é removida.") && cancelar(l, "Locação cancelada antes da entrega")}>
+                <Button variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50" onClick={async () =>
+                    (await confirmar({ titulo: "Cancelar esta locação?", texto: "As peças voltam para o estoque e a cobrança em aberto sai do financeiro.", ok: "Cancelar locação", cancelar: "Manter", perigo: true })) &&
+                    cancelar(l, "Locação cancelada antes da entrega")
+                  }>
                   <XCircle className="h-3.5 w-3.5" /> Cancelar locação
                 </Button>
               )}
@@ -367,15 +428,23 @@ export default function DetalheLocacao() {
             <div className="grid gap-3 p-5">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Entrega">
-                  <Input type="date" value={l.data_entrega} onChange={(ev) => mudarData("data_entrega", ev.target.value)} />
+                  <CampoData valor={l.data_entrega} onSalvar={(v) => mudarData("data_entrega", v)} />
                 </Field>
                 <Field label="Coleta">
-                  <Input type="date" value={l.data_coleta} onChange={(ev) => mudarData("data_coleta", ev.target.value)} />
+                  <CampoData valor={l.data_coleta} onSalvar={(v) => mudarData("data_coleta", v)} />
                 </Field>
               </div>
               {l.status === "na_obra" && (
                 <div className="grid grid-cols-2 gap-2">
-                  <Button variant="secondary" loading={busy === "renovar"} onClick={() => comBusy("renovar", () => renovar(l))}>
+                  <Button
+                    variant="secondary"
+                    loading={busy === "renovar"}
+                    onClick={async () => {
+                      const nova = addDias(l.data_coleta || hoje(), diasDoPlano);
+                      if (!(await confirmar({ titulo: "Renovar o contrato?", texto: `Mais ${descreverModalidade(l.modalidade, l.quantidade_periodos)}: a coleta passa para ${fmtData(nova)} e uma cobrança de ${brl(aluguel.total)} entra no financeiro.`, ok: "Renovar" }))) return;
+                      comBusy("renovar", () => renovar(l));
+                    }}
+                  >
                     <RefreshCcw className="h-4 w-4" /> Renovar
                   </Button>
                   <ButtonLink href={linkWhatsApp(l.cliente_telefone, mensagemVencimento(l, cfg))} target="_blank" variant="secondary" className="w-full">
@@ -396,7 +465,7 @@ export default function DetalheLocacao() {
               icon={<CircleDollarSign className="h-[18px] w-[18px]" />}
               action={
                 l.status !== "orcamento" && (
-                  <Button size="sm" variant="ghost" onClick={() => setCobranca({ id: uid(), tipo: "entrada", categoria: "Avaria / reposição", descricao: `#${l.numero} — ${l.cliente_nome}`, valor: 0, data: hoje(), pago: false, pago_em: null, forma: "PIX", locacao_id: l.id, modalidade: l.modalidade, criado_em: new Date().toISOString() })}>
+                  <Button size="sm" variant="ghost" onClick={() => setCobranca({ id: uid(), tipo: "entrada", categoria: "Avaria / reposição", descricao: `${codigo(l.numero)} — ${l.cliente_nome}`, valor: 0, data: hoje(), pago: false, pago_em: null, forma: "PIX", locacao_id: l.id, modalidade: l.modalidade, criado_em: new Date().toISOString() })}>
                     <Plus className="h-3.5 w-3.5" /> Cobrança
                   </Button>
                 )
@@ -430,7 +499,9 @@ export default function DetalheLocacao() {
                         {x.pago ? (
                           <button
                             title="Desfazer recebimento"
-                            onClick={() => salvarLancamento({ ...x, pago: false, pago_em: null })}
+                            onClick={async () =>
+                              (await confirmar({ titulo: "Desfazer este recebimento?", texto: `${x.categoria} de ${brl(x.valor)} volta a ficar em aberto.`, ok: "Desfazer" })) && salvarLancamento({ ...x, pago: false, pago_em: null })
+                            }
                             className="grid h-8 w-8 place-items-center rounded-lg bg-brand-100 text-brand-700 hover:bg-brand-200"
                           >
                             <Check className="h-4 w-4" />
@@ -449,7 +520,7 @@ export default function DetalheLocacao() {
                           <MessageCircle className="h-4 w-4" /> Cobrar no WhatsApp
                         </ButtonLink>
                     )}
-                    {(l.status === "na_obra" || l.status === "finalizada") && (
+                    {(l.status === "na_obra" || l.status === "finalizada") && !desmontagemAplicada && (
                       <Button variant="ghost" size="sm" loading={busy === "desm"} onClick={taxaDesmontagem}>
                         Aplicar taxa de desmontagem ({cfg.taxa_desmontagem_pct}%)
                       </Button>
@@ -465,7 +536,7 @@ export default function DetalheLocacao() {
               variant="ghost"
               className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
               onClick={async () => {
-                if (!confirm(`Excluir a locação #${l.numero}? Cobranças em aberto também serão excluídas.`)) return;
+                if (!(await confirmar({ titulo: `Excluir a locação ${codigo(l.numero)}?`, texto: "Ela some do sistema, junto com as cobranças em aberto. Recebimentos já feitos continuam no financeiro.", ok: "Excluir", perigo: true }))) return;
                 await excluirLocacao(l.id);
                 toast.success("Locação excluída");
                 router.push("/locacoes");

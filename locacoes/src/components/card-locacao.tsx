@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, MapPin } from "lucide-react";
 import { useDados } from "@/lib/store";
-import { fmtDataCurta } from "@/lib/format";
+import { codigo, fmtDataCurta } from "@/lib/format";
 import { brl, descreverModalidade } from "@/lib/pricing";
 import { ALERTA_COR, alertaPrazo, progresso, saldoLocacao } from "@/lib/status";
 import type { Locacao } from "@/lib/types";
@@ -61,7 +61,7 @@ export function CardLocacao({ l }: { l: Locacao }) {
       className="group block cursor-pointer rounded-2xl bg-white p-4 shadow-soft ring-1 ring-ink-200/70 transition hover:-translate-y-0.5 hover:shadow-lift hover:ring-ink-300"
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="font-mono text-[11px] font-semibold text-ink-400">#{String(l.numero).padStart(4, "0")}</span>
+        <span className="font-mono text-[11px] font-semibold text-ink-400">{codigo(l.numero)}</span>
         {alerta && <span className={cx("rounded-full px-2 py-0.5 text-[10.5px] font-bold", ALERTA_COR[alerta.tipo])}>{alerta.texto}</span>}
       </div>
       <p className="mt-1 truncate font-semibold text-ink-950">{l.cliente_nome || "Cliente sem nome"}</p>
@@ -82,8 +82,8 @@ export function CardLocacao({ l }: { l: Locacao }) {
         <div className="text-[11.5px] text-ink-500">
           <p>{descreverModalidade(l.modalidade, l.quantidade_periodos)}</p>
           <p>
-            {l.status === "na_obra" ? "Coleta " : "Entrega "}
-            <b className="text-ink-700">{fmtDataCurta(l.status === "na_obra" || l.status === "finalizada" ? l.data_coleta : l.data_entrega)}</b>
+            {l.status === "na_obra" ? "Coleta " : l.status === "finalizada" ? "Recolhido " : "Entrega "}
+            <b className="text-ink-700">{fmtDataCurta(l.status === "na_obra" ? l.data_coleta : l.status === "finalizada" ? (l.recolhido_em ?? l.data_coleta).slice(0, 10) : l.data_entrega)}</b>
           </p>
         </div>
         <div className="text-right">

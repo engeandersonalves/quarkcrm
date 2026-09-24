@@ -15,6 +15,8 @@ export interface Backend {
   salvar<T extends { id: string }>(tabela: Tabela, linha: T): Promise<void>;
   excluir(tabela: Tabela, id: string): Promise<void>;
   salvarConfig(cfg: Config): Promise<void>;
+  /** Maior número de locação já gravado no servidor (para resolver números repetidos). */
+  maiorNumero(): Promise<number>;
   /** Nuvem: confirma que o e-mail logado faz parte da equipe (o 1º a entrar vira administrador). */
   entrarEquipe(): Promise<boolean>;
   equipe(): Promise<string[]>;
@@ -24,24 +26,123 @@ export interface Backend {
   ouvir(cb: () => void): () => void;
 }
 
-const TABELAS: Tabela[] = ["equipamentos", "clientes", "locacoes", "lancamentos"];
-
-function limparUrl(url: string) {
-  if (!url) return "";
-  try {
-    return new URL(url.includes("://") ? url : `https://${url}`).origin;
-  } catch {
-    return url.replace(/\/+$/, "");
+/** Erro do banco com o código do Postgres (ex.: 23505 = valor repetido). */
+export class ErroBanco extends Error {
+  constructor(
+    message: string,
+    public code?: string,
+  ) {
+    super(message);
   }
 }
 
-const SUPABASE_URL = limparUrl(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "");
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
-export const temNuvem = Boolean(SUPABASE_URL && SUPABASE_KEY);
+/** Falha de conexão (sem internet, servidor fora): vale tentar de novo depois. */
+export function ehErroDeRede(e: unknown): boolean {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
+  const msg = e instanceof Error ? e.message : String(e);
+  return /failed to fetch|networkerror|load failed|network request failed|fetch failed|timeout|ECONN|\b50[234]\b/i.test(msg);
+}
+
+const TABELAS: Tabela[] = ["equipamentos", "clientes", "locacoes", "lancamentos"];
+
+/* ------------------------------------------------------------------ Configuração da nuvem */
+
+export interface ConexaoNuvem {
+  url: string;
+  chave: string;
+}
+
+const CHAVE_CONEXAO = "quark-locacoes:nuvem";
+
+export function limparUrl(url: string) {
+  const u = (url || "").trim();
+  if (!u) return "";
+  try {
+    return new URL(u.includes("://") ? u : `https://${u}`).origin;
+  } catch {
+    return u.replace(/\/+$/, "");
+  }
+}
+
+const ENV: ConexaoNuvem = {
+  url: limparUrl(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
+  chave: (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim(),
+};
+
+/** Link "#conectar=…" (gerado em Ajustes) configura a nuvem em outro aparelho. */
+export function codificarConexao(c: ConexaoNuvem) {
+  return btoa(JSON.stringify({ u: c.url, k: c.chave })).replace(/=+$/, "");
+}
+
+function decodificarConexao(s: string): ConexaoNuvem | null {
+  try {
+    const j = JSON.parse(atob(s));
+    if (typeof j.u === "string" && typeof j.k === "string" && j.u && j.k) return { url: limparUrl(j.u), chave: j.k.trim() };
+  } catch {
+    /* link inválido */
+  }
+  return null;
+}
+
+/**
+ * De onde vem a conexão: variáveis da Vercel (preferência) ou a salva neste aparelho
+ * (Ajustes → Nuvem, ou o link/QR Code de conexão).
+ */
+export function conexaoAtual(): (ConexaoNuvem & { origem: "vercel" | "aparelho" }) | null {
+  if (ENV.url && ENV.chave) return { ...ENV, origem: "vercel" };
+  if (typeof window === "undefined") return null;
+  try {
+    const m = window.location.hash.match(/conectar=([A-Za-z0-9+/_-]+)/);
+    if (m) {
+      const c = decodificarConexao(m[1]);
+      if (c) localStorage.setItem(CHAVE_CONEXAO, JSON.stringify(c));
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    const raw = localStorage.getItem(CHAVE_CONEXAO);
+    if (raw) {
+      const c = JSON.parse(raw) as ConexaoNuvem;
+      if (c.url && c.chave) return { ...c, origem: "aparelho" };
+    }
+  } catch {
+    /* armazenamento bloqueado */
+  }
+  return null;
+}
+
+export function salvarConexao(c: ConexaoNuvem | null) {
+  try {
+    if (c) localStorage.setItem(CHAVE_CONEXAO, JSON.stringify({ url: limparUrl(c.url), chave: c.chave.trim() }));
+    else localStorage.removeItem(CHAVE_CONEXAO);
+  } catch {
+    /* armazenamento bloqueado */
+  }
+}
+
+/** Testa URL e chave antes de salvar e explica em português o que está errado. */
+export async function testarConexao(c: ConexaoNuvem): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const url = limparUrl(c.url);
+  if (!/^https:\/\/.+/.test(url)) return { ok: false, erro: "A URL deve começar com https:// (ex.: https://abcd.supabase.co)." };
+  if (c.chave.trim().length < 20) return { ok: false, erro: "A chave parece incompleta. Copie a chave pública (anon / publishable) inteira." };
+  try {
+    const cli = createClient(url, c.chave.trim(), { auth: { persistSession: false, autoRefreshToken: false } });
+    const r = await cli.from("config").select("id").limit(1);
+    if (!r.error) return { ok: true };
+    const msg = r.error.message || "";
+    if (/does not exist|schema cache|Could not find the table/i.test(msg)) return { ok: false, erro: "Conectou, mas o banco ainda não tem as tabelas. Rode o arquivo supabase/schema.sql no SQL Editor do Supabase." };
+    if (/Invalid API key|JWT|apikey|No API key/i.test(msg)) return { ok: false, erro: "A chave não é aceita por este projeto. Confira se copiou a chave pública do MESMO projeto da URL." };
+    return { ok: false, erro: msg };
+  } catch (e) {
+    return { ok: false, erro: ehErroDeRede(e) ? "Não foi possível falar com esse endereço. Confira a URL e a internet." : e instanceof Error ? e.message : String(e) };
+  }
+}
 
 let sb: SupabaseClient | null = null;
 export function supabase(): SupabaseClient {
-  if (!sb) sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+  if (!sb) {
+    const c = conexaoAtual();
+    if (!c) throw new Error("Nuvem não configurada");
+    sb = createClient(c.url, c.chave);
+  }
   return sb;
 }
 
@@ -49,8 +150,8 @@ export function supabase(): SupabaseClient {
 
 function nuvem(): Backend {
   const c = supabase();
-  const must = <T,>(r: { data: T | null; error: { message: string } | null }) => {
-    if (r.error) throw new Error(r.error.message);
+  const must = <T,>(r: { data: T | null; error: { message: string; code?: string } | null }) => {
+    if (r.error) throw new ErroBanco(r.error.message, r.error.code);
     return r.data as T;
   };
   return {
@@ -80,10 +181,17 @@ function nuvem(): Backend {
     async salvarConfig(cfg) {
       must(await c.from("config").upsert({ id: 1, dados: cfg }));
     },
+    async maiorNumero() {
+      const r = must(await c.from("locacoes").select("numero").order("numero", { ascending: false }).limit(1)) as { numero: number }[];
+      return r[0]?.numero ?? 0;
+    },
     async entrarEquipe() {
       const r = await c.rpc("entrar_equipe");
-      // Banco criado com a versão antiga do schema (sem a função): não bloqueia.
-      if (r.error) return true;
+      if (r.error) {
+        if (ehErroDeRede(new Error(r.error.message))) throw new ErroBanco(r.error.message);
+        // Banco criado com a versão antiga do schema (sem a função): não bloqueia.
+        return true;
+      }
       return Boolean(r.data);
     },
     async equipe() {
@@ -101,7 +209,7 @@ function nuvem(): Backend {
       for (const tabela of [...TABELAS, "config"]) {
         ch.on("postgres_changes", { event: "*", schema: "public", table: tabela }, () => {
           clearTimeout(t);
-          t = setTimeout(cb, 300);
+          t = setTimeout(cb, 400);
         });
       }
       ch.subscribe();
@@ -115,11 +223,11 @@ function nuvem(): Backend {
 
 /* ------------------------------------------------------------------ Navegador */
 
-const CHAVE = "quark-locacoes:v1";
+export const CHAVE_LOCAL = "quark-locacoes:v1";
 
-function lerLocal(): Dados | null {
+export function lerLocal(): Dados | null {
   try {
-    const raw = localStorage.getItem(CHAVE);
+    const raw = localStorage.getItem(CHAVE_LOCAL);
     if (!raw) return null;
     const d = JSON.parse(raw) as Partial<Dados>;
     return {
@@ -136,7 +244,7 @@ function lerLocal(): Dados | null {
 
 function gravarLocal(d: Dados) {
   try {
-    localStorage.setItem(CHAVE, JSON.stringify(d));
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify(d));
   } catch {
     // armazenamento cheio ou bloqueado: os dados ficam só na memória desta aba.
   }
@@ -171,6 +279,9 @@ function local(): Backend {
       d.config = cfg;
       gravarLocal(d);
     },
+    async maiorNumero() {
+      return atual().locacoes.reduce((m, l) => Math.max(m, l.numero || 0), 0);
+    },
     entrarEquipe: async () => true,
     equipe: async () => [],
     adicionarEquipe: async () => {},
@@ -178,7 +289,7 @@ function local(): Backend {
     ouvir(cb) {
       // Outra aba do mesmo navegador alterou os dados.
       const h = (e: StorageEvent) => {
-        if (e.key === CHAVE) {
+        if (e.key === CHAVE_LOCAL) {
           mem = null;
           cb();
         }
@@ -190,5 +301,5 @@ function local(): Backend {
 }
 
 export function criarBackend(): Backend {
-  return temNuvem ? nuvem() : local();
+  return conexaoAtual() ? nuvem() : local();
 }

@@ -6,13 +6,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, Boxes, CalendarDays, Check, FileText, MapPinned, MessageCircle, Package, Plus, RotateCcw, Save, Search, Truck, UserRound } from "lucide-react";
 import { useDados } from "@/lib/store";
-import { addDias, fmtData, fmtDataCurta, fmtDocumento, fmtNum, fmtTelefone, linkWhatsApp, normalizar, temEndereco } from "@/lib/format";
+import { addDias, codigo, fmtData, fmtDataCurta, fmtDocumento, fmtNum, fmtTelefone, linkWhatsApp, normalizar, soDigitos, temEndereco } from "@/lib/format";
 import { mensagemOrcamento } from "@/lib/mensagens";
 import { novaLocacao, novoCliente } from "@/lib/novo";
 import { brl, comparativo, descreverModalidade, descreverPartes, diasDaLocacao, PERIODOS, precosDe, totalLocacao, valorAluguel } from "@/lib/pricing";
 import type { Cliente, Equipamento, Locacao, Modalidade } from "@/lib/types";
 import { EnderecoForm } from "./endereco-form";
-import { Badge, Button, Card, cx, Field, Input, MoneyInput, Segmented, Stepper, Textarea } from "./ui";
+import { Badge, Button, Card, cx, Field, Input, MoneyInput, Segmented, Skeleton, Stepper, Textarea } from "./ui";
+
+const CHAVE_RASCUNHO = "quark-locacoes:rascunho";
+
+/** Orçamento novo ainda não salvo fica guardado no aparelho (fechou sem querer? volta de onde parou). */
+function lerRascunho(): Locacao | null {
+  try {
+    const r = JSON.parse(localStorage.getItem(CHAVE_RASCUNHO) || "null") as Locacao | null;
+    return r && r.numero === 0 && Array.isArray(r.itens) ? r : null;
+  } catch {
+    return null;
+  }
+}
 
 const PERGUNTA: Record<Modalidade, string> = {
   diaria: "Quantas diárias?",
@@ -47,7 +59,8 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
   const router = useRouter();
   const { dados, estoque, carregando, salvarLocacao, salvarCliente, salvarLancamento, aprovar, proximoNumero } = useDados();
   const cfg = dados.config;
-  const [l, setL] = useState<Locacao>(() => novaLocacao(cfg));
+  const rascunhoInicial = useRef<Locacao | null>(!editarId && !clienteId && typeof window !== "undefined" ? lerRascunho() : null);
+  const [l, setL] = useState<Locacao>(() => rascunhoInicial.current ?? novaLocacao(cfg));
   const [busca, setBusca] = useState("");
   const [salvando, setSalvando] = useState<null | "salvar" | "aprovar" | "whats" | "pdf">(null);
   const [sugestoes, setSugestoes] = useState(false);
@@ -62,6 +75,24 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
       carregouEdicao.current = editarId;
     }
   }, [editarId, dados.locacoes]);
+
+  // Avisa que recuperou o rascunho, com opção de começar do zero.
+  useEffect(() => {
+    if (rascunhoInicial.current) {
+      toast("Orçamento em andamento recuperado", { description: "Continuando de onde você parou.", action: { label: "Começar do zero", onClick: () => limpar() } });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Guarda o rascunho a cada alteração (só orçamento novo, ainda sem número).
+  useEffect(() => {
+    try {
+      if (l.numero === 0 && (l.itens.length > 0 || l.cliente_nome.trim())) localStorage.setItem(CHAVE_RASCUNHO, JSON.stringify(l));
+      else if (l.numero > 0) localStorage.removeItem(CHAVE_RASCUNHO);
+    } catch {
+      /* armazenamento bloqueado */
+    }
+  }, [l]);
 
   // Novo orçamento já com um cliente (?cliente=id)
   useEffect(() => {
@@ -147,9 +178,23 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
     }
     let cliente_id = l.cliente_id;
     if (l.cliente_nome.trim()) {
+      // Não escolheu da lista, mas o cliente já existe (mesmo telefone ou mesmo nome)? Reaproveita.
+      if (!cliente_id) {
+        const fone = soDigitos(l.cliente_telefone).slice(-8);
+        const achado =
+          (fone.length === 8 && dados.clientes.find((c) => soDigitos(c.telefone).slice(-8) === fone)) ||
+          dados.clientes.find((c) => normalizar(c.nome).trim() === normalizar(l.cliente_nome).trim());
+        if (achado) cliente_id = achado.id;
+      }
       const existente = cliente_id ? dados.clientes.find((c) => c.id === cliente_id) : null;
       const c: Cliente = existente
-        ? { ...existente, nome: l.cliente_nome.trim(), telefone: l.cliente_telefone, documento: l.cliente_documento, endereco: temEndereco(existente.endereco) ? existente.endereco : l.endereco }
+        ? {
+            ...existente,
+            nome: l.cliente_nome.trim(),
+            telefone: l.cliente_telefone || existente.telefone,
+            documento: l.cliente_documento || existente.documento,
+            endereco: temEndereco(existente.endereco) ? existente.endereco : l.endereco,
+          }
         : { ...novoCliente(), nome: l.cliente_nome.trim(), telefone: l.cliente_telefone, documento: l.cliente_documento, endereco: l.endereco };
       await salvarCliente(c);
       cliente_id = c.id;
@@ -177,7 +222,7 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
         return;
       }
       if (tipo === "salvar") {
-        toast.success(`Orçamento #${s.numero} salvo`, { action: { label: "Abrir", onClick: () => router.push(`/locacoes/${s.id}`) } });
+        toast.success(`${s.status === "orcamento" ? "Orçamento" : "Locação"} ${codigo(s.numero)} salvo`, { action: { label: "Abrir ficha", onClick: () => router.push(`/locacoes/${s.id}`) } });
       } else if (tipo === "aprovar") {
         if (await aprovar(s)) router.push(`/locacoes/${s.id}`);
       } else if (tipo === "whats" && aba) {
@@ -193,6 +238,11 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
   }
 
   function limpar() {
+    try {
+      localStorage.removeItem(CHAVE_RASCUNHO);
+    } catch {
+      /* armazenamento bloqueado */
+    }
     setL(novaLocacao(cfg));
     carregouEdicao.current = null;
     if (editarId || clienteId) router.replace("/");
@@ -211,14 +261,20 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
           icon={<Boxes className="h-[18px] w-[18px]" />}
           acao={
             dados.equipamentos.length > 6 ? (
-              <div className="relative hidden w-52 sm:block">
+              <div className="relative w-36 sm:w-52">
                 <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-400" />
                 <Input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar" className="h-9 pl-9 sm:h-9" />
               </div>
             ) : null
           }
         >
-          {!carregando && dados.equipamentos.length === 0 ? (
+          {carregando && dados.equipamentos.length === 0 ? (
+            <div className="grid gap-2">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-[68px] rounded-2xl" />
+              ))}
+            </div>
+          ) : dados.equipamentos.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-ink-300 p-6 text-center text-sm text-ink-500">
               Nenhum equipamento cadastrado.{" "}
               <Link href="/estoque" className="font-semibold text-brand-700 underline">
@@ -227,6 +283,7 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
             </div>
           ) : (
             <div className="grid gap-2">
+              {equipamentos.length === 0 && <p className="py-4 text-center text-sm text-ink-500">Nenhum equipamento com “{busca}”.</p>}
               {equipamentos.map((e) => {
                 const q = qtdDe(e.id);
                 const s = estoque[e.id];
@@ -372,12 +429,12 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
       </div>
 
       {/* Resumo */}
-      <aside className="lg:sticky lg:top-8" id="resumo">
+      <aside className="scroll-mt-20 lg:sticky lg:top-8" id="resumo">
         <div className="bg-navy-gradient relative overflow-hidden rounded-3xl p-5 text-white shadow-lift">
           <div className="bg-grid pointer-events-none absolute inset-0 opacity-70 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
           <div className="relative">
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold tracking-[0.2em] text-brand-300 uppercase">{editando ? `Orçamento #${l.numero}` : `Novo orçamento #${numero}`}</p>
+              <p className="text-[11px] font-semibold tracking-[0.2em] text-brand-300 uppercase">{editando ? `${l.status === "orcamento" ? "Orçamento" : "Locação"} ${codigo(l.numero)}` : `Novo orçamento ${codigo(numero)}`}</p>
               <button onClick={limpar} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-semibold text-ink-300 hover:bg-white/10 hover:text-white">
                 <RotateCcw className="h-3.5 w-3.5" /> Novo
               </button>
@@ -479,7 +536,7 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
         </div>
         {editando && (
           <Link href={`/locacoes/${l.id}`} className="mt-3 flex items-center justify-center gap-1.5 text-[13px] font-semibold text-ink-500 hover:text-ink-900">
-            Ver ficha da locação #{l.numero}
+            Ver ficha da locação {codigo(l.numero)}
           </Link>
         )}
       </aside>

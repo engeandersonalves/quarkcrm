@@ -31,28 +31,38 @@ Todos os preços podem ser editados item a item. Os preços do catálogo inicial
 
 ## Usar agora (modo demonstração)
 ```bash
-cd locacoes
+git clone https://github.com/engeandersonalves/quarklocacoes && cd quarklocacoes
 npm install
 npm run dev        # http://localhost:3000
 ```
 Sem configurar nada, os dados ficam salvos **só no navegador** — bom para testar. Para a equipe usar em vários aparelhos, ative a nuvem:
 
-## Colocar no ar (≈ 10 minutos, plano gratuito)
-1. **Supabase** — crie um projeto em [supabase.com](https://supabase.com). Em **SQL Editor → New query**, cole [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**. Em **Project Settings → API**, copie a *Project URL* e a chave *anon*.
-2. **Vercel** — importe o repositório em [vercel.com/new](https://vercel.com/new) e, em **Root Directory**, escolha **`locacoes`**. Em *Environment Variables* cadastre as variáveis de [`.env.example`](.env.example). Clique em Deploy.
-3. Abra o app e **crie a sua conta primeiro** — a primeira pessoa a entrar vira administradora. Depois, em **Ajustes → Equipe**, libere o e-mail de cada funcionário; só e-mails liberados conseguem ver os dados (clientes, CPFs, endereços). Quando todos tiverem conta, defina `NEXT_PUBLIC_ALLOW_SIGNUP=false` e, no Supabase, desative *Allow new users to sign up* em **Authentication → Sign In / Providers**.
-4. Tinha dados no modo demonstração? Em **Ajustes → Baixar backup** no navegador antigo e **Importar backup** no app publicado.
+## Salvar na nuvem (≈ 10 minutos, plano gratuito)
+
+1. **Supabase** — crie um projeto em [supabase.com](https://supabase.com) (região *South America – São Paulo*). Em **SQL Editor → New query**, cole todo o [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run** (pode rodar de novo quando atualizar o app). Em **Authentication → Sign In / Providers → Email**, desligue *Confirm email* para a equipe entrar sem confirmar. Em **Authentication → URL Configuration**, coloque o endereço do site em *Site URL*.
+2. **Ligar o app à nuvem** — escolha **um** dos jeitos:
+   - **Pelo próprio app (mais fácil):** abra o site, vá em **Ajustes → Nuvem**, cole a *Project URL* e a chave pública (*anon* ou *publishable*, em **Project Settings → API**) e toque em **Testar e conectar**. O app testa e explica o que estiver errado (URL, chave ou tabelas faltando). Para os outros celulares, use o **QR Code / link** que aparece em Ajustes → Nuvem.
+   - **Pela Vercel (vale para todos os aparelhos de uma vez):** em *Settings → Environment Variables* cadastre `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` e faça **Redeploy**.
+3. **Primeiro acesso** — crie a sua conta primeiro: a primeira pessoa a entrar vira administradora. Se havia dados do modo demonstração no aparelho, o app oferece **enviar para a nuvem** (sem duplicar clientes e equipamentos). Depois, em **Ajustes → Equipe**, libere o e-mail de cada funcionário — só e-mails liberados veem os dados.
+4. **Fechar cadastros** — quando todos tiverem conta, no Supabase desative *Allow new users to sign up* (e, se quiser esconder o botão, `NEXT_PUBLIC_ALLOW_SIGNUP=false` na Vercel).
+
+### Como o app salva
+- Tudo aparece na hora na tela e vai para uma **fila de salvamento** guardada no aparelho. O indicador mostra **Tudo salvo**, **Salvando…** ou **Sem internet · N aguardando**.
+- **Sem internet** (ex.: entregador na obra): o app abre com a última cópia do aparelho, deixa trabalhar normalmente e envia tudo sozinho quando a internet volta — mesmo que o app seja fechado nesse meio-tempo.
+- Duas pessoas criando orçamento ao mesmo tempo com o mesmo número: o app pega o próximo número livre e avisa.
+- Os outros aparelhos atualizam sozinhos (tempo real).
 
 ### PIX
 Em **Ajustes**, confira a chave PIX, o titular e a cidade. O termo mostra um QR Code PIX com o valor da locação já preenchido, e o botão **Cobrar no WhatsApp** manda o “PIX copia e cola”. Chave de telefone deve ser escrita com +55 (ex.: `+5582988156223`).
 
-> Os textos do termo são um modelo. Vale pedir a um advogado de confiança para revisar as cláusulas (Ajustes → Textos do termo).
+> Os textos do termo são um modelo. Vale pedir a um advogado de confiança para revisar as cláusulas (Ajustes → Cláusulas do termo de locação).
 
 ## Estrutura
 ```
 src/lib/pricing.ts        cálculo dos planos e da melhor combinação + testes (npm test)
-src/lib/store.tsx         dados, fluxo da locação (aprovar, entregar, recolher, renovar)
-src/lib/backend.ts        Supabase (nuvem) ou navegador (demonstração)
+src/lib/store.tsx         dados, fila de salvamento offline e fluxo da locação (aprovar, entregar, recolher, renovar)
+src/lib/mesclar.ts        junta backup / dados do aparelho com a nuvem sem duplicar + testes
+src/lib/backend.ts        Supabase (nuvem) ou navegador (demonstração), conexão pelo app ou pela Vercel
 src/lib/mensagens.ts      textos do WhatsApp (orçamento, entregador, cobrança, vencimento)
 src/lib/pix.ts            PIX copia e cola / QR Code (padrão BR Code do Banco Central) + testes
 src/components/orcamento.tsx   tela de orçamento rápido

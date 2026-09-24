@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmar } from "@/components/dialogo";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -8,7 +9,7 @@ import { ReceberModal } from "@/components/receber-modal";
 import { Button, Card, CardHeader, cx, Empty, Field, Input, Modal, MoneyInput, PageHeader, Segmented, Select, Stat, Switch, ButtonLink } from "@/components/ui";
 import { useDados } from "@/lib/store";
 import { CATEGORIAS_ENTRADA, CATEGORIAS_SAIDA, FORMAS_PAGAMENTO } from "@/lib/defaults";
-import { diffDias, fmtData, hoje, linkWhatsApp, MESES, parseData } from "@/lib/format";
+import { diffDias, fmtData, hoje, linkWhatsApp, MESES, parseData, codigo } from "@/lib/format";
 import { mensagemCobranca } from "@/lib/mensagens";
 import { novoLancamento } from "@/lib/novo";
 import { brl, PERIODOS } from "@/lib/pricing";
@@ -88,7 +89,7 @@ function EditarLancamento({ lanc, onClose }: { lanc: Lancamento; onClose: () => 
               variant="ghost"
               className="mr-auto text-rose-600 hover:bg-rose-50"
               onClick={async () => {
-                if (!confirm("Excluir este lançamento?")) return;
+                if (!(await confirmar({ titulo: "Excluir este lançamento?", texto: `${x.descricao || x.categoria} — some do financeiro.`, ok: "Excluir", perigo: true }))) return;
                 await excluirLancamento(x.id);
                 onClose();
               }}
@@ -357,7 +358,7 @@ export default function Financeiro() {
                         <>
                           {" · "}
                           <Link href={`/locacoes/${l.id}`} className="font-semibold text-ink-700 underline-offset-2 hover:underline" onClick={(e) => e.stopPropagation()}>
-                            #{l.numero}
+                            {codigo(l.numero)}
                           </Link>
                         </>
                       )}

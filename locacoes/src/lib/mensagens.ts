@@ -1,4 +1,4 @@
-import { enderecoCompleto, fmtData, fmtTelefone, linkMaps } from "./format";
+import { enderecoCompleto, fmtData, fmtTelefone, linkMaps, codigo } from "./format";
 import { brl, comparativo, descreverModalidade, descreverPartes, valorAluguel } from "./pricing";
 import { pixCopiaECola } from "./pix";
 import type { Config, Locacao } from "./types";
@@ -11,7 +11,7 @@ export function mensagemOrcamento(l: Locacao, cfg: Config): string {
   const aluguel = valorAluguel(l.itens, l.modalidade, l.quantidade_periodos);
   const taxas = (l.taxa_entrega || 0) + (l.taxa_retirada || 0);
   const linhas = [
-    `*${cfg.empresa_nome}* — Orçamento nº ${l.numero}`,
+    `*${cfg.empresa_nome}* — Orçamento nº ${codigo(l.numero).slice(1)}`,
     `Olá${l.cliente_nome ? `, ${l.cliente_nome.split(" ")[0]}` : ""}! Segue o orçamento da locação:`,
     "",
     itensTexto(l),
@@ -37,7 +37,7 @@ export function mensagemOrcamento(l: Locacao, cfg: Config): string {
 export function mensagemEntregador(l: Locacao, acao: "entrega" | "coleta"): string {
   const e = l.endereco;
   return [
-    `🚚 *${acao === "entrega" ? "ENTREGA" : "COLETA"} — Locação #${l.numero}*`,
+    `🚚 *${acao === "entrega" ? "ENTREGA" : "COLETA"} — Locação ${codigo(l.numero)}*`,
     `📅 ${fmtData(acao === "entrega" ? l.data_entrega : l.data_coleta)}`,
     "",
     `👤 ${l.cliente_nome}${l.cliente_telefone ? ` — ${fmtTelefone(l.cliente_telefone)}` : ""}`,
@@ -64,7 +64,7 @@ export function mensagemCobranca(l: Locacao, valor: number, cfg: Config): string
     : "";
   return [
     `Olá, ${l.cliente_nome.split(" ")[0]}! Aqui é da *${cfg.empresa_nome}*.`,
-    `Referente à locação nº ${l.numero}, o valor em aberto é *${brl(valor)}*.`,
+    `Referente à locação nº ${codigo(l.numero).slice(1)}, o valor em aberto é *${brl(valor)}*.`,
     cfg.empresa_pix ? `Chave PIX: ${cfg.empresa_pix}` : "",
     copiaECola ? `\nPIX copia e cola (o valor já vem preenchido):\n${copiaECola}\n` : "",
     "Obrigado pela preferência! 🙏",
@@ -76,7 +76,7 @@ export function mensagemCobranca(l: Locacao, valor: number, cfg: Config): string
 export function mensagemVencimento(l: Locacao, cfg: Config): string {
   return [
     `Olá, ${l.cliente_nome.split(" ")[0]}! Aqui é da *${cfg.empresa_nome}*.`,
-    `A locação nº ${l.numero} vence em *${fmtData(l.data_coleta)}*.`,
+    `A locação nº ${codigo(l.numero).slice(1)} vence em *${fmtData(l.data_coleta)}*.`,
     "Deseja *renovar* ou podemos *agendar a coleta*?",
     `Lembrando: andaimes e escoras precisam estar desmontados na coleta (senão há taxa de ${cfg.taxa_desmontagem_pct}%).`,
   ].join("\n");

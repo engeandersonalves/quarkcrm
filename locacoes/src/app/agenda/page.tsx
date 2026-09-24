@@ -6,7 +6,7 @@ import { CalendarCheck, ExternalLink, MapPin, Navigation, PackageCheck, Route, T
 import { ProximaAcao, resumoItens } from "@/components/card-locacao";
 import { ButtonLink, Card, cx, Empty, PageHeader, Segmented } from "@/components/ui";
 import { useDados } from "@/lib/store";
-import { addDias, diffDias, fmtDataCurta, hoje, linhaEndereco, linkMaps, linkWaze, linkWhatsApp, temEndereco } from "@/lib/format";
+import { addDias, diffDias, fmtDataCurta, hoje, linhaEndereco, linkMaps, linkWaze, linkWhatsApp, temEndereco, codigo } from "@/lib/format";
 import { mensagemEntregador } from "@/lib/mensagens";
 import type { Locacao } from "@/lib/types";
 
@@ -49,7 +49,7 @@ function LinhaTarefa({ t }: { t: Tarefa }) {
       <Link href={`/locacoes/${l.id}`} className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className={cx("rounded-full px-2 py-0.5 text-[10.5px] font-bold tracking-wide uppercase", tipo === "entrega" ? "bg-sky-600 text-white" : "bg-amber-400 text-ink-950")}>{tipo}</span>
-          <span className="font-mono text-[11px] text-ink-400">#{l.numero}</span>
+          <span className="font-mono text-[11px] text-ink-400">{codigo(l.numero)}</span>
           {atraso > 0 && <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[10.5px] font-bold text-white">{atraso}d de atraso</span>}
         </div>
         <p className="mt-1 font-semibold text-ink-950">{l.cliente_nome}</p>

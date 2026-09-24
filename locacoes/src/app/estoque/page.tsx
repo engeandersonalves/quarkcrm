@@ -1,12 +1,13 @@
 "use client";
 
+import { confirmar } from "@/components/dialogo";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useAbrirItem } from "@/lib/abrir";
 import { toast } from "sonner";
 import { Boxes, ChevronDown, Package, PackageOpen, Pencil, Plus, Search, Wand2, Wrench } from "lucide-react";
 import { Badge, Button, Card, cx, Empty, Field, Input, Modal, MoneyInput, NumberInput, PageHeader, Stat, Switch, Textarea } from "@/components/ui";
 import { useDados, type SaldoEstoque } from "@/lib/store";
-import { catalogoInicial } from "@/lib/defaults";
 import { fmtDataCurta, fmtNum, normalizar, pct } from "@/lib/format";
 import { novoEquipamento } from "@/lib/novo";
 import { brl, PERIODOS, sugerirPrecos } from "@/lib/pricing";
@@ -80,7 +81,7 @@ function EditarEquipamento({ eq, onClose }: { eq: Equipamento; onClose: () => vo
               disabled={emUso}
               title={emUso ? "Está em uma locação ativa" : undefined}
               onClick={async () => {
-                if (!confirm(`Excluir “${e.nome}”? Dica: para só esconder dos orçamentos, desative-o.`)) return;
+                if (!(await confirmar({ titulo: `Excluir “${e.nome}”?`, texto: "Dica: para só esconder dos orçamentos sem perder o histórico, desligue “Disponível para orçamento”.", ok: "Excluir", perigo: true }))) return;
                 await excluirEquipamento(e.id);
                 onClose();
               }}
@@ -153,8 +154,18 @@ function EditarEquipamento({ eq, onClose }: { eq: Equipamento; onClose: () => vo
 }
 
 export default function Estoque() {
-  const { dados, estoque, carregando, salvarEquipamento } = useDados();
+  const { dados, estoque, carregando, carregarCatalogo } = useDados();
   const [editando, setEditando] = useState<Equipamento | null>(null);
+  useAbrirItem(
+    useCallback(
+      (id: string) => {
+        const e = dados.equipamentos.find((x) => x.id === id);
+        if (e) setEditando(e);
+        return Boolean(e);
+      },
+      [dados.equipamentos],
+    ),
+  );
   const [aberto, setAberto] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
@@ -218,7 +229,7 @@ export default function Estoque() {
                 <Button
                   variant="brand"
                   onClick={async () => {
-                    for (const e of catalogoInicial(dados.config)) await salvarEquipamento(e);
+                    await carregarCatalogo();
                     toast.success("Catálogo carregado — confira as quantidades");
                   }}
                 >

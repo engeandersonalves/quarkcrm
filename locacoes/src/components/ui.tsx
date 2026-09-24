@@ -4,7 +4,7 @@ import Link from "next/link";
 import clsx, { type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 import { Loader2, Minus, Plus, X } from "lucide-react";
-import { forwardRef, useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { cloneElement, forwardRef, isValidElement, useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactElement, type ReactNode } from "react";
 import { brl } from "@/lib/pricing";
 import { fmtNum, parseNumero } from "@/lib/format";
 
@@ -149,12 +149,25 @@ export function Field({
   className?: string;
   htmlFor?: string;
 }) {
+  // Liga o rótulo ao campo (leitor de tela anuncia o nome; tocar no rótulo foca o campo).
+  const auto = useId();
+  let id = htmlFor;
+  let conteudo = children;
+  if (!id && isValidElement(children) && typeof children.type !== "string") {
+    const props = children.props as { id?: string };
+    id = props.id ?? auto;
+    if (!props.id) conteudo = cloneElement(children as ReactElement<{ id?: string }>, { id });
+  } else if (!id && isValidElement(children) && ["input", "select", "textarea"].includes(children.type as string)) {
+    const props = children.props as { id?: string };
+    id = props.id ?? auto;
+    if (!props.id) conteudo = cloneElement(children as ReactElement<{ id?: string }>, { id });
+  }
   return (
     <div className={cx("flex flex-col gap-1.5", className)}>
-      <label htmlFor={htmlFor} className="text-[13px] font-medium text-ink-600">
+      <label htmlFor={id} className="text-[13px] font-medium text-ink-600">
         {label}
       </label>
-      {children}
+      {conteudo}
       {hint && <p className="text-xs text-ink-500">{hint}</p>}
     </div>
   );
@@ -431,7 +444,7 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
 /* ----------------------------------------------------------------- Stepper */
 
 /** Quantidade com botões − / + grandes (bom para o celular). */
-export function Stepper({ value, onChange, min = 0, max, className }: { value: number; onChange: (v: number) => void; min?: number; max?: number; className?: string }) {
+export function Stepper({ value, onChange, min = 0, max, className, id }: { value: number; onChange: (v: number) => void; min?: number; max?: number; className?: string; id?: string }) {
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);
   const set = (v: number) => onChange(Math.max(min, max != null ? Math.min(max, v) : v));
@@ -441,6 +454,7 @@ export function Stepper({ value, onChange, min = 0, max, className }: { value: n
         <Minus className="h-4 w-4" />
       </button>
       <input
+        id={id}
         inputMode="numeric"
         value={text}
         onFocus={(e) => e.target.select()}

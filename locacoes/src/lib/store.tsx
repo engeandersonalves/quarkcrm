@@ -3,9 +3,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
-import { criarBackend, supabase, temNuvem, type Backend } from "./backend";
-import { addDias, hoje, uid } from "./format";
+import { confirmar } from "@/components/dialogo";
+import { conexaoAtual, criarBackend, ehErroDeRede, ErroBanco, lerLocal, supabase, type Backend } from "./backend";
+import { addDias, codigo, fmtData, hoje, uid } from "./format";
 import { catalogoInicial, mesclarConfig } from "./defaults";
+import { mesclarDados, temDadosReais, type ResultadoMescla } from "./mesclar";
 import { descreverModalidade, diasDaLocacao, totalLocacao } from "./pricing";
 import type { Cliente, Config, Dados, Equipamento, Lancamento, Locacao, Tabela } from "./types";
 
@@ -21,6 +23,17 @@ export interface SaldoEstoque {
   disponivel: number;
 }
 
+/** Situação do salvamento: tudo salvo, enviando, ou esperando a internet voltar. */
+export interface Sync {
+  estado: "ok" | "salvando" | "offline";
+  pendentes: number;
+}
+
+type Op =
+  | { k: string; tipo: "salvar"; tabela: Tabela; linha: { id: string } }
+  | { k: string; tipo: "excluir"; tabela: Tabela; id: string }
+  | { k: string; tipo: "config"; cfg: Config };
+
 interface Ctx {
   dados: Dados;
   carregando: boolean;
@@ -29,6 +42,11 @@ interface Ctx {
   authPronto: boolean;
   /** Logado, mas o e-mail não está na lista da equipe. */
   semAcesso: boolean;
+  /** Abriu pelo link "esqueci a senha": precisa definir a nova. */
+  recuperandoSenha: boolean;
+  sync: Sync;
+  /** Dados do modo demonstração encontrados neste aparelho, prontos para irem à nuvem. */
+  migracao: Dados | null;
   backend: Backend;
   estoque: Record<string, SaldoEstoque>;
   recarregar(): Promise<void>;
@@ -41,7 +59,10 @@ interface Ctx {
   salvarLancamento(l: Lancamento): Promise<void>;
   excluirLancamento(id: string): Promise<void>;
   salvarConfig(c: Config): Promise<void>;
-  importar(d: Dados): Promise<void>;
+  importar(d: Dados, opcoes?: { config?: boolean }): Promise<ResultadoMescla>;
+  migrar(): Promise<void>;
+  dispensarMigracao(): void;
+  carregarCatalogo(): Promise<void>;
   proximoNumero(): number;
   /* fluxo da locação */
   aprovar(l: Locacao): Promise<boolean>;
@@ -50,12 +71,17 @@ interface Ctx {
   marcarEntregue(l: Locacao): Promise<void>;
   marcarRecolhido(l: Locacao): Promise<void>;
   renovar(l: Locacao): Promise<void>;
+  definirSenha(nova: string): Promise<void>;
   sair(): Promise<void>;
 }
 
 const C = createContext<Ctx | null>(null);
 
 const VAZIO: Dados = { equipamentos: [], clientes: [], locacoes: [], lancamentos: [], config: mesclarConfig(null) };
+const CHAVE_FILA = "quark-locacoes:fila";
+const CHAVE_MIGRADO = "quark-locacoes:migrado";
+/** Última cópia dos dados da nuvem, para abrir o app mesmo sem internet (ex.: entregador na obra). */
+const CHAVE_CACHE = "quark-locacoes:cache";
 
 export function calcularEstoque(d: Dados): Record<string, SaldoEstoque> {
   const out: Record<string, SaldoEstoque> = {};
@@ -75,99 +101,287 @@ export function calcularEstoque(d: Dados): Record<string, SaldoEstoque> {
   return out;
 }
 
+/** Aplica uma operação na cópia em memória (a tela muda na hora, antes do servidor responder). */
+function aplicar(d: Dados, op: Op): Dados {
+  if (op.tipo === "config") return { ...d, config: op.cfg };
+  const lista = d[op.tabela] as unknown as { id: string }[];
+  if (op.tipo === "excluir") return { ...d, [op.tabela]: lista.filter((x) => x.id !== op.id) };
+  const existe = lista.some((x) => x.id === op.linha.id);
+  return { ...d, [op.tabela]: existe ? lista.map((x) => (x.id === op.linha.id ? op.linha : x)) : [op.linha, ...lista] };
+}
+
+function lerFila(): Op[] {
+  try {
+    return JSON.parse(localStorage.getItem(CHAVE_FILA) || "[]") as Op[];
+  } catch {
+    return [];
+  }
+}
+
+const traduzir = (msg: string) =>
+  /row-level security|permission denied/i.test(msg)
+    ? "Seu usuário não tem permissão (confira Ajustes → Equipe)."
+    : /violates foreign key/i.test(msg)
+      ? "Registro ligado a outro que não existe mais."
+      : msg;
+
 export function DadosProvider({ children }: { children: ReactNode }) {
   const backend = useRef<Backend>(null as unknown as Backend);
   if (!backend.current) backend.current = criarBackend();
+  const nuvem = backend.current.modo === "nuvem";
+
   const [dados, setDados] = useState<Dados>(VAZIO);
   const dadosRef = useRef(dados);
   dadosRef.current = dados;
   const [carregando, setCarregando] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
-  const [authPronto, setAuthPronto] = useState(!temNuvem);
+  const [authPronto, setAuthPronto] = useState(false);
+  const [semAcesso, setSemAcesso] = useState(false);
+  const [recuperandoSenha, setRecuperandoSenha] = useState(false);
+  const [migracao, setMigracao] = useState<Dados | null>(null);
 
+  /* ---------------------------------------------------------------- fila de salvamento */
+
+  const fila = useRef<Op[]>([]);
+  const processando = useRef(false);
+  const tentativa = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [sync, setSync] = useState<Sync>({ estado: "ok", pendentes: 0 });
+
+  const persistirFila = useCallback(() => {
+    try {
+      if (fila.current.length) localStorage.setItem(CHAVE_FILA, JSON.stringify(fila.current));
+      else localStorage.removeItem(CHAVE_FILA);
+    } catch {
+      /* armazenamento bloqueado */
+    }
+  }, []);
+
+  const recarregarRef = useRef<() => Promise<void>>(async () => {});
+  /** Usado pelo botão "Desfazer" dos avisos (definido mais abaixo). */
+  const voltarRef = useRef<(l: Locacao) => Promise<void>>(async () => {});
+  /** Botão "Desfazer" do aviso: age sobre a versão atual e só se ela ainda estiver na etapa do aviso. */
+  const desfazer = (l: Locacao) => ({
+    label: "Desfazer",
+    onClick: () => {
+      const atual = dadosRef.current.locacoes.find((x) => x.id === l.id);
+      if (!atual || atual.status !== l.status) return void toast.info("Essa locação já mudou de etapa", { description: "Use “Desfazer etapa” na ficha dela." });
+      void voltarRef.current(atual);
+    },
+  });
+
+  const processar = useCallback(async () => {
+    if (processando.current) return;
+    processando.current = true;
+    clearTimeout(timer.current);
+    let recarregarDepois = false;
+    let offline = false;
+    while (fila.current.length) {
+      setSync({ estado: "salvando", pendentes: fila.current.length });
+      const op = fila.current[0];
+      try {
+        if (op.tipo === "config") await backend.current.salvarConfig(op.cfg);
+        else if (op.tipo === "excluir") await backend.current.excluir(op.tabela, op.id);
+        else await backend.current.salvar(op.tabela, op.linha);
+        fila.current.shift();
+        persistirFila();
+        tentativa.current = 0;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (ehErroDeRede(e)) {
+          offline = true;
+          break;
+        }
+        if (/JWT|token is expired|not authenticated/i.test(msg) && tentativa.current < 2 && nuvem) {
+          tentativa.current++;
+          await supabase().auth.refreshSession().catch(() => {});
+          continue;
+        }
+        // Dois aparelhos criaram locações ao mesmo tempo com o mesmo número: pega o próximo livre.
+        if (e instanceof ErroBanco && e.code === "23505" && op.tipo === "salvar" && op.tabela === "locacoes") {
+          const l = op.linha as Locacao;
+          const novo = Math.max(await backend.current.maiorNumero().catch(() => 0), ...dadosRef.current.locacoes.map((x) => x.numero)) + 1;
+          const antigo = l.numero;
+          op.linha = { ...l, numero: novo } as Locacao;
+          persistirFila();
+          setDados((d) => aplicar(d, op));
+          toast.info(`Locação ${codigo(antigo)} passou a ser ${codigo(novo)}`, { description: "Outra pessoa da equipe usou o mesmo número ao mesmo tempo." });
+          continue;
+        }
+        fila.current.shift();
+        persistirFila();
+        recarregarDepois = true;
+        toast.error("Não foi possível salvar uma alteração", { description: traduzir(msg) });
+      }
+    }
+    processando.current = false;
+    if (offline) {
+      tentativa.current++;
+      setSync({ estado: "offline", pendentes: fila.current.length });
+      timer.current = setTimeout(() => processar(), Math.min(60_000, 3000 * 2 ** Math.min(tentativa.current, 5)));
+    } else {
+      setSync({ estado: "ok", pendentes: 0 });
+    }
+    if (recarregarDepois) await recarregarRef.current();
+  }, [persistirFila, nuvem]);
+
+  const enfileirar = useCallback(
+    (op: Op) => {
+      setDados((d) => aplicar(d, op));
+      // Duas gravações seguidas do mesmo registro viram uma só (a mais nova).
+      const i = fila.current.findIndex(
+        (x, idx) =>
+          (idx > 0 || !processando.current) &&
+          ((op.tipo === "config" && x.tipo === "config") || (op.tipo === "salvar" && x.tipo === "salvar" && x.tabela === op.tabela && x.linha.id === op.linha.id)),
+      );
+      if (i >= 0) fila.current[i] = op;
+      else fila.current.push(op);
+      persistirFila();
+      setSync((s) => ({ ...s, pendentes: fila.current.length }));
+      void processar();
+    },
+    [persistirFila, processar],
+  );
+
+  // Tenta de novo quando a internet volta ou o app volta para a tela.
+  useEffect(() => {
+    const retomar = () => fila.current.length && processar();
+    const visivel = () => document.visibilityState === "visible" && retomar();
+    window.addEventListener("online", retomar);
+    document.addEventListener("visibilitychange", visivel);
+    return () => {
+      window.removeEventListener("online", retomar);
+      document.removeEventListener("visibilitychange", visivel);
+    };
+  }, [processar]);
+
+  /* ---------------------------------------------------------------- carregar */
+
+  const emailRef = useRef("");
   const recarregar = useCallback(async () => {
     try {
       let d = await backend.current.carregar();
-      // Primeiro uso: já começa com o catálogo do termo de locação.
-      if (backend.current.modo === "local" && d.equipamentos.length === 0 && d.locacoes.length === 0 && !localStorage.getItem("quark-locacoes:semeado")) {
+      // Modo demonstração, primeiro uso: já começa com o catálogo do termo.
+      if (!nuvem && d.equipamentos.length === 0 && d.locacoes.length === 0 && !localStorage.getItem("quark-locacoes:semeado")) {
         const cat = catalogoInicial(d.config);
         for (const e of cat) await backend.current.salvar("equipamentos", e);
         localStorage.setItem("quark-locacoes:semeado", "1");
         d = { ...d, equipamentos: cat };
       }
+      // O que ainda está na fila continua valendo por cima do que veio do servidor.
+      for (const op of fila.current) d = aplicar(d, op);
       setDados(d);
     } catch (e) {
-      toast.error("Não foi possível carregar os dados", { description: e instanceof Error ? e.message : String(e) });
+      if (ehErroDeRede(e)) {
+        setSync({ estado: "offline", pendentes: fila.current.length });
+        // Sem internet: mostra a última cópia deste aparelho, com as alterações pendentes por cima.
+        let usouCopia = false;
+        try {
+          const c = JSON.parse(localStorage.getItem(CHAVE_CACHE) || "null") as { email: string; dados: Dados } | null;
+          if (c && c.email === emailRef.current && dadosRef.current.equipamentos.length === 0 && dadosRef.current.locacoes.length === 0) {
+            let d = { ...c.dados, config: mesclarConfig(c.dados.config) };
+            for (const op of fila.current) d = aplicar(d, op);
+            setDados(d);
+            usouCopia = true;
+          }
+        } catch {
+          /* sem cópia */
+        }
+        toast.error("Sem conexão com a nuvem", { description: usouCopia ? "Mostrando a última cópia deste aparelho. O que você alterar é enviado quando a internet voltar." : "Confira a internet. O app tenta de novo sozinho." });
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => recarregarRef.current(), 8000);
+      } else {
+        toast.error("Não foi possível carregar os dados", { description: traduzir(e instanceof Error ? e.message : String(e)) });
+      }
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [nuvem]);
+  recarregarRef.current = recarregar;
 
   // Sessão (apenas no modo nuvem)
   useEffect(() => {
-    if (!temNuvem) return;
+    fila.current = lerFila();
+    if (!nuvem) {
+      setAuthPronto(true);
+      return;
+    }
     const c = supabase();
     c.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setAuthPronto(true);
     });
-    const { data } = c.auth.onAuthStateChange((_ev, s) => setSession(s));
+    const { data } = c.auth.onAuthStateChange((ev, s) => {
+      setSession(s);
+      if (ev === "PASSWORD_RECOVERY") setRecuperandoSenha(true);
+    });
     return () => data.subscription.unsubscribe();
-  }, []);
+  }, [nuvem]);
 
-  const logado = !temNuvem || Boolean(session);
+  const logado = !nuvem || Boolean(session);
   const email = session?.user.email ?? "";
-  const [semAcesso, setSemAcesso] = useState(false);
+  emailRef.current = email;
   useEffect(() => {
     if (!authPronto || !logado) return;
     let parar: (() => void) | undefined;
     let cancelado = false;
-    backend.current.entrarEquipe().then((ok) => {
+    const iniciar = async () => {
+      // Abre na hora com a cópia deste aparelho; os dados novos chegam logo em seguida.
+      if (nuvem && dadosRef.current.equipamentos.length === 0 && dadosRef.current.locacoes.length === 0) {
+        try {
+          const c = JSON.parse(localStorage.getItem(CHAVE_CACHE) || "null") as { email: string; dados: Dados } | null;
+          if (c && c.email === email) {
+            let d = { ...c.dados, config: mesclarConfig(c.dados.config) };
+            for (const op of fila.current) d = aplicar(d, op);
+            setDados(d);
+            setCarregando(false);
+          }
+        } catch {
+          /* sem cópia */
+        }
+      }
+      try {
+        const ok = await backend.current.entrarEquipe();
+        if (cancelado) return;
+        setSemAcesso(!ok);
+        if (!ok) return setCarregando(false);
+      } catch {
+        // Sem internet para confirmar a equipe: segue com o que der (a carga mostra o aviso).
+      }
+      await recarregar();
       if (cancelado) return;
-      setSemAcesso(!ok);
-      if (!ok) return setCarregando(false);
-      recarregar();
       parar = backend.current.ouvir(recarregar);
-    });
+      if (fila.current.length) void processar();
+      // Dados do modo demonstração neste aparelho? Oferece levar para a nuvem.
+      if (nuvem && localStorage.getItem(CHAVE_MIGRADO) !== "1") {
+        const loc = lerLocal();
+        if (temDadosReais(loc)) setMigracao(loc);
+      }
+    };
+    void iniciar();
     return () => {
       cancelado = true;
       parar?.();
     };
-  }, [authPronto, logado, email, recarregar]);
+  }, [authPronto, logado, email, recarregar, processar, nuvem]);
 
-  /* ---------------------------------------------------------------- escrita otimista */
-
-  const gravar = useCallback(
-    async <T extends { id: string }>(tabela: Tabela, linha: T) => {
-      setDados((d) => {
-        const lista = d[tabela] as unknown as T[];
-        const existe = lista.some((x) => x.id === linha.id);
-        return { ...d, [tabela]: existe ? lista.map((x) => (x.id === linha.id ? linha : x)) : [linha, ...lista] };
-      });
+  // Mantém a cópia offline sempre igual ao que está na tela (alterações aplicam de novo sem duplicar).
+  useEffect(() => {
+    if (!nuvem || carregando || !email || semAcesso) return;
+    const t = setTimeout(() => {
       try {
-        await backend.current.salvar(tabela, linha);
-      } catch (e) {
-        toast.error("Erro ao salvar", { description: e instanceof Error ? e.message : String(e) });
-        await recarregar();
-        throw e;
+        localStorage.setItem(CHAVE_CACHE, JSON.stringify({ email, dados }));
+      } catch {
+        /* sem espaço: segue sem cópia */
       }
-    },
-    [recarregar],
-  );
+    }, 600);
+    return () => clearTimeout(t);
+  }, [dados, nuvem, carregando, email, semAcesso]);
 
-  const apagar = useCallback(
-    async (tabela: Tabela, id: string) => {
-      setDados((d) => ({ ...d, [tabela]: (d[tabela] as unknown as { id: string }[]).filter((x) => x.id !== id) }));
-      try {
-        await backend.current.excluir(tabela, id);
-      } catch (e) {
-        toast.error("Erro ao excluir", { description: e instanceof Error ? e.message : String(e) });
-        await recarregar();
-        throw e;
-      }
-    },
-    [recarregar],
-  );
+  /* ---------------------------------------------------------------- escrita */
+
+  const gravar = useCallback(async <T extends { id: string }>(tabela: Tabela, linha: T) => enfileirar({ k: uid(), tipo: "salvar", tabela, linha }), [enfileirar]);
+  const apagar = useCallback(async (tabela: Tabela, id: string) => enfileirar({ k: uid(), tipo: "excluir", tabela, id }), [enfileirar]);
 
   const proximoNumero = useCallback(() => dadosRef.current.locacoes.reduce((m, l) => Math.max(m, l.numero || 0), 0) + 1, []);
 
@@ -188,7 +402,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
 
   const salvarLancamento = useCallback((x: Lancamento) => gravar("lancamentos", x), [gravar]);
 
-  /** Cria a cobrança do aluguel no financeiro (a receber). */
+  /** Cria uma cobrança (a receber) ligada à locação. */
   const cobrar = useCallback(
     async (l: Locacao, valor: number, categoria: string, descricao: string, data: string) => {
       if (valor <= 0) return;
@@ -223,13 +437,17 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       const saldo = calcularEstoque(dadosRef.current);
       const faltas = l.itens.filter((i) => saldo[i.equipamento_id] && i.quantidade > saldo[i.equipamento_id].disponivel);
       if (faltas.length > 0) {
-        const lista = faltas.map((i) => `• ${i.nome}: pediu ${i.quantidade}, disponível ${Math.max(0, saldo[i.equipamento_id].disponivel)}`).join("\n");
-        if (!confirm(`Estoque insuficiente:\n${lista}\n\nAprovar mesmo assim?`)) return false;
+        const ok = await confirmar({
+          titulo: "Estoque insuficiente",
+          texto: faltas.map((i) => `${i.nome}: pediu ${i.quantidade}, disponível ${Math.max(0, saldo[i.equipamento_id].disponivel)}`).join("\n"),
+          ok: "Aprovar mesmo assim",
+        });
+        if (!ok) return false;
       }
       const salva = await salvarLocacao({ ...l, status: "agendada" }, "Orçamento aprovado pelo cliente");
       const jaCobrado = dadosRef.current.lancamentos.some((x) => x.locacao_id === l.id && x.categoria === "Aluguel");
-      if (!jaCobrado) await cobrar(salva, salva.valor_total, "Aluguel", `Locação #${salva.numero} — ${salva.cliente_nome}`, salva.data_entrega || hoje());
-      toast.success(`Locação #${salva.numero} aprovada`, { description: "Foi para “Aguardando entrega” e a cobrança entrou no financeiro." });
+      if (!jaCobrado) await cobrar(salva, salva.valor_total, "Aluguel", `Locação ${codigo(salva.numero)} — ${salva.cliente_nome}`, salva.data_entrega || hoje());
+      toast.success(`Locação ${codigo(salva.numero)} aprovada`, { description: "Foi para “Aguardando entrega” e a cobrança entrou no financeiro.", action: desfazer(salva) });
       return true;
     },
     [salvarLocacao, cobrar],
@@ -238,22 +456,20 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const marcarEntregue = useCallback(
     async (l: Locacao) => {
       const agora = new Date().toISOString();
-      // Se entregou em data diferente da prevista, a coleta acompanha.
+      // Entregou em data diferente da prevista? A coleta acompanha.
       const dias = diasDaLocacao(l.modalidade, l.quantidade_periodos);
       const entrega = hoje();
-      await salvarLocacao(
-        { ...l, status: "na_obra", entregue_em: agora, data_entrega: entrega, data_coleta: l.data_entrega === entrega ? l.data_coleta : addDias(entrega, dias) },
-        "Equipamentos entregues na obra",
-      );
-      toast.success(`#${l.numero} entregue`, { description: "Contagem do prazo iniciada." });
+      const coleta = l.data_entrega === entrega ? l.data_coleta : addDias(entrega, dias);
+      const salva = await salvarLocacao({ ...l, status: "na_obra", entregue_em: agora, data_entrega: entrega, data_coleta: coleta }, "Equipamentos entregues na obra");
+      toast.success(`${codigo(l.numero)} entregue`, { description: `Coleta prevista para ${fmtData(coleta)}.`, action: desfazer(salva) });
     },
     [salvarLocacao],
   );
 
   const marcarRecolhido = useCallback(
     async (l: Locacao) => {
-      await salvarLocacao({ ...l, status: "finalizada", recolhido_em: new Date().toISOString() }, "Equipamentos recolhidos — voltaram ao estoque");
-      toast.success(`#${l.numero} finalizada`, { description: "Os itens voltaram para o estoque." });
+      const salva = await salvarLocacao({ ...l, status: "finalizada", recolhido_em: new Date().toISOString() }, "Equipamentos recolhidos — voltaram ao estoque");
+      toast.success(`${codigo(l.numero)} finalizada`, { description: "Os itens voltaram para o estoque.", action: desfazer(salva) });
     },
     [salvarLocacao],
   );
@@ -282,6 +498,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     },
     [salvarLocacao, apagarCobrancasAbertas],
   );
+  voltarRef.current = voltarEtapa;
 
   const cancelar = useCallback(
     async (l: Locacao, motivo: string) => {
@@ -296,11 +513,24 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       const dias = diasDaLocacao(l.modalidade, l.quantidade_periodos);
       const aluguel = totalLocacao({ ...l, taxa_entrega: 0, taxa_retirada: 0, acrescimo: 0, desconto: 0 });
       const novaColeta = addDias(l.data_coleta || hoje(), dias);
-      const salva = await salvarLocacao({ ...l, data_coleta: novaColeta }, `Contrato renovado por mais ${descreverModalidade(l.modalidade, l.quantidade_periodos)} — nova coleta ${novaColeta.split("-").reverse().join("/")}`);
-      await cobrar(salva, aluguel, "Renovação", `Renovação #${l.numero} — ${l.cliente_nome}`, l.data_coleta || hoje());
-      toast.success("Contrato renovado", { description: "A cobrança da renovação entrou no financeiro." });
+      const salva = await salvarLocacao({ ...l, data_coleta: novaColeta }, `Contrato renovado por mais ${descreverModalidade(l.modalidade, l.quantidade_periodos)} — nova coleta ${fmtData(novaColeta)}`);
+      await cobrar(salva, aluguel, "Renovação", `Renovação ${codigo(l.numero)} — ${l.cliente_nome}`, l.data_coleta || hoje());
+      toast.success("Contrato renovado", { description: `Nova coleta em ${fmtData(novaColeta)}. A cobrança entrou no financeiro.` });
     },
     [salvarLocacao, cobrar],
+  );
+
+  const importar = useCallback(
+    async (d: Dados, opcoes?: { config?: boolean }) => {
+      const r = mesclarDados(dadosRef.current, d);
+      for (const e of r.equipamentos) await gravar("equipamentos", e);
+      for (const c of r.clientes) await gravar("clientes", c);
+      for (const l of r.locacoes) await gravar("locacoes", l);
+      for (const x of r.lancamentos) await gravar("lancamentos", x);
+      if (opcoes?.config) enfileirar({ k: uid(), tipo: "config", cfg: mesclarConfig(d.config) });
+      return r;
+    },
+    [gravar, enfileirar],
   );
 
   const value = useMemo<Ctx>(
@@ -311,6 +541,9 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       session,
       authPronto,
       semAcesso,
+      recuperandoSenha,
+      sync,
+      migracao,
       backend: backend.current,
       estoque: calcularEstoque(dados),
       recarregar,
@@ -326,15 +559,27 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       salvarLancamento,
       excluirLancamento: (id) => apagar("lancamentos", id),
       async salvarConfig(c) {
-        setDados((d) => ({ ...d, config: c }));
-        await backend.current.salvarConfig(c);
+        enfileirar({ k: uid(), tipo: "config", cfg: c });
       },
-      async importar(d) {
-        for (const t of ["equipamentos", "clientes", "locacoes", "lancamentos"] as Tabela[]) {
-          for (const linha of d[t] as unknown as { id: string }[]) await backend.current.salvar(t, linha);
-        }
-        await backend.current.salvarConfig(mesclarConfig(d.config));
-        await recarregar();
+      importar,
+      async migrar() {
+        if (!migracao) return;
+        // A configuração do aparelho só vai junto se a nuvem ainda estiver com a padrão.
+        const nuvemPadrao = JSON.stringify(dadosRef.current.config) === JSON.stringify(mesclarConfig(null));
+        const r = await importar(migracao, { config: nuvemPadrao });
+        localStorage.setItem(CHAVE_MIGRADO, "1");
+        setMigracao(null);
+        toast.success("Dados enviados para a nuvem", {
+          description: `${r.locacoes.length} locações, ${r.clientes.length} clientes e ${r.lancamentos.length} lançamentos${r.renumeradas.length ? ` (${r.renumeradas.length} renumeradas)` : ""}.`,
+        });
+      },
+      dispensarMigracao() {
+        localStorage.setItem(CHAVE_MIGRADO, "1");
+        setMigracao(null);
+      },
+      async carregarCatalogo() {
+        const existentes = new Set(dadosRef.current.equipamentos.map((e) => e.nome.toLowerCase()));
+        for (const e of catalogoInicial(dadosRef.current.config)) if (!existentes.has(e.nome.toLowerCase())) await gravar("equipamentos", e);
       },
       proximoNumero,
       aprovar,
@@ -343,11 +588,22 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       marcarEntregue,
       marcarRecolhido,
       renovar,
+      async definirSenha(nova) {
+        const r = await supabase().auth.updateUser({ password: nova });
+        if (r.error) throw r.error;
+        setRecuperandoSenha(false);
+      },
       async sair() {
-        if (temNuvem) await supabase().auth.signOut();
+        if (nuvem) await supabase().auth.signOut();
+        try {
+          localStorage.removeItem(CHAVE_CACHE);
+        } catch {
+          /* ok */
+        }
+        setDados(VAZIO);
       },
     }),
-    [dados, carregando, session, authPronto, semAcesso, recarregar, gravar, apagar, salvarLocacao, salvarLancamento, proximoNumero, aprovar, voltarEtapa, cancelar, marcarEntregue, marcarRecolhido, renovar],
+    [dados, carregando, session, authPronto, semAcesso, recuperandoSenha, sync, migracao, recarregar, gravar, apagar, enfileirar, salvarLocacao, salvarLancamento, importar, proximoNumero, aprovar, voltarEtapa, cancelar, marcarEntregue, marcarRecolhido, renovar, nuvem],
   );
 
   return <C.Provider value={value}>{children}</C.Provider>;
@@ -359,6 +615,4 @@ export function useDados() {
   return c;
 }
 
-export function precisaLogin(session: Session | null) {
-  return temNuvem && !session;
-}
+export const temNuvemConfigurada = () => Boolean(conexaoAtual());

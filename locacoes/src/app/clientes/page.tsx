@@ -1,13 +1,15 @@
 "use client";
 
+import { confirmar } from "@/components/dialogo";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useAbrirItem } from "@/lib/abrir";
 import { toast } from "sonner";
 import { MapPin, MessageCircle, Phone, Plus, Search, Sparkles, Users } from "lucide-react";
 import { EnderecoForm } from "@/components/endereco-form";
 import { Avatar, Badge, Button, Card, Empty, Field, Input, Modal, PageHeader, Textarea, ButtonLink } from "@/components/ui";
 import { useDados } from "@/lib/store";
-import { fmtData, fmtDocumento, fmtTelefone, linhaEndereco, linkWhatsApp, normalizar } from "@/lib/format";
+import { fmtData, fmtDocumento, fmtTelefone, linhaEndereco, linkWhatsApp, normalizar, codigo } from "@/lib/format";
 import { novoCliente } from "@/lib/novo";
 import { brl } from "@/lib/pricing";
 import { saldoLocacao, STATUS } from "@/lib/status";
@@ -33,7 +35,7 @@ function EditarCliente({ cliente, onClose }: { cliente: Cliente; onClose: () => 
               variant="ghost"
               className="mr-auto text-rose-600 hover:bg-rose-50"
               onClick={async () => {
-                if (!confirm("Excluir este cliente?")) return;
+                if (!(await confirmar({ titulo: `Excluir ${c.nome || "este cliente"}?`, texto: "O cadastro some da lista de clientes.", ok: "Excluir", perigo: true }))) return;
                 await excluirCliente(c.id);
                 onClose();
               }}
@@ -85,7 +87,7 @@ function EditarCliente({ cliente, onClose }: { cliente: Cliente; onClose: () => 
               {locs.map((l) => (
                 <li key={l.id}>
                   <Link href={`/locacoes/${l.id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-ink-50">
-                    <span className="font-mono text-xs text-ink-400">#{l.numero}</span>
+                    <span className="font-mono text-xs text-ink-400">{codigo(l.numero)}</span>
                     <Badge className={STATUS[l.status].cor} dot={STATUS[l.status].ponto}>
                       {STATUS[l.status].curto}
                     </Badge>
@@ -107,6 +109,16 @@ export default function Clientes() {
   const { dados, carregando } = useDados();
   const [q, setQ] = useState("");
   const [editar, setEditar] = useState<Cliente | null>(null);
+  useAbrirItem(
+    useCallback(
+      (id: string) => {
+        const c = dados.clientes.find((x) => x.id === id);
+        if (c) setEditar(c);
+        return Boolean(c);
+      },
+      [dados.clientes],
+    ),
+  );
 
   const lista = useMemo(() => {
     const t = normalizar(q);

@@ -6,7 +6,7 @@ import { ClipboardList, KanbanSquare, List, Plus, Search } from "lucide-react";
 import { CardLocacao, resumoItens } from "@/components/card-locacao";
 import { Badge, Card, cx, Empty, Input, PageHeader, Segmented, ButtonLink } from "@/components/ui";
 import { useDados } from "@/lib/store";
-import { diffDias, fmtDataCurta, hoje, normalizar } from "@/lib/format";
+import { diffDias, fmtDataCurta, hoje, normalizar, codigo } from "@/lib/format";
 import { brl } from "@/lib/pricing";
 import { ALERTA_COR, alertaPrazo, STATUS } from "@/lib/status";
 import type { Locacao, StatusLocacao } from "@/lib/types";
@@ -179,7 +179,7 @@ export default function Locacoes() {
                     const a = alertaPrazo(l);
                     return (
                       <tr key={l.id} className="cursor-pointer hover:bg-ink-50" onClick={() => router.push(`/locacoes/${l.id}`)}>
-                        <td className="px-4 py-3 font-mono text-xs text-ink-500">#{l.numero}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-ink-500">{codigo(l.numero)}</td>
                         <td className="px-4 py-3 font-semibold">{l.cliente_nome || "—"}</td>
                         <td className="px-4 py-3 text-ink-600">{l.endereco.bairro || l.endereco.logradouro || "—"}</td>
                         <td className="px-4 py-3">

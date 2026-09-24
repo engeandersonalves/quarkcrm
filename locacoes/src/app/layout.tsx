@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Plus_Jakarta_Sans, Sora } from "next/font/google";
 import { Toaster } from "sonner";
+import { Dialogos } from "@/components/dialogo";
 import { Shell } from "@/components/shell";
 import { DadosProvider } from "@/lib/store";
 import "./globals.css";
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <DadosProvider>
           <Shell>{children}</Shell>
         </DadosProvider>
+        <Dialogos />
         <Toaster position="top-center" richColors closeButton toastOptions={{ style: { fontFamily: "var(--font-jakarta)" } }} />
       </body>
     </html>
