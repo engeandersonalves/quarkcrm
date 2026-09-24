@@ -179,8 +179,7 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
       if (tipo === "salvar") {
         toast.success(`Orçamento #${s.numero} salvo`, { action: { label: "Abrir", onClick: () => router.push(`/locacoes/${s.id}`) } });
       } else if (tipo === "aprovar") {
-        await aprovar(s);
-        router.push(`/locacoes/${s.id}`);
+        if (await aprovar(s)) router.push(`/locacoes/${s.id}`);
       } else if (tipo === "whats" && aba) {
         aba.location.href = linkWhatsApp(s.cliente_telefone, mensagemOrcamento(s, cfg));
       } else if (tipo === "pdf" && aba) {
@@ -202,7 +201,7 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
   const editando = l.numero > 0;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
+    <div className="grid gap-6 pb-20 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:pb-0">
       <div className="grid gap-5">
         {/* 1. Equipamentos */}
         <Secao
@@ -275,7 +274,10 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
             <Segmented<Modalidade>
               className="flex w-full overflow-x-auto scrollbar-none [&>button]:flex-1"
               value={l.modalidade}
-              onChange={(m) => atualizar({ modalidade: m, quantidade_periodos: m === "dias" ? Math.max(l.quantidade_periodos, 1) : l.modalidade === "dias" ? 1 : l.quantidade_periodos })}
+              onChange={(m) =>
+                // Ao ir para "Nº de dias", mantém a mesma duração (1 mês → 30 dias).
+                atualizar({ modalidade: m, quantidade_periodos: m === "dias" ? diasDaLocacao(l.modalidade, l.quantidade_periodos) : l.modalidade === "dias" ? 1 : l.quantidade_periodos })
+              }
               options={[...PERIODOS.map((p) => ({ value: p.id as Modalidade, label: p.nome })), { value: "dias", label: "Nº de dias" }]}
             />
             <div className="grid gap-4 sm:grid-cols-3">
@@ -308,7 +310,10 @@ export function Orcamento({ editarId, clienteId }: { editarId?: string | null; c
                 onFocus={() => setSugestoes(true)}
                 onBlur={() => setTimeout(() => setSugestoes(false), 150)}
                 onChange={(e) => {
-                  atualizar({ cliente_nome: e.target.value, cliente_id: l.cliente_id && e.target.value ? l.cliente_id : null });
+                  // Mudou o nome de um cliente já escolhido? Então é outra pessoa: desvincula.
+                  const escolhido = l.cliente_id ? dados.clientes.find((c) => c.id === l.cliente_id) : null;
+                  const mesmo = escolhido && normalizar(escolhido.nome).trim() === normalizar(e.target.value).trim();
+                  atualizar({ cliente_nome: e.target.value, cliente_id: mesmo ? l.cliente_id : null });
                   setSugestoes(true);
                 }}
                 placeholder="Ex.: Vinicius Daniel Silva"

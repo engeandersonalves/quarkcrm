@@ -115,6 +115,10 @@ export interface Config {
   empresa_pix: string;
   empresa_responsavel: string;
   empresa_endereco: string;
+  /** Cidade do recebedor PIX (vai no QR Code). */
+  empresa_cidade: string;
+  /** Nome do titular da chave PIX (vai no QR Code). */
+  pix_titular: string;
   /** Preço de cada plano como fração do mensal (mensal = 1). */
   fator_diaria: number;
   fator_semanal: number;

@@ -7,12 +7,12 @@ App para locação de andaimes e equipamentos. Funciona no celular e no computad
 | Tela | O que faz |
 |---|---|
 | **Orçamento** (tela inicial) | Escolhe os equipamentos com botões − / +, o período, o cliente e o endereço da obra. Mostra na hora os **4 planos lado a lado** (diária, semanal, quinzenal e mensal) com o preço por dia e quanto o cliente economiza. Opção **“Nº de dias”**: o sistema acha a combinação mais barata (ex.: 10 dias → 1 quinzena, não 1 semana + 3 diárias). Envia pelo **WhatsApp**, gera **PDF** ou já aprova. |
-| **Locações** (CRM) | Quadro: **Orçamento → Aguardando entrega → Na obra → Finalizada**. Um botão avança cada etapa (Aprovar, Marcar entregue, Marcar recolhido). Alertas de “entregar hoje”, “vence em 2 dias”, “venceu há 3 dias”. Ficha com mapa, histórico, pagamentos, renovação, taxa de desmontagem de 25% e o **termo de aluguel** no modelo da empresa. |
+| **Locações** (CRM) | Quadro: **Orçamento → Aguardando entrega → Na obra → Finalizada**. Um botão avança cada etapa (Aprovar, Marcar entregue, Marcar recolhido). Alertas de “entregar hoje”, “vence em 2 dias”, “venceu há 3 dias”. Ficha com mapa, histórico, pagamentos, renovação, taxa de desmontagem de 25% e o **termo de locação** (1 página A4) com QR Code do PIX já com o valor, QR Code do mapa da obra, tabela com valor de reposição, cláusulas, conferência na entrega/coleta e 3 assinaturas. Botões para **desfazer etapa** (clicou errado) e **cancelar** depois de aprovado. |
 | **Agenda** | Entregas e coletas: atrasadas, hoje, amanhã, próximos dias. **Rota de hoje** no Google Maps passando por todas as obras, e **“Enviar rota ao entregador”** no WhatsApp com endereço, referência, link do mapa e itens. |
 | **Estoque** | Total, na obra, a entregar, em manutenção e disponível de cada item, **onde está cada peça** e quanto o estoque está rendendo por mês. O orçamento avisa quando falta peça. |
 | **Financeiro** | Recebido **por dia** e **por mês**, despesas, resultado, **a receber** (com vencidos), receita por plano, recebimento parcial e cobrança pelo WhatsApp. Aprovar um orçamento lança a cobrança sozinho; renovar lança a da renovação. |
 | **Clientes** | Criados automaticamente nos orçamentos. Histórico, total gasto e em aberto de cada um. |
-| **Ajustes** | Dados da empresa, regra de preços, taxas, textos do termo e backup. |
+| **Ajustes** | Dados da empresa e do PIX, regra de preços, taxas, cláusulas do termo, **equipe** (quem tem acesso) e backup. |
 
 ### Endereço para o entregador
 CEP preenche rua, bairro e cidade sozinho. Tem campo de **ponto de referência** e de **localização exata**: cole o link que o cliente manda pelo WhatsApp, ou toque em **GPS** estando na obra. Os botões **Maps** e **Waze** abrem a navegação direto.
@@ -40,8 +40,13 @@ Sem configurar nada, os dados ficam salvos **só no navegador** — bom para tes
 ## Colocar no ar (≈ 10 minutos, plano gratuito)
 1. **Supabase** — crie um projeto em [supabase.com](https://supabase.com). Em **SQL Editor → New query**, cole [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**. Em **Project Settings → API**, copie a *Project URL* e a chave *anon*.
 2. **Vercel** — importe o repositório em [vercel.com/new](https://vercel.com/new) e, em **Root Directory**, escolha **`locacoes`**. Em *Environment Variables* cadastre as variáveis de [`.env.example`](.env.example). Clique em Deploy.
-3. Abra o app, **Criar conta** para cada pessoa da equipe e depois defina `NEXT_PUBLIC_ALLOW_SIGNUP=false`.
+3. Abra o app e **crie a sua conta primeiro** — a primeira pessoa a entrar vira administradora. Depois, em **Ajustes → Equipe**, libere o e-mail de cada funcionário; só e-mails liberados conseguem ver os dados (clientes, CPFs, endereços). Quando todos tiverem conta, defina `NEXT_PUBLIC_ALLOW_SIGNUP=false` e, no Supabase, desative *Allow new users to sign up* em **Authentication → Sign In / Providers**.
 4. Tinha dados no modo demonstração? Em **Ajustes → Baixar backup** no navegador antigo e **Importar backup** no app publicado.
+
+### PIX
+Em **Ajustes**, confira a chave PIX, o titular e a cidade. O termo mostra um QR Code PIX com o valor da locação já preenchido, e o botão **Cobrar no WhatsApp** manda o “PIX copia e cola”. Chave de telefone deve ser escrita com +55 (ex.: `+5582988156223`).
+
+> Os textos do termo são um modelo. Vale pedir a um advogado de confiança para revisar as cláusulas (Ajustes → Textos do termo).
 
 ## Estrutura
 ```
@@ -49,6 +54,7 @@ src/lib/pricing.ts        cálculo dos planos e da melhor combinação + testes 
 src/lib/store.tsx         dados, fluxo da locação (aprovar, entregar, recolher, renovar)
 src/lib/backend.ts        Supabase (nuvem) ou navegador (demonstração)
 src/lib/mensagens.ts      textos do WhatsApp (orçamento, entregador, cobrança, vencimento)
+src/lib/pix.ts            PIX copia e cola / QR Code (padrão BR Code do Banco Central) + testes
 src/components/orcamento.tsx   tela de orçamento rápido
 src/app/                  telas (locacoes, agenda, estoque, financeiro, clientes, ajustes, documento)
 supabase/schema.sql       tabelas, segurança (só a equipe logada) e tempo real

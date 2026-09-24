@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowDownRight, ArrowUpRight, Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Plus, Scale, Wallet } from "lucide-react";
 import { ReceberModal } from "@/components/receber-modal";
-import { Button, Card, CardHeader, cx, Empty, Field, Input, Modal, MoneyInput, PageHeader, Segmented, Select, Stat, Switch } from "@/components/ui";
+import { Button, Card, CardHeader, cx, Empty, Field, Input, Modal, MoneyInput, PageHeader, Segmented, Select, Stat, Switch, ButtonLink } from "@/components/ui";
 import { useDados } from "@/lib/store";
 import { CATEGORIAS_ENTRADA, CATEGORIAS_SAIDA, FORMAS_PAGAMENTO } from "@/lib/defaults";
 import { diffDias, fmtData, hoje, linkWhatsApp, MESES, parseData } from "@/lib/format";
@@ -349,7 +349,7 @@ export default function Financeiro() {
                   <span className={cx("grid h-9 w-9 shrink-0 place-items-center rounded-xl", x.tipo === "entrada" ? "bg-brand-100 text-brand-700" : "bg-rose-100 text-rose-700")}>
                     {x.tipo === "entrada" ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
                   </span>
-                  <button className="min-w-0 flex-1 text-left" onClick={() => setEditar(x)}>
+                  <div role="button" tabIndex={0} className="min-w-0 flex-1 cursor-pointer text-left" onClick={() => setEditar(x)} onKeyDown={(e) => e.key === "Enter" && setEditar(x)}>
                     <p className="truncate text-[14px] font-medium">{x.descricao || x.categoria}</p>
                     <p className="text-[12px] text-ink-500">
                       {x.categoria} · {x.pago ? `${fmtData(dataCaixa(x))} · ${x.forma}` : <span className={vencido ? "font-semibold text-rose-600" : undefined}>{vencido ? `venceu há ${diffDias(x.data, hoje())}d` : `vence ${fmtData(x.data)}`}</span>}
@@ -362,7 +362,7 @@ export default function Financeiro() {
                         </>
                       )}
                     </p>
-                  </button>
+                  </div>
                   <span className={cx("tnum text-[14px] font-semibold whitespace-nowrap", x.tipo === "entrada" ? "text-ink-900" : "text-rose-600")}>
                     {x.tipo === "saida" && "−"}
                     {brl(x.valor)}
@@ -370,11 +370,9 @@ export default function Financeiro() {
                   {!x.pago && (
                     <div className="flex gap-1.5">
                       {x.tipo === "entrada" && l?.cliente_telefone && (
-                        <a href={linkWhatsApp(l.cliente_telefone, mensagemCobranca(l, x.valor, dados.config))} target="_blank" rel="noreferrer" title="Cobrar no WhatsApp">
-                          <Button size="icon" variant="ghost">
+                        <ButtonLink href={linkWhatsApp(l.cliente_telefone, mensagemCobranca(l, x.valor, dados.config))} target="_blank" title="Cobrar no WhatsApp" size="icon" variant="ghost">
                             <MessageCircle className="h-4 w-4" />
-                          </Button>
-                        </a>
+                          </ButtonLink>
                       )}
                       {x.tipo === "entrada" ? (
                         <Button size="sm" variant="brand" onClick={() => setReceber(x)}>

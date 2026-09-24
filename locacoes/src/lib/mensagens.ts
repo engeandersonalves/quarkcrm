@@ -1,5 +1,6 @@
 import { enderecoCompleto, fmtData, fmtTelefone, linkMaps } from "./format";
 import { brl, comparativo, descreverModalidade, descreverPartes, valorAluguel } from "./pricing";
+import { pixCopiaECola } from "./pix";
 import type { Config, Locacao } from "./types";
 
 const itensTexto = (l: Locacao) => l.itens.map((i) => `• ${i.quantidade} ${i.unidade} — ${i.nome}`).join("\n");
@@ -50,7 +51,7 @@ export function mensagemEntregador(l: Locacao, acao: "entrega" | "coleta"): stri
     "",
     "*Itens:*",
     itensTexto(l),
-    acao === "coleta" ? "\n⚠️ Conferir quantidades e estado das peças na coleta." : "\n✍️ Levar o termo de aluguel para assinatura.",
+    acao === "coleta" ? "\n⚠️ Conferir quantidades e estado das peças na coleta." : "\n✍️ Levar o termo de locação para assinatura.",
   ]
     .filter((x) => x !== "")
     .join("\n")
@@ -58,10 +59,14 @@ export function mensagemEntregador(l: Locacao, acao: "entrega" | "coleta"): stri
 }
 
 export function mensagemCobranca(l: Locacao, valor: number, cfg: Config): string {
+  const copiaECola = cfg.empresa_pix
+    ? pixCopiaECola({ chave: cfg.empresa_pix, nome: cfg.pix_titular || cfg.empresa_nome, cidade: cfg.empresa_cidade, valor, identificador: `LOC${String(l.numero).padStart(4, "0")}` })
+    : "";
   return [
     `Olá, ${l.cliente_nome.split(" ")[0]}! Aqui é da *${cfg.empresa_nome}*.`,
     `Referente à locação nº ${l.numero}, o valor em aberto é *${brl(valor)}*.`,
-    cfg.empresa_pix ? `PIX: ${cfg.empresa_pix}${cfg.empresa_responsavel ? ` (${cfg.empresa_responsavel})` : ""}` : "",
+    cfg.empresa_pix ? `Chave PIX: ${cfg.empresa_pix}` : "",
+    copiaECola ? `\nPIX copia e cola (o valor já vem preenchido):\n${copiaECola}\n` : "",
     "Obrigado pela preferência! 🙏",
   ]
     .filter(Boolean)

@@ -27,6 +27,9 @@ interface Ctx {
   modo: Backend["modo"];
   session: Session | null;
   authPronto: boolean;
+  /** Logado, mas o e-mail não está na lista da equipe. */
+  semAcesso: boolean;
+  backend: Backend;
   estoque: Record<string, SaldoEstoque>;
   recarregar(): Promise<void>;
   salvarEquipamento(e: Equipamento): Promise<void>;
@@ -41,7 +44,9 @@ interface Ctx {
   importar(d: Dados): Promise<void>;
   proximoNumero(): number;
   /* fluxo da locação */
-  aprovar(l: Locacao): Promise<void>;
+  aprovar(l: Locacao): Promise<boolean>;
+  voltarEtapa(l: Locacao): Promise<void>;
+  cancelar(l: Locacao, motivo: string): Promise<void>;
   marcarEntregue(l: Locacao): Promise<void>;
   marcarRecolhido(l: Locacao): Promise<void>;
   renovar(l: Locacao): Promise<void>;
@@ -83,7 +88,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const recarregar = useCallback(async () => {
     try {
       let d = await backend.current.carregar();
-      // Primeiro uso: já começa com o catálogo do termo de aluguel.
+      // Primeiro uso: já começa com o catálogo do termo de locação.
       if (backend.current.modo === "local" && d.equipamentos.length === 0 && d.locacoes.length === 0 && !localStorage.getItem("quark-locacoes:semeado")) {
         const cat = catalogoInicial(d.config);
         for (const e of cat) await backend.current.salvar("equipamentos", e);
@@ -111,11 +116,24 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logado = !temNuvem || Boolean(session);
+  const email = session?.user.email ?? "";
+  const [semAcesso, setSemAcesso] = useState(false);
   useEffect(() => {
     if (!authPronto || !logado) return;
-    recarregar();
-    return backend.current.ouvir(recarregar);
-  }, [authPronto, logado, recarregar]);
+    let parar: (() => void) | undefined;
+    let cancelado = false;
+    backend.current.entrarEquipe().then((ok) => {
+      if (cancelado) return;
+      setSemAcesso(!ok);
+      if (!ok) return setCarregando(false);
+      recarregar();
+      parar = backend.current.ouvir(recarregar);
+    });
+    return () => {
+      cancelado = true;
+      parar?.();
+    };
+  }, [authPronto, logado, email, recarregar]);
 
   /* ---------------------------------------------------------------- escrita otimista */
 
@@ -194,10 +212,25 @@ export function DadosProvider({ children }: { children: ReactNode }) {
 
   const aprovar = useCallback(
     async (l: Locacao) => {
+      if (l.itens.length === 0) {
+        toast.error("Este orçamento não tem equipamentos");
+        return false;
+      }
+      if (!l.cliente_nome.trim()) {
+        toast.error("Informe o nome do cliente antes de aprovar", { description: "Abra o orçamento em “Editar” e preencha o cliente." });
+        return false;
+      }
+      const saldo = calcularEstoque(dadosRef.current);
+      const faltas = l.itens.filter((i) => saldo[i.equipamento_id] && i.quantidade > saldo[i.equipamento_id].disponivel);
+      if (faltas.length > 0) {
+        const lista = faltas.map((i) => `• ${i.nome}: pediu ${i.quantidade}, disponível ${Math.max(0, saldo[i.equipamento_id].disponivel)}`).join("\n");
+        if (!confirm(`Estoque insuficiente:\n${lista}\n\nAprovar mesmo assim?`)) return false;
+      }
       const salva = await salvarLocacao({ ...l, status: "agendada" }, "Orçamento aprovado pelo cliente");
       const jaCobrado = dadosRef.current.lancamentos.some((x) => x.locacao_id === l.id && x.categoria === "Aluguel");
       if (!jaCobrado) await cobrar(salva, salva.valor_total, "Aluguel", `Locação #${salva.numero} — ${salva.cliente_nome}`, salva.data_entrega || hoje());
       toast.success(`Locação #${salva.numero} aprovada`, { description: "Foi para “Aguardando entrega” e a cobrança entrou no financeiro." });
+      return true;
     },
     [salvarLocacao, cobrar],
   );
@@ -225,6 +258,39 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     [salvarLocacao],
   );
 
+  /** Apaga as cobranças ainda não pagas da locação (ao cancelar ou voltar para orçamento). */
+  const apagarCobrancasAbertas = useCallback(
+    async (l: Locacao) => {
+      for (const x of dadosRef.current.lancamentos.filter((x) => x.locacao_id === l.id && !x.pago)) await apagar("lancamentos", x.id);
+    },
+    [apagar],
+  );
+
+  /** Desfaz a última etapa (clicou por engano). */
+  const voltarEtapa = useCallback(
+    async (l: Locacao) => {
+      if (l.status === "agendada") {
+        await apagarCobrancasAbertas(l);
+        await salvarLocacao({ ...l, status: "orcamento" }, "Voltou para orçamento (aprovação desfeita)");
+      } else if (l.status === "na_obra") {
+        await salvarLocacao({ ...l, status: "agendada", entregue_em: null }, "Entrega desfeita — voltou para “aguardando entrega”");
+      } else if (l.status === "finalizada") {
+        await salvarLocacao({ ...l, status: "na_obra", recolhido_em: null }, "Coleta desfeita — voltou para “na obra”");
+      } else if (l.status === "recusada") {
+        await salvarLocacao({ ...l, status: "orcamento" }, "Reaberto como orçamento");
+      }
+    },
+    [salvarLocacao, apagarCobrancasAbertas],
+  );
+
+  const cancelar = useCallback(
+    async (l: Locacao, motivo: string) => {
+      await apagarCobrancasAbertas(l);
+      await salvarLocacao({ ...l, status: "recusada" }, motivo);
+    },
+    [salvarLocacao, apagarCobrancasAbertas],
+  );
+
   const renovar = useCallback(
     async (l: Locacao) => {
       const dias = diasDaLocacao(l.modalidade, l.quantidade_periodos);
@@ -244,6 +310,8 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       modo: backend.current.modo,
       session,
       authPronto,
+      semAcesso,
+      backend: backend.current,
       estoque: calcularEstoque(dados),
       recarregar,
       salvarEquipamento: (e) => gravar("equipamentos", e),
@@ -270,6 +338,8 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       },
       proximoNumero,
       aprovar,
+      voltarEtapa,
+      cancelar,
       marcarEntregue,
       marcarRecolhido,
       renovar,
@@ -277,7 +347,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
         if (temNuvem) await supabase().auth.signOut();
       },
     }),
-    [dados, carregando, session, authPronto, recarregar, gravar, apagar, salvarLocacao, salvarLancamento, proximoNumero, aprovar, marcarEntregue, marcarRecolhido, renovar],
+    [dados, carregando, session, authPronto, semAcesso, recarregar, gravar, apagar, salvarLocacao, salvarLancamento, proximoNumero, aprovar, voltarEtapa, cancelar, marcarEntregue, marcarRecolhido, renovar],
   );
 
   return <C.Provider value={value}>{children}</C.Provider>;

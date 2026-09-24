@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, MapPin } from "lucide-react";
 import { useDados } from "@/lib/store";
@@ -45,15 +45,20 @@ export function ProximaAcao({ l, size = "sm", className }: { l: Locacao; size?: 
 
 export function CardLocacao({ l }: { l: Locacao }) {
   const { dados } = useDados();
+  const router = useRouter();
+  const abrir = () => router.push(`/locacoes/${l.id}`);
   const alerta = alertaPrazo(l);
   const prog = progresso(l);
   const saldo = l.status === "orcamento" ? null : saldoLocacao(l, dados.lancamentos);
   const lugar = [l.endereco.bairro, l.endereco.cidade].filter(Boolean).join(", ") || l.endereco.logradouro;
 
   return (
-    <Link
-      href={`/locacoes/${l.id}`}
-      className="group block rounded-2xl bg-white p-4 shadow-soft ring-1 ring-ink-200/70 transition hover:-translate-y-0.5 hover:shadow-lift hover:ring-ink-300"
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={abrir}
+      onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && abrir()}
+      className="group block cursor-pointer rounded-2xl bg-white p-4 shadow-soft ring-1 ring-ink-200/70 transition hover:-translate-y-0.5 hover:shadow-lift hover:ring-ink-300"
     >
       <div className="flex items-start justify-between gap-2">
         <span className="font-mono text-[11px] font-semibold text-ink-400">#{String(l.numero).padStart(4, "0")}</span>
@@ -88,10 +93,10 @@ export function CardLocacao({ l }: { l: Locacao }) {
         </div>
       </div>
       {["orcamento", "agendada", "na_obra"].includes(l.status) && (
-        <div className="mt-3 border-t border-ink-100 pt-3 opacity-100 lg:opacity-0 lg:transition lg:group-hover:opacity-100">
+        <div className="mt-3 border-t border-ink-100 pt-3">
           <ProximaAcao l={l} className="w-full" />
         </div>
       )}
-    </Link>
+    </div>
   );
 }

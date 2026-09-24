@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { ProximaAcao } from "@/components/card-locacao";
 import { ReceberModal } from "@/components/receber-modal";
-import { Badge, Button, Card, CardHeader, cx, Empty, Field, Input, Modal, MoneyInput, Select, Skeleton } from "@/components/ui";
+import { Badge, Button, Card, CardHeader, cx, Empty, Field, Input, Modal, MoneyInput, Select, Skeleton, ButtonLink } from "@/components/ui";
 import { useDados } from "@/lib/store";
 import { CATEGORIAS_ENTRADA } from "@/lib/defaults";
 import { diffDias, fmtData, fmtDataCurta, fmtDataHora, fmtDocumento, fmtTelefone, hoje, linkMaps, linkWaze, linkWhatsApp, temEndereco, uid } from "@/lib/format";
@@ -71,7 +71,7 @@ function Etapas({ l }: { l: Locacao }) {
 export default function DetalheLocacao() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { dados, carregando, salvarLocacao, excluirLocacao, salvarLancamento, excluirLancamento, renovar } = useDados();
+  const { dados, carregando, salvarLocacao, excluirLocacao, salvarLancamento, excluirLancamento, renovar, voltarEtapa, cancelar } = useDados();
   const [receber, setReceber] = useState<Lancamento | null>(null);
   const [cobranca, setCobranca] = useState<Lancamento | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -87,7 +87,7 @@ export default function DetalheLocacao() {
       </div>
     ) : (
       <Card>
-        <Empty icon={<FileText className="h-6 w-6" />} title="Locação não encontrada" action={<Link href="/locacoes"><Button>Voltar</Button></Link>} />
+        <Empty icon={<FileText className="h-6 w-6" />} title="Locação não encontrada" action={<ButtonLink href="/locacoes">Voltar</ButtonLink>} />
       </Card>
     );
   }
@@ -108,7 +108,12 @@ export default function DetalheLocacao() {
     }
   }
 
-  const mudarData = (campo: "data_entrega" | "data_coleta", v: string) => v && salvarLocacao({ ...l, [campo]: v }, `${campo === "data_entrega" ? "Entrega" : "Coleta"} remarcada para ${fmtData(v)}`);
+  function mudarData(campo: "data_entrega" | "data_coleta", v: string) {
+    if (!v) return;
+    const n = { ...l!, [campo]: v };
+    if (n.data_coleta < n.data_entrega) return toast.error("A coleta não pode ser antes da entrega");
+    salvarLocacao(n, `${campo === "data_entrega" ? "Entrega" : "Coleta"} remarcada para ${fmtData(v)}`);
+  }
 
   function taxaDesmontagem() {
     const base = l!.valor_total;
@@ -155,21 +160,15 @@ export default function DetalheLocacao() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/?editar=${l.id}`}>
-            <Button variant="secondary">
+          <ButtonLink href={`/?editar=${l.id}`} variant="secondary">
               <Pencil className="h-4 w-4" /> Editar
-            </Button>
-          </Link>
-          <a href={`/documento/${l.id}?tipo=orcamento`} target="_blank" rel="noreferrer">
-            <Button variant="secondary">
+            </ButtonLink>
+          <ButtonLink href={`/documento/${l.id}?tipo=orcamento`} target="_blank" variant="secondary">
               <FileText className="h-4 w-4" /> Orçamento
-            </Button>
-          </a>
-          <a href={`/documento/${l.id}?tipo=termo`} target="_blank" rel="noreferrer">
-            <Button variant="secondary">
-              <FileSignature className="h-4 w-4" /> Termo de aluguel
-            </Button>
-          </a>
+            </ButtonLink>
+          <ButtonLink href={`/documento/${l.id}?tipo=termo`} target="_blank" variant="secondary">
+              <FileSignature className="h-4 w-4" /> Termo de locação
+            </ButtonLink>
         </div>
       </div>
 
@@ -179,19 +178,35 @@ export default function DetalheLocacao() {
           <div className="flex-1">
             <Etapas l={l} />
           </div>
-          <div className="flex flex-wrap gap-2 lg:w-[320px] lg:justify-end">
+          <div className="flex flex-col gap-2 lg:w-[340px]">
             {l.status === "recusada" || l.status === "finalizada" ? (
-              <Button variant="secondary" onClick={() => salvarLocacao({ ...l, status: l.status === "recusada" ? "orcamento" : "na_obra", recolhido_em: null }, "Reaberta")}>
-                <Undo2 className="h-4 w-4" /> Reabrir
+              <Button variant="secondary" size="lg" onClick={() => voltarEtapa(l)}>
+                <Undo2 className="h-4 w-4" /> {l.status === "recusada" ? "Reabrir como orçamento" : "Desfazer coleta"}
               </Button>
             ) : (
-              <ProximaAcao l={l} size="md" className="h-12 flex-1 text-[15px]" />
+              <ProximaAcao l={l} size="md" className="h-12 w-full text-[15px]" />
             )}
-            {l.status === "orcamento" && (
-              <Button variant="ghost" onClick={() => salvarLocacao({ ...l, status: "recusada" }, "Cliente recusou o orçamento")}>
-                <XCircle className="h-4 w-4" /> Recusou
-              </Button>
-            )}
+            <div className="flex flex-wrap justify-center gap-1 lg:justify-end">
+              {(l.status === "agendada" || l.status === "na_obra") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => confirm(l.status === "agendada" ? "Voltar para orçamento? A cobrança em aberto será removida." : "Desfazer a entrega? Volta para “aguardando entrega”.") && voltarEtapa(l)}
+                >
+                  <Undo2 className="h-3.5 w-3.5" /> Desfazer etapa
+                </Button>
+              )}
+              {l.status === "orcamento" && (
+                <Button variant="ghost" size="sm" onClick={() => cancelar(l, "Cliente recusou o orçamento")}>
+                  <XCircle className="h-3.5 w-3.5" /> Cliente recusou
+                </Button>
+              )}
+              {l.status === "agendada" && (
+                <Button variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50" onClick={() => confirm("Cancelar esta locação? As peças voltam ao estoque e a cobrança em aberto é removida.") && cancelar(l, "Locação cancelada antes da entrega")}>
+                  <XCircle className="h-3.5 w-3.5" /> Cancelar locação
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </Card>
@@ -223,21 +238,15 @@ export default function DetalheLocacao() {
                 </p>
               )}
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <a href={linkMaps(e)} target="_blank" rel="noreferrer">
-                  <Button variant="secondary" className="w-full" disabled={!temEndereco(e)}>
+                <ButtonLink href={linkMaps(e)} target="_blank" variant="secondary" disabled={!temEndereco(e)} className="w-full">
                     <ExternalLink className="h-4 w-4" /> Maps
-                  </Button>
-                </a>
-                <a href={linkWaze(e)} target="_blank" rel="noreferrer">
-                  <Button variant="secondary" className="w-full" disabled={!temEndereco(e)}>
+                  </ButtonLink>
+                <ButtonLink href={linkWaze(e)} target="_blank" variant="secondary" disabled={!temEndereco(e)} className="w-full">
                     <Navigation className="h-4 w-4" /> Waze
-                  </Button>
-                </a>
-                <a href={linkWhatsApp("", mensagemEntregador(l, l.status === "na_obra" ? "coleta" : "entrega"))} target="_blank" rel="noreferrer" className="col-span-2">
-                  <Button variant="primary" className="w-full">
+                  </ButtonLink>
+                <ButtonLink href={linkWhatsApp("", mensagemEntregador(l, l.status === "na_obra" ? "coleta" : "entrega"))} target="_blank" variant="primary" className="col-span-2 w-full">
                     <Truck className="h-4 w-4" /> Enviar ao entregador
-                  </Button>
-                </a>
+                  </ButtonLink>
               </div>
               <div className="mt-4 grid gap-3 border-t border-ink-100 pt-4 text-sm sm:grid-cols-2">
                 <div>
@@ -246,16 +255,12 @@ export default function DetalheLocacao() {
                   <p className="text-ink-600">{l.cliente_documento && fmtDocumento(l.cliente_documento)}</p>
                   {l.cliente_telefone && (
                     <div className="mt-2 flex gap-2">
-                      <a href={`tel:${l.cliente_telefone.replace(/\D/g, "")}`}>
-                        <Button size="sm" variant="secondary">
+                      <ButtonLink href={`tel:${l.cliente_telefone.replace(/\D/g, "")}`} size="sm" variant="secondary">
                           <Phone className="h-3.5 w-3.5" /> {fmtTelefone(l.cliente_telefone)}
-                        </Button>
-                      </a>
-                      <a href={linkWhatsApp(l.cliente_telefone, `Olá, ${l.cliente_nome.split(" ")[0]}! Aqui é da ${cfg.empresa_nome}.`)} target="_blank" rel="noreferrer">
-                        <Button size="sm" variant="secondary">
+                        </ButtonLink>
+                      <ButtonLink href={linkWhatsApp(l.cliente_telefone, `Olá, ${l.cliente_nome.split(" ")[0]}! Aqui é da ${cfg.empresa_nome}.`)} target="_blank" size="sm" variant="secondary">
                           <MessageCircle className="h-3.5 w-3.5" />
-                        </Button>
-                      </a>
+                        </ButtonLink>
                     </div>
                   )}
                 </div>
@@ -373,11 +378,9 @@ export default function DetalheLocacao() {
                   <Button variant="secondary" loading={busy === "renovar"} onClick={() => comBusy("renovar", () => renovar(l))}>
                     <RefreshCcw className="h-4 w-4" /> Renovar
                   </Button>
-                  <a href={linkWhatsApp(l.cliente_telefone, mensagemVencimento(l, cfg))} target="_blank" rel="noreferrer">
-                    <Button variant="secondary" className="w-full">
+                  <ButtonLink href={linkWhatsApp(l.cliente_telefone, mensagemVencimento(l, cfg))} target="_blank" variant="secondary" className="w-full">
                       <BellRing className="h-4 w-4" /> Avisar cliente
-                    </Button>
-                  </a>
+                    </ButtonLink>
                 </div>
               )}
               {l.status === "na_obra" && (
@@ -442,11 +445,9 @@ export default function DetalheLocacao() {
                   </ul>
                   <div className="mt-3 grid gap-2">
                     {saldo.aberto > 0 && (
-                      <a href={linkWhatsApp(l.cliente_telefone, mensagemCobranca(l, saldo.aberto, cfg))} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" className="w-full">
+                      <ButtonLink href={linkWhatsApp(l.cliente_telefone, mensagemCobranca(l, saldo.aberto, cfg))} target="_blank" variant="secondary" className="w-full">
                           <MessageCircle className="h-4 w-4" /> Cobrar no WhatsApp
-                        </Button>
-                      </a>
+                        </ButtonLink>
                     )}
                     {(l.status === "na_obra" || l.status === "finalizada") && (
                       <Button variant="ghost" size="sm" loading={busy === "desm"} onClick={taxaDesmontagem}>

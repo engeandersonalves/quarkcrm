@@ -6,7 +6,7 @@ export const STATUS: Record<StatusLocacao, { nome: string; curto: string; cor: s
   agendada: { nome: "Aguardando entrega", curto: "A entregar", cor: "bg-sky-50 text-sky-700 ring-sky-200", ponto: "bg-sky-500" },
   na_obra: { nome: "Na obra", curto: "Na obra", cor: "bg-emerald-50 text-emerald-700 ring-emerald-200", ponto: "bg-emerald-500" },
   finalizada: { nome: "Finalizada", curto: "Finalizada", cor: "bg-ink-100 text-ink-600 ring-ink-200", ponto: "bg-ink-400" },
-  recusada: { nome: "Recusada", curto: "Recusada", cor: "bg-rose-50 text-rose-700 ring-rose-200", ponto: "bg-rose-400" },
+  recusada: { nome: "Recusada / cancelada", curto: "Cancelada", cor: "bg-rose-50 text-rose-700 ring-rose-200", ponto: "bg-rose-400" },
 };
 
 export type Alerta = { tipo: "critico" | "atencao" | "info"; texto: string };

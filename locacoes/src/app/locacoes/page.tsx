@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ClipboardList, KanbanSquare, List, Plus, Search } from "lucide-react";
 import { CardLocacao, resumoItens } from "@/components/card-locacao";
-import { Badge, Button, Card, cx, Empty, Input, PageHeader, Segmented } from "@/components/ui";
+import { Badge, Card, cx, Empty, Input, PageHeader, Segmented, ButtonLink } from "@/components/ui";
 import { useDados } from "@/lib/store";
 import { diffDias, fmtDataCurta, hoje, normalizar } from "@/lib/format";
 import { brl } from "@/lib/pricing";
@@ -73,11 +72,9 @@ export default function Locacoes() {
                 { value: "lista", label: <List className="h-4 w-4" /> },
               ]}
             />
-            <Link href="/">
-              <Button variant="brand">
+            <ButtonLink href="/" variant="brand">
                 <Plus className="h-4 w-4" /> Orçamento
-              </Button>
-            </Link>
+              </ButtonLink>
           </>
         }
       />
@@ -89,9 +86,7 @@ export default function Locacoes() {
             title="Nenhuma locação ainda"
             text="Faça um orçamento na tela inicial. Quando o cliente aprovar, ele aparece aqui."
             action={
-              <Link href="/">
-                <Button variant="brand">Fazer orçamento</Button>
-              </Link>
+              <ButtonLink href="/" variant="brand">Fazer orçamento</ButtonLink>
             }
           />
         </Card>

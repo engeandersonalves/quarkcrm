@@ -27,7 +27,7 @@ function ativo(path: string, href: string) {
 
 export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
-  const { dados, modo, session, authPronto, carregando, sair } = useDados();
+  const { dados, modo, session, authPronto, semAcesso, carregando, sair } = useDados();
   const [mais, setMais] = useState(false);
 
   const badges = useMemo(() => {
@@ -39,9 +39,6 @@ export function Shell({ children }: { children: ReactNode }) {
     return { "/agenda": agenda, "/locacoes": orc } as Record<string, number>;
   }, [dados.locacoes]);
 
-  // Documento para impressão: sem menu.
-  if (path.startsWith("/documento")) return <>{children}</>;
-
   if (!authPronto) {
     return (
       <div className="bg-navy-gradient grid min-h-dvh place-items-center">
@@ -50,6 +47,23 @@ export function Shell({ children }: { children: ReactNode }) {
     );
   }
   if (modo === "nuvem" && !session) return <Login />;
+  if (semAcesso) {
+    return (
+      <div className="bg-navy-gradient grid min-h-dvh place-items-center px-5">
+        <div className="max-w-sm rounded-3xl bg-white p-6 text-center shadow-lift">
+          <p className="font-display text-lg font-semibold">Acesso ainda não liberado</p>
+          <p className="mt-2 text-sm text-ink-600">
+            O e-mail <b>{session?.user.email}</b> não está na equipe. Peça para quem administra o app adicionar você em <b>Ajustes → Equipe</b>.
+          </p>
+          <button onClick={sair} className="mt-5 text-sm font-semibold text-ink-500 hover:text-ink-900">
+            Sair
+          </button>
+        </div>
+      </div>
+    );
+  }
+  // Documento para impressão: sem menu.
+  if (path.startsWith("/documento")) return <>{children}</>;
 
   return (
     <div className="min-h-dvh lg:pl-[248px]">

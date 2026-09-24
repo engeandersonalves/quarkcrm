@@ -89,15 +89,55 @@ create table if not exists public.config (
 insert into public.config (id) values (1) on conflict (id) do nothing;
 
 -- -----------------------------------------------------------------------------
--- Segurança: só quem está logado (a sua equipe) lê e grava.
+-- Equipe: só os e-mails desta lista acessam os dados.
+-- A primeira pessoa que entrar no app vira a primeira da lista; as demais
+-- são liberadas por ela em Ajustes → Equipe.
+-- -----------------------------------------------------------------------------
+create table if not exists public.equipe (
+  email text primary key,
+  criado_em timestamptz not null default now()
+);
+
+create or replace function public.eh_equipe()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.equipe where email = lower(auth.jwt() ->> 'email'));
+$$;
+
+create or replace function public.entrar_equipe()
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    return false;
+  end if;
+  if not exists (select 1 from public.equipe) then
+    insert into public.equipe (email) values (lower(auth.jwt() ->> 'email')) on conflict do nothing;
+  end if;
+  return public.eh_equipe();
+end;
+$$;
+
+revoke execute on function public.eh_equipe() from anon;
+revoke execute on function public.entrar_equipe() from anon;
+
+-- -----------------------------------------------------------------------------
+-- Segurança: só quem está logado E na lista da equipe lê e grava.
 -- -----------------------------------------------------------------------------
 do $$
 declare t text;
 begin
-  foreach t in array array['equipamentos', 'clientes', 'locacoes', 'lancamentos', 'config'] loop
+  foreach t in array array['equipamentos', 'clientes', 'locacoes', 'lancamentos', 'config', 'equipe'] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists equipe on public.%I', t);
-    execute format('create policy equipe on public.%I for all to authenticated using (true) with check (true)', t);
+    execute format('create policy equipe on public.%I for all to authenticated using (public.eh_equipe()) with check (public.eh_equipe())', t);
   end loop;
 end $$;
 

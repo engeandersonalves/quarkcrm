@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import clsx, { type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 import { Loader2, Minus, Plus, X } from "lucide-react";
@@ -37,6 +38,59 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
+export function buttonClass({ variant = "primary", size = "md", className }: { variant?: Variant; size?: Size; className?: string } = {}) {
+  return cx(
+    "inline-flex shrink-0 items-center justify-center font-semibold whitespace-nowrap transition-all duration-150 select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500",
+    variants[variant],
+    sizes[size],
+    className,
+  );
+}
+
+/** Link com cara de botão. Desabilitado, não navega. */
+export function ButtonLink({
+  href,
+  target,
+  title,
+  disabled,
+  variant,
+  size,
+  className,
+  children,
+  onClick,
+  "aria-label": ariaLabel,
+}: {
+  "aria-label"?: string;
+  href: string;
+  target?: "_blank";
+  title?: string;
+  disabled?: boolean;
+  variant?: Variant;
+  size?: Size;
+  className?: string;
+  children: ReactNode;
+  onClick?: () => void;
+}) {
+  const cls = buttonClass({ variant, size, className });
+  if (disabled)
+    return (
+      <span aria-disabled="true" aria-label={ariaLabel} title={title} className={cx(cls, "pointer-events-none opacity-40")}>
+        {children}
+      </span>
+    );
+  if (target || /^(https?:|tel:|mailto:)/.test(href))
+    return (
+      <a href={href} target={target ?? (href.startsWith("http") ? "_blank" : undefined)} rel="noreferrer" title={title} aria-label={ariaLabel} className={cls} onClick={onClick}>
+        {children}
+      </a>
+    );
+  return (
+    <Link href={href} title={title} aria-label={ariaLabel} className={cls} onClick={onClick}>
+      {children}
+    </Link>
+  );
+}
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   { variant = "primary", size = "md", loading, className, children, disabled, ...rest },
   ref,
@@ -45,12 +99,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       disabled={disabled || loading}
-      className={cx(
-        "inline-flex shrink-0 items-center justify-center font-semibold whitespace-nowrap transition-all duration-150 select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500",
-        variants[variant],
-        sizes[size],
-        className,
-      )}
+      className={buttonClass({ variant, size, className })}
       {...rest}
     >
       {loading && <Loader2 className="h-4 w-4 animate-spin" />}

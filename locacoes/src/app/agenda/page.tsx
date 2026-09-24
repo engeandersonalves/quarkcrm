@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CalendarCheck, ExternalLink, MapPin, Navigation, PackageCheck, Route, Truck } from "lucide-react";
 import { ProximaAcao, resumoItens } from "@/components/card-locacao";
-import { Button, Card, cx, Empty, PageHeader, Segmented } from "@/components/ui";
+import { ButtonLink, Card, cx, Empty, PageHeader, Segmented } from "@/components/ui";
 import { useDados } from "@/lib/store";
 import { addDias, diffDias, fmtDataCurta, hoje, linhaEndereco, linkMaps, linkWaze, linkWhatsApp, temEndereco } from "@/lib/format";
 import { mensagemEntregador } from "@/lib/mensagens";
@@ -63,21 +63,15 @@ function LinhaTarefa({ t }: { t: Tarefa }) {
         <p className="mt-1 line-clamp-1 text-[12.5px] text-ink-500">{resumoItens(l)}</p>
       </Link>
       <div className="flex flex-wrap gap-2 sm:flex-nowrap">
-        <a href={linkMaps(l.endereco)} target="_blank" rel="noreferrer" title="Google Maps">
-          <Button variant="secondary" size="icon" disabled={!temEndereco(l.endereco)}>
+        <ButtonLink href={linkMaps(l.endereco)} target="_blank" title="Google Maps" variant="secondary" size="icon" disabled={!temEndereco(l.endereco)}>
             <ExternalLink className="h-4 w-4" />
-          </Button>
-        </a>
-        <a href={linkWaze(l.endereco)} target="_blank" rel="noreferrer" title="Waze">
-          <Button variant="secondary" size="icon" disabled={!temEndereco(l.endereco)}>
+          </ButtonLink>
+        <ButtonLink href={linkWaze(l.endereco)} target="_blank" title="Waze" variant="secondary" size="icon" disabled={!temEndereco(l.endereco)}>
             <Navigation className="h-4 w-4" />
-          </Button>
-        </a>
-        <a href={linkWhatsApp("", mensagemEntregador(l, tipo))} target="_blank" rel="noreferrer" title="Enviar ao entregador">
-          <Button variant="secondary" size="icon">
+          </ButtonLink>
+        <ButtonLink href={linkWhatsApp("", mensagemEntregador(l, tipo))} target="_blank" title="Enviar ao entregador" variant="secondary" size="icon">
             <Truck className="h-4 w-4" />
-          </Button>
-        </a>
+          </ButtonLink>
         <ProximaAcao l={l} size="md" className="flex-1 sm:flex-none" />
       </div>
     </div>
@@ -129,17 +123,13 @@ export default function Agenda() {
             {deHoje.length > 0 && (
               <>
                 {rota && (
-                  <a href={rota} target="_blank" rel="noreferrer">
-                    <Button variant="secondary">
+                  <ButtonLink href={rota} target="_blank" variant="secondary">
                       <Route className="h-4 w-4" /> Rota de hoje
-                    </Button>
-                  </a>
+                    </ButtonLink>
                 )}
-                <a href={linkWhatsApp("", mensagemRota(deHoje, `hoje, ${fmtDataCurta(hoje())}`))} target="_blank" rel="noreferrer">
-                  <Button variant="brand">
+                <ButtonLink href={linkWhatsApp("", mensagemRota(deHoje, `hoje, ${fmtDataCurta(hoje())}`))} target="_blank" variant="brand">
                     <Truck className="h-4 w-4" /> Enviar rota ao entregador
-                  </Button>
-                </a>
+                  </ButtonLink>
               </>
             )}
           </>

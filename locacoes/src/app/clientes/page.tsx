@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { MapPin, MessageCircle, Phone, Plus, Search, Sparkles, Users } from "lucide-react";
 import { EnderecoForm } from "@/components/endereco-form";
-import { Avatar, Badge, Button, Card, Empty, Field, Input, Modal, PageHeader, Textarea } from "@/components/ui";
+import { Avatar, Badge, Button, Card, Empty, Field, Input, Modal, PageHeader, Textarea, ButtonLink } from "@/components/ui";
 import { useDados } from "@/lib/store";
 import { fmtData, fmtDocumento, fmtTelefone, linhaEndereco, linkWhatsApp, normalizar } from "@/lib/format";
 import { novoCliente } from "@/lib/novo";
@@ -182,23 +182,17 @@ export default function Clientes() {
                 </div>
               </div>
               <div className="mt-3 flex gap-2">
-                <Link href={`/?cliente=${c.id}`} className="flex-1">
-                  <Button size="sm" variant="secondary" className="w-full">
+                <ButtonLink href={`/?cliente=${c.id}`} size="sm" variant="secondary" className="flex-1">
                     <Sparkles className="h-3.5 w-3.5" /> Novo orçamento
-                  </Button>
-                </Link>
+                  </ButtonLink>
                 {c.telefone && (
                   <>
-                    <a href={`tel:${c.telefone.replace(/\D/g, "")}`}>
-                      <Button size="sm" variant="secondary" aria-label="Ligar">
+                    <ButtonLink href={`tel:${c.telefone.replace(/\D/g, "")}`} size="sm" variant="secondary" aria-label="Ligar">
                         <Phone className="h-3.5 w-3.5" />
-                      </Button>
-                    </a>
-                    <a href={linkWhatsApp(c.telefone, `Olá, ${c.nome.split(" ")[0]}! Aqui é da ${dados.config.empresa_nome}.`)} target="_blank" rel="noreferrer">
-                      <Button size="sm" variant="secondary" aria-label="WhatsApp">
+                      </ButtonLink>
+                    <ButtonLink href={linkWhatsApp(c.telefone, `Olá, ${c.nome.split(" ")[0]}! Aqui é da ${dados.config.empresa_nome}.`)} target="_blank" size="sm" variant="secondary" aria-label="WhatsApp">
                         <MessageCircle className="h-3.5 w-3.5" />
-                      </Button>
-                    </a>
+                      </ButtonLink>
                   </>
                 )}
               </div>

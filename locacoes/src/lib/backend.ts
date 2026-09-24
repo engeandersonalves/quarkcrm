@@ -15,6 +15,11 @@ export interface Backend {
   salvar<T extends { id: string }>(tabela: Tabela, linha: T): Promise<void>;
   excluir(tabela: Tabela, id: string): Promise<void>;
   salvarConfig(cfg: Config): Promise<void>;
+  /** Nuvem: confirma que o e-mail logado faz parte da equipe (o 1º a entrar vira administrador). */
+  entrarEquipe(): Promise<boolean>;
+  equipe(): Promise<string[]>;
+  adicionarEquipe(email: string): Promise<void>;
+  removerEquipe(email: string): Promise<void>;
   /** Avisa quando outro aparelho alterou algo. Retorna a função para parar de ouvir. */
   ouvir(cb: () => void): () => void;
 }
@@ -74,6 +79,21 @@ function nuvem(): Backend {
     },
     async salvarConfig(cfg) {
       must(await c.from("config").upsert({ id: 1, dados: cfg }));
+    },
+    async entrarEquipe() {
+      const r = await c.rpc("entrar_equipe");
+      // Banco criado com a versão antiga do schema (sem a função): não bloqueia.
+      if (r.error) return true;
+      return Boolean(r.data);
+    },
+    async equipe() {
+      return (must(await c.from("equipe").select("email").order("criado_em")) as { email: string }[]).map((x) => x.email);
+    },
+    async adicionarEquipe(email) {
+      must(await c.from("equipe").upsert({ email: email.trim().toLowerCase() }));
+    },
+    async removerEquipe(email) {
+      must(await c.from("equipe").delete().eq("email", email));
     },
     ouvir(cb) {
       let t: ReturnType<typeof setTimeout> | undefined;
@@ -151,6 +171,10 @@ function local(): Backend {
       d.config = cfg;
       gravarLocal(d);
     },
+    entrarEquipe: async () => true,
+    equipe: async () => [],
+    adicionarEquipe: async () => {},
+    removerEquipe: async () => {},
     ouvir(cb) {
       // Outra aba do mesmo navegador alterou os dados.
       const h = (e: StorageEvent) => {

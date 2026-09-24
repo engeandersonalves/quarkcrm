@@ -9,6 +9,8 @@ export const CONFIG_PADRAO: Config = {
   empresa_pix: "quarklocacoes@jim.com",
   empresa_responsavel: "Sandra Pereira da Silva",
   empresa_endereco: "Maceió/AL",
+  empresa_cidade: "Maceió",
+  pix_titular: "Quark Locações",
   fator_diaria: 0.15,
   fator_semanal: 0.45,
   fator_quinzenal: 0.7,
@@ -16,14 +18,15 @@ export const CONFIG_PADRAO: Config = {
   taxa_desmontagem_pct: 25,
   validade_orcamento_dias: 7,
   termo_compromisso: [
-    "Declaro que estou alugando os itens descritos acima, de acordo com as condições estabelecidas pela {empresa}.",
-    "Declaro que recebi os itens em perfeito estado de conservação e funcionamento, conforme inspeção realizada no momento da retirada/entrega.",
-    "Comprometo-me a devolver todos os itens no mesmo estado em que foram entregues.",
-    "Comprometo-me a assumir a responsabilidade por danos ou perdas dos itens e, em caso de devolução inadequada, arcar com os custos de reparo ou substituição.",
+    "Recebi os equipamentos listados neste termo em perfeito estado de conservação e funcionamento, conferidos no ato da entrega.",
+    "Os equipamentos serão usados somente no endereço da obra aqui indicado. Não é permitido sublocar, emprestar ou levar para outro local sem autorização da {empresa}.",
+    "Sou responsável pela guarda, pelo uso correto e pela montagem segura dos equipamentos, seguindo as normas de segurança do trabalho.",
+    "Devolverei todos os itens no mesmo estado em que foram entregues. Em caso de dano, perda, furto ou roubo, pagarei o conserto ou o valor de reposição indicado na tabela de itens.",
   ].join("\n"),
   disposicoes: [
-    "Vencimento do contrato: no vencimento, nossa empresa entrará em contato com o cliente para agendar a coleta dos equipamentos ou realizar a renovação do contrato. Caso o cliente não responda em tempo hábil, o contrato será renovado automaticamente, e os valores referentes à renovação serão cobrados.",
-    "Coleta dos equipamentos: na coleta, os andaimes e escoras deverão estar desmontados, da mesma forma como foram entregues. Caso os itens não estejam desmontados, será aplicada uma taxa adicional de {desmontagem}% do valor do contrato.",
+    "Vencimento e renovação: no vencimento, a {empresa} entrará em contato para agendar a coleta ou renovar o contrato. Se o cliente não responder em tempo hábil, o contrato será renovado automaticamente pelo mesmo período, e os valores da renovação serão cobrados.",
+    "Coleta: na coleta, andaimes e escoras devem estar desmontados, da mesma forma como foram entregues. Se não estiverem, será cobrada uma taxa adicional de {desmontagem}% do valor do contrato.",
+    "Acesso: o locatário garante acesso livre e seguro ao local nos dias de entrega e de coleta.",
   ].join("\n"),
 };
 
@@ -31,7 +34,7 @@ export function mesclarConfig(c: Partial<Config> | null | undefined): Config {
   return { ...CONFIG_PADRAO, ...(c ?? {}) };
 }
 
-/** Catálogo inicial com os itens e valores do termo de aluguel da empresa. */
+/** Catálogo inicial com os itens e valores do termo de locação da empresa. */
 export function catalogoInicial(cfg: Config): Equipamento[] {
   const base = [
     { nome: "Andaime tubular 1,5 m", categoria: "Andaimes", unidade: "peça", estoque_total: 200, mensal: 12, valor_reposicao: 250 },

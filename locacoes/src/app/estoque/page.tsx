@@ -212,7 +212,7 @@ export default function Estoque() {
           <Empty
             icon={<Boxes className="h-6 w-6" />}
             title="Nenhum equipamento cadastrado"
-            text="Comece com os itens do seu termo de aluguel (andaime 1,5 m, plataforma 1,5 m e betoneira 400 L) e ajuste as quantidades."
+            text="Comece com os itens do seu termo de locação (andaime 1,5 m, plataforma 1,5 m e betoneira 400 L) e ajuste as quantidades."
             action={
               <div className="flex flex-wrap justify-center gap-2">
                 <Button

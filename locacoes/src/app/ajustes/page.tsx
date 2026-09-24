@@ -1,14 +1,82 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Building2, Cloud, Database, Download, FileSignature, HardDrive, Percent, Upload, Wand2 } from "lucide-react";
+import { Building2, Cloud, Trash2, UserPlus, Users, Database, Download, FileSignature, HardDrive, Percent, Upload, Wand2 } from "lucide-react";
 import { Button, Card, CardHeader, Field, Input, MoneyInput, NumberInput, PageHeader, Textarea } from "@/components/ui";
 import { useDados } from "@/lib/store";
 import { CONFIG_PADRAO } from "@/lib/defaults";
 import { hoje } from "@/lib/format";
 import { brl, PERIODOS, sugerirPrecos } from "@/lib/pricing";
 import type { Config, Dados } from "@/lib/types";
+
+function Equipe() {
+  const { backend, session } = useDados();
+  const [lista, setLista] = useState<string[]>([]);
+  const [novo, setNovo] = useState("");
+  const eu = session?.user.email?.toLowerCase() ?? "";
+  const carregar = useCallback(() => backend.equipe().then(setLista).catch(() => setLista([])), [backend]);
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  async function adicionar(e: React.FormEvent) {
+    e.preventDefault();
+    const email = novo.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) return toast.error("E-mail inválido");
+    try {
+      await backend.adicionarEquipe(email);
+      setNovo("");
+      toast.success("Acesso liberado", { description: `${email} já pode criar a conta e entrar.` });
+      carregar();
+    } catch (err) {
+      toast.error("Não foi possível adicionar", { description: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader title="Equipe" subtitle="Só estes e-mails conseguem ver e alterar os dados" icon={<Users className="h-[18px] w-[18px]" />} />
+      <div className="grid gap-4 px-5 pb-5 lg:grid-cols-2">
+        <ul className="divide-y divide-ink-100 rounded-2xl ring-1 ring-ink-200">
+          {lista.map((email) => (
+            <li key={email} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+              <span className="truncate">
+                {email}
+                {email === eu && <span className="ml-2 text-xs text-ink-400">(você)</span>}
+              </span>
+              {email !== eu && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Remover"
+                  onClick={async () => {
+                    if (!confirm(`Remover o acesso de ${email}?`)) return;
+                    await backend.removerEquipe(email);
+                    carregar();
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 text-rose-600" />
+                </Button>
+              )}
+            </li>
+          ))}
+          {lista.length === 0 && <li className="px-4 py-3 text-sm text-ink-500">Carregando…</li>}
+        </ul>
+        <form onSubmit={adicionar} className="flex flex-col gap-2">
+          <Field label="Liberar acesso para" hint="Depois a pessoa abre o app, toca em “Criar conta” com este e-mail e entra.">
+            <div className="flex gap-2">
+              <Input type="email" value={novo} onChange={(e) => setNovo(e.target.value)} placeholder="email@exemplo.com" />
+              <Button type="submit" variant="brand">
+                <UserPlus className="h-4 w-4" /> Liberar
+              </Button>
+            </div>
+          </Field>
+        </form>
+      </div>
+    </Card>
+  );
+}
 
 export default function Ajustes() {
   const { dados, modo, salvarConfig, salvarEquipamento, importar } = useDados();
@@ -78,7 +146,7 @@ export default function Ajustes() {
       />
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Empresa" subtitle="Aparece no orçamento e no termo de aluguel" icon={<Building2 className="h-[18px] w-[18px]" />} />
+          <CardHeader title="Empresa" subtitle="Aparece no orçamento e no termo de locação" icon={<Building2 className="h-[18px] w-[18px]" />} />
           <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
             <Field label="Nome" className="sm:col-span-2">
               <Input value={c.empresa_nome} onChange={(e) => set({ empresa_nome: e.target.value })} />
@@ -89,8 +157,14 @@ export default function Ajustes() {
             <Field label="Telefone / WhatsApp">
               <Input value={c.empresa_telefone} onChange={(e) => set({ empresa_telefone: e.target.value })} />
             </Field>
-            <Field label="Chave PIX">
+            <Field label="Chave PIX" hint="Telefone com +55, ex.: +5582988156223">
               <Input value={c.empresa_pix} onChange={(e) => set({ empresa_pix: e.target.value })} />
+            </Field>
+            <Field label="Titular da chave PIX" hint="Vai no QR Code de pagamento do termo">
+              <Input value={c.pix_titular} onChange={(e) => set({ pix_titular: e.target.value })} />
+            </Field>
+            <Field label="Cidade (PIX e assinatura)">
+              <Input value={c.empresa_cidade} onChange={(e) => set({ empresa_cidade: e.target.value })} />
             </Field>
             <Field label="Responsável (assina o termo)">
               <Input value={c.empresa_responsavel} onChange={(e) => set({ empresa_responsavel: e.target.value })} />
@@ -148,7 +222,7 @@ export default function Ajustes() {
 
         <Card className="lg:col-span-2">
           <CardHeader
-            title="Textos do termo de aluguel"
+            title="Textos do termo de locação"
             subtitle="Uma cláusula por linha. Use {empresa} e {desmontagem} para preencher sozinho."
             icon={<FileSignature className="h-[18px] w-[18px]" />}
             action={
@@ -166,6 +240,8 @@ export default function Ajustes() {
             </Field>
           </div>
         </Card>
+
+        {modo === "nuvem" && <Equipe />}
 
         <Card className="lg:col-span-2">
           <CardHeader title="Dados e backup" icon={<Database className="h-[18px] w-[18px]" />} />
