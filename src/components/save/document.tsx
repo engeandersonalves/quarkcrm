@@ -1,19 +1,18 @@
 "use client";
 
-import { AtSign, BatteryCharging, Check, Clock, Download, Gauge, Info, Mail, MapPin, MessageCircle, Phone, ShieldCheck, Zap } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { AtSign, BatteryCharging, Check, Clock, Download, Info, Mail, MapPin, MessageCircle, Phone, ShieldCheck, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
 import { mergeSettings } from "@/lib/defaults";
 import { formatDate, formatPhone, whatsappUrl } from "@/lib/format";
 import { brl, fmtNum } from "@/lib/pricing";
-import { chargeHours, costPerKm, effectiveKw, fillCondition, mergeSave, saveCardInstallment, type SaveInputs } from "@/lib/save";
+import { COMMON_SOCKET_KW, REF_BATTERY_KWH, chargeHours, fillCondition, mergeSave, saveCardInstallment, type SaveInputs } from "@/lib/save";
 import { Button, cx } from "../ui";
-import { AcceptModal, Brand, CoverKpi, Explain, MiniSpec, PayOption, Photo, Section, SectionTitle, Stat, type PublicProposal } from "../proposal/document";
+import { AcceptModal, Brand, CoverKpi, Explain, PayOption, Photo, Section, SectionTitle, type PublicProposal } from "../proposal/document";
 import { SaveDiagram, WallboxRender } from "../proposal/renders";
 
 /** Foto padrão da capa (recarga de veículo elétrico). Troque em Configurações → Proposta. */
 const DEFAULT_SAVE_COVER = "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=2000&q=75";
 const NAVY = "#0E2A47";
-const COMMON_SOCKET_KW = 2.3; // tomada residencial 10 A / 220 V
 
 export function SaveDocument({ data, token }: { data: PublicProposal; token: string | null }) {
   const s = mergeSettings(data.settings);
@@ -26,12 +25,9 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
 
   const kwLabel = `${fmtNum(i.chargerPowerKw, i.chargerPowerKw % 1 ? 1 : 0)} kW`;
   const phaseLabel = i.phases === "tri" ? "Trifásico" : "Monofásico";
-  const effKw = effectiveKw(i.chargerPowerKw, i.onboardChargerKw);
-  const hours = chargeHours(i.batteryKwh, effKw);
-  const socketHours = chargeHours(i.batteryKwh, Math.min(COMMON_SOCKET_KW, i.onboardChargerKw || COMMON_SOCKET_KW));
-  const kmPerHour = i.evKwhPer100km > 0 ? ((effKw * 0.9) / i.evKwhPer100km) * 100 : 0;
-  const cost = useMemo(() => costPerKm(i), [i]);
-  const showEconomy = i.kmPerMonth > 0 && i.fuelPrice > 0 && i.kmPerLiter > 0 && i.evKwhPer100km > 0 && cost.savingMonth > 0;
+  const hours = chargeHours(i.chargerPowerKw);
+  const socketHours = chargeHours(COMMON_SOCKET_KW);
+  const timesFaster = socketHours / hours;
   const card = saveCardInstallment(price, i);
   const chargerImg = i.chargerImage || s.proposal.chargerImage;
 
@@ -205,37 +201,21 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
 
           {/* ======================================================= RECARGA */}
           <Section num={num()} kicker="Na prática" title="Quanto tempo leva para carregar">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Stat label="Potência efetiva" value={`${fmtNum(effKw, 1)} kW`} accent />
-              <Stat label={`20% → 80% (${fmtNum(i.batteryKwh)} kWh)`} value={fmtHours(hours)} />
-              <Stat label="Autonomia por hora" value={kmPerHour ? `+${fmtNum(kmPerHour)} km` : "—"} />
-            </div>
+            <p className="max-w-2xl leading-relaxed text-ink-600">
+              Tempo aproximado para recarregar um carro elétrico médio de <b>20% a 80%</b> da bateria ({fmtNum(REF_BATTERY_KWH)} kWh):
+            </p>
             <div className="mt-8 grid gap-5">
-              <SpeedBar label="Tomada comum (2,3 kW)" hours={socketHours} max={socketHours} color="#94A3B8" />
+              <SpeedBar label={`Tomada comum de casa (${fmtNum(COMMON_SOCKET_KW, 1)} kW)`} hours={socketHours} max={socketHours} color="#94A3B8" />
               <SpeedBar label={`Seu carregador (${kwLabel})`} hours={hours} max={socketHours} color={NAVY} />
             </div>
-            <Explain title="carregador de bordo" className="mt-8">
-              Em corrente alternada, quem converte a energia para a bateria é o carregador de bordo do próprio veículo. Por isso a velocidade real é a menor entre a do wallbox (
-              {kwLabel}) e a do veículo (considerado {fmtNum(i.onboardChargerKw, 1)} kW). Um carregador mais potente atende também os próximos veículos da casa ou da empresa.
+            <p className="mt-6 text-sm leading-relaxed text-ink-600">
+              Até <b style={{ color: NAVY }}>{fmtNum(timesFaster)}× mais rápido</b> que a tomada comum: o carro fica pronto durante a noite ou em poucas horas de uso da garagem.
+            </p>
+            <Explain title="por que “até”" className="mt-6">
+              Cada modelo de carro tem um limite de potência que aceita ao carregar em casa. Se o seu veículo aceitar menos que {kwLabel}, ele carrega na velocidade máxima dele, com
+              total segurança. O carregador continua pronto para modelos mais novos e para outros veículos da casa ou da empresa.
             </Explain>
           </Section>
-
-          {/* ===================================================== ECONOMIA */}
-          {showEconomy && (
-            <Section num={num()} kicker="Custo por quilômetro" title="Elétrico × gasolina" tone="paper">
-              <div className="grid gap-8 md:grid-cols-[1.3fr_1fr] md:items-center">
-                <div className="grid gap-5">
-                  <CostBar label="Gasolina" value={cost.iceMonth} max={cost.iceMonth} color="#94A3B8" />
-                  <CostBar label="Elétrico, carregando em casa" value={cost.evMonth} max={cost.iceMonth} color={NAVY} />
-                  <p className="text-xs text-ink-500">Gasto mensal para rodar {fmtNum(i.kmPerMonth)} km.</p>
-                </div>
-                <div className="grid gap-px overflow-hidden rounded-xl border border-ink-200 bg-ink-200">
-                  <MiniSpec label="Economia por mês" value={brl(cost.savingMonth, 0)} sub={`${brl(cost.evPer100 / 100, 2)}/km contra ${brl(cost.icePer100 / 100, 2)}/km`} />
-                  <MiniSpec label="Economia por ano" value={brl(cost.savingYear, 0)} sub={cost.savingYear >= price ? "o carregador se paga em menos de um ano" : `o carregador se paga em ~${fmtNum(price / cost.savingMonth)} meses`} />
-                </div>
-              </div>
-            </Section>
-          )}
 
           {/* ================================================= INVESTIMENTO */}
           <section className="print-break relative overflow-hidden px-6 py-14 text-white sm:px-14 sm:py-16" style={{ background: NAVY }}>
@@ -366,13 +346,8 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
           </section>
 
           <footer className="border-t border-ink-100 px-6 py-6 text-[11px] leading-relaxed text-ink-400 sm:px-14">
-            <p className="mb-1 flex items-center gap-1.5 font-semibold text-ink-500">
-              <Info className="h-3.5 w-3.5" /> Premissas
-            </p>
-            Tempo de recarga de 20% a 80% de uma bateria de {fmtNum(i.batteryKwh)} kWh, com 90% de eficiência e carregador de bordo de {fmtNum(i.onboardChargerKw, 1)} kW.
-            {showEconomy &&
-              ` Consumo de ${fmtNum(i.evKwhPer100km, 1)} kWh/100 km, energia a ${brl(i.energyTariff, 2)}/kWh, gasolina a ${brl(i.fuelPrice, 2)}/L e ${fmtNum(i.kmPerLiter, 1)} km/L.`}{" "}
-            Valores estimados; variam conforme o veículo, a temperatura e o uso. Proposta nº {data.proposal.number}.
+            Tempos de recarga estimados para uma bateria de {fmtNum(REF_BATTERY_KWH)} kWh, de 20% a 80%, com 90% de eficiência; variam conforme o veículo e a temperatura. Proposta nº{" "}
+            {data.proposal.number}.
           </footer>
         </article>
       </div>
@@ -451,23 +426,6 @@ function SpeedBar({ label, hours, max, color }: { label: string; hours: number; 
   );
 }
 
-function CostBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
-  return (
-    <div>
-      <div className="mb-2 flex items-baseline justify-between gap-3">
-        <span className="flex items-center gap-2 text-sm text-ink-600">
-          <Gauge className="h-4 w-4" style={{ color }} /> {label}
-        </span>
-        <span className="tnum font-display text-xl font-semibold" style={{ color: color === NAVY ? NAVY : "#475569" }}>
-          {brl(value, 0)}/mês
-        </span>
-      </div>
-      <div className="h-3 overflow-hidden rounded-full bg-ink-100">
-        <div className="h-full rounded-full" style={{ width: `${Math.max(3, (value / Math.max(1, max)) * 100)}%`, background: color }} />
-      </div>
-    </div>
-  );
-}
 
 function WarrantyBox({ value, unit, title, text }: { value: number; unit: string; title: string; text: string }) {
   return (

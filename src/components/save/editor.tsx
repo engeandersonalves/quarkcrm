@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Car, Check, Copy, ExternalLink, FileText, Loader2, MessageCircle, Percent, PlugZap, Plus, Receipt, Trash2, User, Wallet, Wrench, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, ExternalLink, FileText, Loader2, MessageCircle, Percent, PlugZap, Plus, Receipt, Trash2, User, Wallet, Wrench, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -14,7 +14,7 @@ import { PROPOSAL_STATUS } from "@/lib/constants";
 import { addDays, whatsappUrl } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, fmtNum, pct } from "@/lib/pricing";
-import { CHARGER_OPTIONS, calcSave, chargeHours, costPerKm, effectiveKw, mergeSave, type SaveCostItem, type SaveInputs } from "@/lib/save";
+import { CHARGER_OPTIONS, calcSave, mergeSave, type SaveCostItem, type SaveInputs } from "@/lib/save";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead, Proposal } from "@/lib/types";
 
@@ -144,9 +144,6 @@ export function SaveEditor({ proposal, initialLeadId }: { proposal?: Proposal; i
   }
 
   const status = proposal ? PROPOSAL_STATUS[proposal.status] : null;
-  const kwEff = effectiveKw(inputs.chargerPowerKw, inputs.onboardChargerKw);
-  const hours = chargeHours(inputs.batteryKwh, kwEff);
-  const cost = costPerKm(inputs);
 
   return (
     <div className="animate-fade-up">
@@ -425,35 +422,6 @@ export function SaveEditor({ proposal, initialLeadId }: { proposal?: Proposal; i
             </div>
           </Card>
 
-          <Card>
-            <CardHeader icon={<Car className="h-[18px] w-[18px]" />} title="Veículo e economia (didático)" subtitle="Tempo de recarga e custo por km mostrados na proposta" />
-            <div className="grid gap-4 px-5 pb-5 sm:grid-cols-4">
-              <Field label="Bateria do veículo">
-                <NumberInput value={inputs.batteryKwh} onChange={(v) => set("batteryKwh", v)} suffix="kWh" digits={0} />
-              </Field>
-              <Field label="Carregador de bordo">
-                <NumberInput value={inputs.onboardChargerKw} onChange={(v) => set("onboardChargerKw", v)} suffix="kW" digits={1} />
-              </Field>
-              <Field label="Rodagem mensal">
-                <NumberInput value={inputs.kmPerMonth} onChange={(v) => set("kmPerMonth", v)} suffix="km" digits={0} />
-              </Field>
-              <Field label="Consumo do elétrico">
-                <NumberInput value={inputs.evKwhPer100km} onChange={(v) => set("evKwhPer100km", v)} suffix="kWh/100km" digits={1} />
-              </Field>
-              <Field label="Tarifa de energia">
-                <NumberInput value={inputs.energyTariff} onChange={(v) => set("energyTariff", v)} prefix="R$" suffix="/kWh" digits={2} />
-              </Field>
-              <Field label="Gasolina">
-                <NumberInput value={inputs.fuelPrice} onChange={(v) => set("fuelPrice", v)} prefix="R$" suffix="/L" digits={2} />
-              </Field>
-              <Field label="Consumo do carro a combustão">
-                <NumberInput value={inputs.kmPerLiter} onChange={(v) => set("kmPerLiter", v)} suffix="km/L" digits={1} />
-              </Field>
-              <div className="rounded-xl bg-sky-50 p-3 text-xs text-sky-900 ring-1 ring-sky-600/15">
-                <b>{fmtNum(hours, 1)} h</b> de 20% a 80% · economia de <b>{brl(cost.savingMonth, 0)}</b>/mês
-              </div>
-            </div>
-          </Card>
         </div>
 
         <aside className="hidden lg:block">

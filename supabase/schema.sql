@@ -138,6 +138,7 @@ create table if not exists public.tasks (
   updated_at timestamptz not null default now()
 );
 create index if not exists tasks_due_idx on public.tasks (done, due_at);
+create index if not exists tasks_lead_idx on public.tasks (lead_id);
 
 -- -----------------------------------------------------------------------------
 -- Histórico de atividades do lead

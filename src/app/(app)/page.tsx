@@ -30,7 +30,12 @@ export default function Dashboard() {
       const sb = supabase();
       const [leads, proposals, tasks] = await Promise.all([
         sb.from("leads").select("*").order("created_at", { ascending: false }),
-        sb.from("proposals").select("*, lead:leads(id,name,city,phone)").order("updated_at", { ascending: false }),
+        sb
+          .from("proposals")
+          // sem "inputs" (JSON grande do cálculo), que o painel não usa
+          .select(
+            "id,number,lead_id,title,status,power_kwp,monthly_generation,direct_cost,commission_value,tax_value,profit_value,final_price,public_token,valid_until,sent_at,viewed_at,view_count,accepted_at,accepted_by,created_by,created_at,updated_at, lead:leads(id,name,city,phone)",
+          ).order("updated_at", { ascending: false }),
         sb.from("tasks").select("*, lead:leads(id,name)").eq("done", false).order("due_at", { ascending: true, nullsFirst: false }),
       ]);
       return { leads: must(leads) as Lead[], proposals: must(proposals) as Proposal[], tasks: must(tasks) as Task[] };

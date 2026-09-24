@@ -634,18 +634,6 @@ function SaveTab({
         </div>
       </Card>
 
-      <Card>
-        <CardHeader title="Veículo e economia" subtitle="Premissas didáticas da proposta (tempo de recarga e custo por km)" />
-        <div className="grid gap-4 px-5 pb-5 sm:grid-cols-3">
-          <Field label="Bateria do veículo"><NumberInput value={v.batteryKwh} onChange={(x) => set("batteryKwh", x)} suffix="kWh" digits={0} /></Field>
-          <Field label="Carregador de bordo"><NumberInput value={v.onboardChargerKw} onChange={(x) => set("onboardChargerKw", x)} suffix="kW" digits={1} /></Field>
-          <Field label="Consumo do elétrico"><NumberInput value={v.evKwhPer100km} onChange={(x) => set("evKwhPer100km", x)} suffix="kWh/100km" digits={1} /></Field>
-          <Field label="Km rodados por mês"><NumberInput value={v.kmPerMonth} onChange={(x) => set("kmPerMonth", x)} suffix="km" digits={0} /></Field>
-          <Field label="Tarifa de energia"><NumberInput value={v.energyTariff} onChange={(x) => set("energyTariff", x)} prefix="R$" suffix="/kWh" digits={2} /></Field>
-          <Field label="Gasolina"><NumberInput value={v.fuelPrice} onChange={(x) => set("fuelPrice", x)} prefix="R$" suffix="/L" digits={2} /></Field>
-          <Field label="Consumo do carro a combustão"><NumberInput value={v.kmPerLiter} onChange={(x) => set("kmPerLiter", x)} suffix="km/L" digits={1} /></Field>
-        </div>
-      </Card>
     </>
   );
 }

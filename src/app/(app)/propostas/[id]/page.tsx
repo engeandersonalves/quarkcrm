@@ -14,7 +14,7 @@ import { FileText } from "lucide-react";
 export default function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   // Sem realtime aqui para não sobrescrever o que está sendo editado.
-  const { data, loading } = useLive(async () => must(await supabase().from("proposals").select("*").eq("id", id).maybeSingle()) as Proposal | null, [id], []);
+  const { data, loading } = useLive(async () => must(await supabase().from("proposals").select("*").eq("id", id).maybeSingle()) as Proposal | null, [id], [], { fresh: true });
 
   if (loading && !data)
     return (
