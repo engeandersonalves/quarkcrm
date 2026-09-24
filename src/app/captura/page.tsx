@@ -1,10 +1,11 @@
 "use client";
 
-import { CheckCircle2, Sun } from "lucide-react";
+import { CheckCircle2, PlugZap, Sun } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { Button, Field, Input, MoneyInput, Select, cx } from "@/components/ui";
+import { Button, Field, Input, MoneyInput, Segmented, Select, cx } from "@/components/ui";
 import { UFS } from "@/lib/constants";
+import type { Segment } from "@/lib/types";
 
 export default function CapturePage() {
   return (
@@ -17,7 +18,10 @@ export default function CapturePage() {
 function Capture() {
   const params = useSearchParams();
   const embed = params.get("embed") === "1";
+  const initial = params.get("interesse");
+  const [segment, setSegment] = useState<Segment>(initial === "save" || initial === "ambos" ? initial : "solar");
   const [form, setForm] = useState({ name: "", phone: "", email: "", city: "", state: "", avg_bill: 0, website: "" });
+  const isSave = segment === "save";
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
@@ -29,7 +33,7 @@ function Capture() {
     const res = await fetch("/api/public/lead", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, avg_bill: form.avg_bill || "", source: params.get("origem") || "Site" }),
+      body: JSON.stringify({ ...form, segment, avg_bill: (!isSave && form.avg_bill) || "", source: params.get("origem") || "Site" }),
     }).catch(() => null);
     setLoading(false);
     if (!res?.ok) return setError("Não foi possível enviar. Tente novamente em instantes.");
@@ -51,11 +55,24 @@ function Capture() {
         ) : (
           <>
             <div className="grid h-12 w-12 place-items-center rounded-2xl bg-sun-gradient shadow-glow">
-              <Sun className="h-6 w-6 text-ink-950" strokeWidth={2.5} />
+              {isSave ? <PlugZap className="h-6 w-6 text-ink-950" strokeWidth={2.5} /> : <Sun className="h-6 w-6 text-ink-950" strokeWidth={2.5} />}
             </div>
-            <h1 className="mt-5 font-display text-[26px] leading-tight font-semibold tracking-tight">Descubra quanto você pode economizar com energia solar</h1>
-            <p className="mt-2 text-sm text-ink-500">Simulação gratuita e sem compromisso.</p>
+            <h1 className="mt-5 font-display text-[26px] leading-tight font-semibold tracking-tight">
+              {isSave ? "Carregue seu veículo elétrico em casa, com segurança" : "Descubra quanto você pode economizar com energia solar"}
+            </h1>
+            <p className="mt-2 text-sm text-ink-500">{isSave ? "Orçamento gratuito do seu ponto de recarga." : "Simulação gratuita e sem compromisso."}</p>
             <form onSubmit={submit} className="mt-6 grid gap-4">
+              <Field label="Tenho interesse em">
+                <Segmented<Segment>
+                  value={segment}
+                  onChange={setSegment}
+                  options={[
+                    { value: "solar", label: "Energia solar" },
+                    { value: "save", label: "Carregador" },
+                    { value: "ambos", label: "Os dois" },
+                  ]}
+                />
+              </Field>
               <Field label="Seu nome">
                 <Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoComplete="name" />
               </Field>
@@ -78,15 +95,17 @@ function Capture() {
                   </Select>
                 </Field>
               </div>
-              <Field label="Valor médio da sua conta de luz">
-                <MoneyInput value={form.avg_bill} onChange={(v) => setForm({ ...form, avg_bill: v })} digits={0} placeholder="0" />
-              </Field>
+              {!isSave && (
+                <Field label="Valor médio da sua conta de luz">
+                  <MoneyInput value={form.avg_bill} onChange={(v) => setForm({ ...form, avg_bill: v })} digits={0} placeholder="0" />
+                </Field>
+              )}
               <input tabIndex={-1} autoComplete="off" className="hidden" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} aria-hidden />
               {error && <p className="text-sm text-rose-600">{error}</p>}
               <Button type="submit" variant="sun" size="lg" loading={loading} className="mt-1">
-                Quero minha simulação
+                {isSave ? "Quero meu orçamento" : "Quero minha simulação"}
               </Button>
-              <p className="text-center text-[11px] text-ink-400">Seus dados são usados apenas para contato sobre energia solar.</p>
+              <p className="text-center text-[11px] text-ink-400">Seus dados são usados apenas para contato sobre a sua solicitação.</p>
             </form>
           </>
         )}

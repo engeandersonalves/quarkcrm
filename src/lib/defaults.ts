@@ -1,4 +1,5 @@
 import type { ProposalInputs } from "./pricing.ts";
+import type { SaveInputs } from "./save.ts";
 
 export interface CompanySettings {
   company_name: string;
@@ -14,6 +15,8 @@ export interface CompanySettings {
   instagram: string;
   about: string;
   seller_name: string;
+  tech_name: string; // responsável técnico (assinatura das propostas)
+  tech_registry: string; // registro profissional (CFT / CREA)
   notify_emails: string;
   warranty_modules_years: number;
   warranty_modules_performance_years: number;
@@ -21,6 +24,8 @@ export interface CompanySettings {
   warranty_installation_years: number;
   warranty_structure_years: number;
   defaults: Partial<ProposalInputs>;
+  /** Padrões do orçamento S.A.V.E (privado: contém custos). */
+  saveDefaults: Partial<SaveInputs>;
   /** Kits salvos para preencher orçamentos com um clique (privado: nunca vai para a proposta). */
   kits: KitPreset[];
   /** Preferências do app: abertura, meta, frases e imagens (privado). */
@@ -77,6 +82,8 @@ export interface ProposalPrefs {
   moduleImage: string; // foto padrão das placas
   inverterImage: string; // foto padrão do inversor
   gallery: string[]; // fotos de obras realizadas
+  saveCoverImage: string; // capa da proposta S.A.V.E
+  chargerImage: string; // foto padrão do carregador veicular
   headline: string; // título da capa (usa {nome})
   sections: ProposalSections;
   timeline: { day: number; title: string; text: string }[];
@@ -139,6 +146,8 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   about:
     "Projetamos e instalamos sistemas fotovoltaicos com engenharia própria, equipamentos de primeira linha e acompanhamento do início ao fim — da análise da sua conta até a homologação na concessionária.",
   seller_name: "",
+  tech_name: "",
+  tech_registry: "",
   notify_emails: "",
   warranty_modules_years: 12,
   warranty_modules_performance_years: 25,
@@ -146,6 +155,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   warranty_installation_years: 1,
   warranty_structure_years: 12,
   defaults: {},
+  saveDefaults: {},
   kits: [],
   app: {
     splash: "daily",
@@ -162,6 +172,8 @@ export const DEFAULT_SETTINGS: CompanySettings = {
     moduleImage: "",
     inverterImage: "",
     gallery: [],
+    saveCoverImage: "",
+    chargerImage: "",
     headline: "",
     sections: {
       howItWorks: true,
@@ -180,7 +192,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   },
 };
 
-type StoredDefaults = Partial<ProposalInputs> & { kits?: KitPreset[]; app?: Partial<AppPrefs> };
+type StoredDefaults = Partial<ProposalInputs> & { kits?: KitPreset[]; app?: Partial<AppPrefs>; save?: Partial<SaveInputs> };
 
 /**
  * Converte o JSON salvo no banco em configurações completas.
@@ -189,13 +201,14 @@ type StoredDefaults = Partial<ProposalInputs> & { kits?: KitPreset[]; app?: Part
  */
 export function mergeSettings(s: Partial<CompanySettings> | null | undefined): CompanySettings {
   const stored = (s?.defaults ?? {}) as StoredDefaults;
-  const { kits, app, ...defaults } = stored;
+  const { kits, app, save, ...defaults } = stored;
   const proposal = (s?.proposal ?? {}) as Partial<ProposalPrefs>;
   return {
     ...DEFAULT_SETTINGS,
     ...(s ?? {}),
     defaults,
     kits: kits ?? s?.kits ?? [],
+    saveDefaults: save ?? {},
     app: { ...DEFAULT_SETTINGS.app, ...(s?.app ?? {}), ...(app ?? {}) },
     proposal: {
       ...DEFAULT_SETTINGS.proposal,
@@ -207,8 +220,8 @@ export function mergeSettings(s: Partial<CompanySettings> | null | undefined): C
 
 /** Formato para salvar no banco (inverso de mergeSettings). */
 export function toStoredSettings(s: CompanySettings) {
-  const { kits, app, defaults, ...rest } = s;
-  return { ...rest, defaults: { ...defaults, kits, app } };
+  const { kits, app, saveDefaults, defaults, ...rest } = s;
+  return { ...rest, defaults: { ...defaults, kits, app, save: saveDefaults } };
 }
 
 export function mergeInputs(...parts: (Partial<ProposalInputs> | null | undefined)[]): ProposalInputs {

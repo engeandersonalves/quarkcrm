@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { TASK_TYPES, stageOf } from "./constants";
+import { SEGMENTS, TASK_TYPES, stageOf } from "./constants";
 import { appUrl, emailTemplate, recipientsFrom, sendEmail } from "./email";
 import { formatPhone } from "./format";
 import { brl, fmtNum } from "./pricing";
@@ -21,6 +21,7 @@ export async function notifyNewLead(sb: SupabaseClient, lead: Lead, notifyEmails
       title: lead.name,
       intro: "Um novo lead acabou de chegar. Quanto mais rápido o primeiro contato, maior a chance de fechar!",
       rows: [
+        ["Interesse", SEGMENTS[lead.segment ?? "solar"]?.label ?? null],
         ["Telefone", formatPhone(lead.phone)],
         ["E-mail", lead.email],
         ["Cidade", [lead.city, lead.state].filter(Boolean).join(" – ")],

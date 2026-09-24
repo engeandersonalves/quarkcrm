@@ -1,4 +1,4 @@
-import type { LeadStatus, Priority, ProposalStatus, TaskType } from "./types";
+import type { LeadStatus, Priority, Product, ProposalStatus, Segment, TaskType } from "./types";
 
 export const STAGES: { id: LeadStatus; label: string; dot: string; soft: string }[] = [
   { id: "novo", label: "Novo lead", dot: "bg-sky-500", soft: "bg-sky-50 text-sky-700 ring-sky-600/15" },
@@ -38,3 +38,16 @@ export const PRIORITIES: Record<Priority, { label: string; cls: string }> = {
 export const SOURCES = ["Indicação", "Instagram", "Facebook", "Google", "Site", "WhatsApp", "Porta a porta", "Evento", "Outro"];
 export const ROOF_TYPES = ["Telhado cerâmico", "Telhado fibrocimento", "Telhado metálico", "Laje", "Solo", "Carport"];
 export const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
+
+export const SEGMENTS: Record<Segment, { label: string; short: string; cls: string }> = {
+  solar: { label: "Energia solar", short: "Solar", cls: "bg-amber-50 text-amber-800 ring-amber-600/20" },
+  save: { label: "Carregador veicular", short: "S.A.V.E", cls: "bg-sky-50 text-sky-800 ring-sky-600/20" },
+  ambos: { label: "Solar + carregador", short: "Solar + S.A.V.E", cls: "bg-violet-50 text-violet-800 ring-violet-600/20" },
+};
+
+export const PRODUCTS: Record<Product, { label: string; short: string; cls: string }> = {
+  solar: { label: "Energia solar", short: "Solar", cls: "bg-amber-50 text-amber-800 ring-amber-600/20" },
+  save: { label: "S.A.V.E · Recarga veicular", short: "S.A.V.E", cls: "bg-sky-50 text-sky-800 ring-sky-600/20" },
+};
+
+export const productOf = (inputs: { product?: unknown } | null | undefined): Product => (inputs?.product === "save" ? "save" : "solar");

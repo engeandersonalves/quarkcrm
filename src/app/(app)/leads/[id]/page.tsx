@@ -16,6 +16,7 @@ import {
   Phone,
   PhoneCall,
   Plus,
+  PlugZap,
   Send,
   Trash2,
   Zap,
@@ -28,6 +29,8 @@ import { useApp } from "@/components/app/app-context";
 import { useCelebrate } from "@/components/app/celebration";
 import { useQuick } from "@/components/app/shell";
 import { TaskRow } from "@/components/app/task-row";
+import { SegmentTag } from "@/components/app/segment-tag";
+import { proposalHeadline, proposalSummary } from "@/lib/proposal-summary";
 import { Avatar, Badge, Button, Card, CardHeader, Empty, Input, Textarea, cx } from "@/components/ui";
 import { PROPOSAL_STATUS, STAGES, stageOf } from "@/lib/constants";
 import { formatDateTime, formatPhone, relativeTime, whatsappUrl } from "@/lib/format";
@@ -86,6 +89,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
   if (!lead) return <Empty icon={<FileText className="h-6 w-6" />} title="Lead não encontrado" action={<Link href="/leads"><Button>Voltar</Button></Link>} />;
 
   const stage = stageOf(lead.status);
+  const seg = lead.segment ?? "solar";
   const owner = profiles.find((p) => p.id === lead.owner_id);
 
   const setStatus = async (status: LeadStatus, reason?: string) => {
@@ -135,6 +139,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
                 {lead.name} {lead.temperature === "quente" && <Flame className="h-5 w-5 text-orange-500" />}
               </h1>
               <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-500">
+                <SegmentTag segment={lead.segment} className="text-[11px]" />
                 <Badge className={stage.soft} dot={stage.dot}>
                   {stage.label}
                 </Badge>
@@ -172,11 +177,20 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
             <Button variant="secondary" size="icon" onClick={() => openLead(lead)} aria-label="Editar">
               <Pencil className="h-4 w-4" />
             </Button>
-            <Link href={`/propostas/nova?lead=${lead.id}`}>
-              <Button variant="sun">
-                <Calculator className="h-4 w-4" /> Novo orçamento
-              </Button>
-            </Link>
+            {seg !== "save" && (
+              <Link href={`/propostas/nova?lead=${lead.id}`}>
+                <Button variant="sun">
+                  <Calculator className="h-4 w-4" /> Orçamento solar
+                </Button>
+              </Link>
+            )}
+            {seg !== "solar" && (
+              <Link href={`/propostas/nova?tipo=save&lead=${lead.id}`}>
+                <Button className="bg-sky-600 hover:bg-sky-700">
+                  <PlugZap className="h-4 w-4" /> Orçamento S.A.V.E
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -226,11 +240,18 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
               title="Orçamentos"
               subtitle={data.proposals.length ? `${data.proposals.length} gerado${data.proposals.length > 1 ? "s" : ""}` : undefined}
               action={
-                <Link href={`/propostas/nova?lead=${lead.id}`}>
-                  <Button size="sm" variant="secondary">
-                    <Plus className="h-3.5 w-3.5" /> Orçamento
-                  </Button>
-                </Link>
+                <div className="flex gap-1.5">
+                  <Link href={`/propostas/nova?lead=${lead.id}`}>
+                    <Button size="sm" variant="secondary">
+                      <Plus className="h-3.5 w-3.5" /> Solar
+                    </Button>
+                  </Link>
+                  <Link href={`/propostas/nova?tipo=save&lead=${lead.id}`}>
+                    <Button size="sm" variant="secondary">
+                      <Plus className="h-3.5 w-3.5" /> S.A.V.E
+                    </Button>
+                  </Link>
+                </div>
               }
             />
             {!data.proposals.length ? (
@@ -243,11 +264,11 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
                       <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sun-50 font-display text-xs font-bold text-sun-700 ring-1 ring-sun-200/70">#{p.number}</div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="truncate font-semibold">{p.title || `${fmtNum(p.power_kwp, 2)} kWp`}</p>
+                          <p className="truncate font-semibold">{p.title || proposalHeadline(p)}</p>
                           <Badge className={PROPOSAL_STATUS[p.status].cls}>{PROPOSAL_STATUS[p.status].label}</Badge>
                         </div>
                         <p className="mt-0.5 flex items-center gap-2 text-xs text-ink-500">
-                          {fmtNum(p.power_kwp, 2)} kWp · {(p.inputs.moduleQty as number) ?? 0} placas · {relativeTime(p.created_at)}
+                          {proposalSummary(p)} · {relativeTime(p.created_at)}
                           {p.view_count > 0 && (
                             <span className="flex items-center gap-1 text-violet-600">
                               <Eye className="h-3 w-3" /> {p.view_count}×

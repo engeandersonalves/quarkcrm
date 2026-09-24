@@ -1,5 +1,7 @@
 import type { ConnectionType, ProposalInputs } from "./pricing";
 
+export type Segment = "solar" | "save" | "ambos";
+export type Product = "solar" | "save";
 export type LeadStatus = "novo" | "contato" | "visita" | "proposta" | "negociacao" | "ganho" | "perdido";
 export type ProposalStatus = "rascunho" | "enviada" | "visualizada" | "aceita" | "recusada";
 export type TaskType = "tarefa" | "ligacao" | "whatsapp" | "visita" | "email" | "reuniao";
@@ -24,6 +26,7 @@ export interface Lead {
   address: string | null;
   source: string | null;
   status: LeadStatus;
+  segment: Segment;
   temperature: "frio" | "morno" | "quente" | null;
   consumption_kwh: number | null;
   avg_bill: number | null;
@@ -45,7 +48,7 @@ export interface Proposal {
   lead_id: string;
   title: string | null;
   status: ProposalStatus;
-  inputs: Partial<ProposalInputs>;
+  inputs: Partial<ProposalInputs> & { product?: Product; [key: string]: unknown };
   power_kwp: number;
   monthly_generation: number;
   direct_cost: number;

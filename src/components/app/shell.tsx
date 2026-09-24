@@ -1,9 +1,9 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
-import { CheckSquare, FileText, LayoutDashboard, LogOut, Plus, Settings, Sun, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
+import { CheckSquare, FileText, LayoutDashboard, LogOut, Plus, PlugZap, Settings, Sun, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead, Task } from "@/lib/types";
@@ -22,6 +22,9 @@ const NAV = [
   { href: "/tarefas", label: "Tarefas", icon: CheckSquare },
   { href: "/configuracoes", label: "Ajustes", icon: Settings },
 ];
+const SAVE_NAV = { href: "/propostas?tipo=save", label: "S.A.V.E", icon: PlugZap };
+const DESKTOP_NAV = [...NAV.slice(0, 3), SAVE_NAV, ...NAV.slice(3)];
+
 
 interface QuickCtx {
   openLead: (lead?: Lead | null, opts?: { onCreated?: (id: string) => void }) => void;
@@ -57,7 +60,13 @@ function ShellInner({ children }: { children: ReactNode }) {
 
   useEffect(() => setFab(false), [pathname]);
 
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const search = useSearchParams();
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    if (href === SAVE_NAV.href) return pathname.startsWith("/propostas") && search.get("tipo") === "save";
+    if (href === "/propostas") return pathname.startsWith("/propostas") && search.get("tipo") !== "save";
+    return pathname.startsWith(href);
+  };
   const signOut = async () => {
     await supabase().auth.signOut();
     router.replace("/login");
@@ -90,7 +99,7 @@ function ShellInner({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="relative flex flex-1 flex-col gap-1 px-3">
-            {NAV.map((item) => {
+            {DESKTOP_NAV.map((item) => {
               const active = isActive(item.href);
               return (
                 <Link
@@ -169,7 +178,8 @@ function ShellInner({ children }: { children: ReactNode }) {
           <div className="fixed inset-0 z-30 lg:hidden" onClick={() => setFab(false)}>
             <div className="absolute inset-0 bg-ink-950/40 backdrop-blur-[2px]" />
             <div className="animate-fade-up absolute inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] grid gap-2 rounded-3xl bg-white p-2 shadow-lift">
-              <FabItem icon={<Calculator className="h-5 w-5" />} title="Novo orçamento" text="Calcular e gerar proposta" onClick={() => router.push("/propostas/nova")} />
+              <FabItem icon={<Calculator className="h-5 w-5" />} title="Orçamento solar" text="Calcular e gerar proposta" onClick={() => router.push("/propostas/nova")} />
+              <FabItem icon={<PlugZap className="h-5 w-5" />} title="Orçamento S.A.V.E" text="Carregador de veículo elétrico" onClick={() => router.push("/propostas/nova?tipo=save")} />
               <FabItem icon={<UserPlus className="h-5 w-5" />} title="Novo lead" text="Cadastrar um cliente" onClick={() => openLead()} />
               <FabItem icon={<ListTodo className="h-5 w-5" />} title="Nova tarefa" text="Agendar um follow-up" onClick={() => openTask()} />
               <FabItem icon={<Settings className="h-5 w-5" />} title="Configurações" text="Empresa, padrões e alertas" onClick={() => router.push("/configuracoes")} />

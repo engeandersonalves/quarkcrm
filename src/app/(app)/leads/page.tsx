@@ -7,13 +7,14 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useCelebrate } from "@/components/app/celebration";
 import { useQuick } from "@/components/app/shell";
+import { SegmentTag } from "@/components/app/segment-tag";
 import { Avatar, Badge, Button, Card, Empty, Input, PageHeader, Segmented, Select, Skeleton, cx } from "@/components/ui";
-import { SOURCES, STAGES, stageOf } from "@/lib/constants";
+import { SEGMENTS, SOURCES, STAGES, stageOf } from "@/lib/constants";
 import { formatPhone, relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
 import { supabase } from "@/lib/supabase/client";
-import type { Lead, LeadStatus } from "@/lib/types";
+import type { Lead, LeadStatus, Segment } from "@/lib/types";
 
 type LeadRow = Lead & { proposals: { final_price: number; status: string }[] };
 
@@ -32,6 +33,7 @@ function Leads() {
   const [view, setView] = useState<"kanban" | "lista">("kanban");
   const [q, setQ] = useState("");
   const [source, setSource] = useState("");
+  const [segment, setSegment] = useState<"" | Segment>("");
   const [stage, setStage] = useState<string>(params.get("etapa") ?? "");
 
   useEffect(() => {
@@ -55,10 +57,11 @@ function Leads() {
       (data ?? []).filter(
         (l) =>
           (!source || l.source === source) &&
+          (!segment || (l.segment ?? "solar") === segment || (segment !== "ambos" && l.segment === "ambos")) &&
           (!stage || l.status === stage) &&
           `${l.name} ${l.city ?? ""} ${l.phone ?? ""} ${l.email ?? ""}`.toLowerCase().includes(q.toLowerCase()),
       ),
-    [data, q, source, stage],
+    [data, q, source, stage, segment],
   );
 
   const move = async (id: string, status: LeadStatus) => {
@@ -114,6 +117,12 @@ function Leads() {
               ))}
             </Select>
           )}
+          <Select value={segment} onChange={(e) => setSegment(e.target.value as "" | Segment)} className="sm:w-48">
+            <option value="">Solar e S.A.V.E</option>
+            <option value="solar">☀️ Energia solar</option>
+            <option value="save">⚡ Carregador veicular</option>
+            <option value="ambos">Clientes dos dois</option>
+          </Select>
           <Select value={source} onChange={(e) => setSource(e.target.value)} className="sm:w-44">
             <option value="">Todas as origens</option>
             {SOURCES.map((s) => (
@@ -221,7 +230,8 @@ function LeadCard({ lead, onMove }: { lead: LeadRow; onMove: (id: string, s: Lea
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-[11px] text-ink-500">
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-ink-500">
+          <SegmentTag segment={lead.segment} />
           {lead.consumption_kwh ? (
             <span className="flex items-center gap-1 rounded-md bg-ink-50 px-1.5 py-0.5">
               <Zap className="h-3 w-3 text-sun-600" /> {fmtNum(lead.consumption_kwh)} kWh
@@ -277,6 +287,9 @@ function LeadTable({ leads }: { leads: LeadRow[] }) {
                       {l.city && <MapPin className="h-3 w-3" />}
                       {[l.city, l.source].filter(Boolean).join(" · ")} · {relativeTime(l.created_at)}
                     </p>
+                    <span className="mt-1 inline-block">
+                      <SegmentTag segment={l.segment} />
+                    </span>
                   </div>
                 </div>
                 <p className="hidden truncate text-sm text-ink-600 md:flex md:items-center md:gap-1.5">
@@ -303,3 +316,4 @@ function LeadTable({ leads }: { leads: LeadRow[] }) {
     </Card>
   );
 }
+

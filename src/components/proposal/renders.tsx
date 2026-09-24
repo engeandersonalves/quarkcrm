@@ -223,3 +223,172 @@ export function SystemDiagram({ brand, className }: { brand?: string; className?
     </svg>
   );
 }
+
+/** Carregador veicular de parede (wallbox) com cabo e conector Tipo 2. */
+export function WallboxRender({ power = "22 kW", ...props }: R & { power?: string }) {
+  return (
+    <svg viewBox="0 0 240 320" {...props}>
+      <defs>
+        <linearGradient id="wbBody" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#2a3442" />
+          <stop offset="0.6" stopColor="#1a212c" />
+          <stop offset="1" stopColor="#10151d" />
+        </linearGradient>
+        <linearGradient id="wbFace" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#f8fafc" />
+          <stop offset="1" stopColor="#dfe4ea" />
+        </linearGradient>
+        <radialGradient id="wbShadow" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor="#0b1220" stopOpacity="0.3" />
+          <stop offset="1" stopColor="#0b1220" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="wbLed" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#38bdf8" stopOpacity="0" />
+          <stop offset="0.5" stopColor="#38bdf8" />
+          <stop offset="1" stopColor="#38bdf8" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="120" cy="306" rx="96" ry="8" fill="url(#wbShadow)" />
+      {/* corpo */}
+      <rect x="52" y="18" width="136" height="200" rx="26" fill="url(#wbBody)" />
+      <rect x="62" y="28" width="116" height="180" rx="20" fill="url(#wbFace)" />
+      {/* anel de LED */}
+      <rect x="84" y="56" width="72" height="4" rx="2" fill="url(#wbLed)" />
+      <text x="120" y="100" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontWeight="800" fontSize="22" fill="#0E2A47">
+        {power}
+      </text>
+      <text x="120" y="116" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="8.5" letterSpacing="1.5" fill="#64748b">
+        AC · MODO 3
+      </text>
+      <circle cx="120" cy="150" r="18" fill="none" stroke="#cbd5e1" strokeWidth="2" />
+      <path d="M116 140 L110 152 H119 L114 162 L128 147 H120 L125 140 Z" fill="#0ea5e9" />
+      <rect x="96" y="184" width="48" height="6" rx="3" fill="#cbd5e1" />
+      {/* cabo */}
+      <path d="M120 218 C120 250 70 244 70 276 C70 292 96 296 150 290" fill="none" stroke="#111827" strokeWidth="7" strokeLinecap="round" />
+      {/* conector tipo 2 */}
+      <g transform="translate(150 272)">
+        <rect x="0" y="4" width="46" height="28" rx="12" fill="#1f2937" />
+        <circle cx="34" cy="18" r="10" fill="#374151" />
+        {[
+          [30, 13],
+          [38, 13],
+          [34, 21],
+          [29, 21],
+          [39, 21],
+        ].map(([x, y]) => (
+          <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" fill="#9ca3af" />
+        ))}
+      </g>
+    </svg>
+  );
+}
+
+/** Diagrama do S.A.V.E: ponto de conexão → quadro de proteção → wallbox (+ tomada e emergência). */
+export function SaveDiagram({
+  distance,
+  power,
+  panel = true,
+  emergency = true,
+  socket = true,
+  className,
+}: {
+  distance: number;
+  power: string;
+  panel?: boolean;
+  emergency?: boolean;
+  socket?: boolean;
+  className?: string;
+}) {
+  const ink = "#0E2A47";
+  const muted = "#64748B";
+  const node = (x: number, label: string, sub: string) => (
+    <g>
+      <text x={x} y="186" textAnchor="middle" fontSize="13" fontWeight="700" fill={ink}>
+        {label}
+      </text>
+      <text x={x} y="203" textAnchor="middle" fontSize="11" fill={muted}>
+        {sub}
+      </text>
+    </g>
+  );
+  const wire = (x1: number, x2: number, label: string) => (
+    <g>
+      <line x1={x1} y1="92" x2={x2 - 6} y2="92" stroke={ink} strokeWidth="2.5" />
+      <polygon points={`${x2},92 ${x2 - 9},87 ${x2 - 9},97`} fill={ink} />
+      <text x={(x1 + x2) / 2} y="82" textAnchor="middle" fontSize="10.5" fontWeight="600" fill={muted} letterSpacing="0.5">
+        {label}
+      </text>
+    </g>
+  );
+  const boardX = panel ? 330 : -1;
+  return (
+    <svg viewBox="0 0 1000 220" className={className} role="img" aria-label="Diagrama de ligação do carregador veicular">
+      {/* ponto de conexão (quadro existente) */}
+      <g>
+        <rect x="40" y="40" width="100" height="108" rx="8" fill="#F1F5F9" stroke="#CBD5E1" />
+        {[0, 1, 2, 3].map((i) => (
+          <g key={i}>
+            <rect x={55 + i * 18} y="60" width="12" height="32" rx="2" fill="#fff" stroke="#94A3B8" />
+            <rect x={58 + i * 18} y="66" width="6" height="10" rx="1" fill="#475569" />
+          </g>
+        ))}
+        <rect x="55" y="104" width="70" height="28" rx="3" fill="#E2E8F0" />
+      </g>
+      {node(90, "Ponto de conexão", "Quadro existente")}
+
+      {panel ? (
+        <>
+          {wire(150, 320, "CIRCUITO DEDICADO")}
+          <g>
+            <rect x={boardX} y="34" width="120" height="118" rx="8" fill="#fff" stroke={ink} strokeWidth="2" />
+            <rect x={boardX + 12} y="46" width="96" height="10" rx="2" fill="#E7C27A" />
+            {[0, 1, 2].map((i) => (
+              <g key={i}>
+                <rect x={boardX + 16 + i * 32} y="66" width="22" height="40" rx="3" fill="#F1F5F9" stroke="#94A3B8" />
+                <rect x={boardX + 22 + i * 32} y="74" width="10" height="14" rx="1.5" fill={i === 1 ? "#0EA5E9" : "#16A34A"} />
+              </g>
+            ))}
+            <text x={boardX + 60} y="130" textAnchor="middle" fontSize="10" fontWeight="700" fill={muted} letterSpacing="1">
+              DISJ · DR · DPS
+            </text>
+          </g>
+          {node(boardX + 60, "Quadro de proteção", "Disjuntores, DR e DPS")}
+          {wire(460, 690, `${distance} m · NBR 5410`)}
+        </>
+      ) : (
+        wire(150, 690, `${distance} m · NBR 5410`)
+      )}
+
+      <WallboxRender x="690" y="10" width="120" height="160" power={power} />
+      {node(750, "Carregador", `${power} · Tipo 2`)}
+
+      {(emergency || socket) && (
+        <g>
+          <line x1="815" y1="92" x2="870" y2="92" stroke={muted} strokeWidth="1.5" strokeDasharray="4 4" />
+          {emergency && (
+            <g>
+              <rect x="880" y="36" width="72" height="56" rx="8" fill="#FDE047" stroke="#CA8A04" />
+              <circle cx="916" cy="64" r="17" fill="#DC2626" />
+              <circle cx="916" cy="64" r="11" fill="#EF4444" />
+              <text x="916" y="108" textAnchor="middle" fontSize="11" fontWeight="700" fill={ink}>
+                Emergência
+              </text>
+            </g>
+          )}
+          {socket && (
+            <g>
+              <rect x="884" y={emergency ? 120 : 50} width="64" height="44" rx="8" fill="#2563EB" />
+              <circle cx="916" cy={emergency ? 142 : 72} r="13" fill="#1E3A8A" />
+              {[-6, 0, 6].map((dx) => (
+                <circle key={dx} cx={916 + dx} cy={(emergency ? 142 : 72) + (dx === 0 ? -5 : 3)} r="2" fill="#93C5FD" />
+              ))}
+              <text x="916" y={emergency ? 182 : 112} textAnchor="middle" fontSize="11" fontWeight="700" fill={ink}>
+                Tomada IEC 60309
+              </text>
+            </g>
+          )}
+        </g>
+      )}
+    </svg>
+  );
+}

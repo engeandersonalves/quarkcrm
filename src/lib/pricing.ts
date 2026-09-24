@@ -168,15 +168,28 @@ export function calcPricing(i: ProposalInputs): PricingResult {
   ];
 
   const directCost = lines.reduce((s, l) => s + l.value, 0);
-  const comps = [i.commission, i.tax, i.profit];
-  const pctSum = comps.filter((c) => c.mode === "percent").reduce((s, c) => s + n(c.value), 0);
-  const fixedSum = comps.filter((c) => c.mode === "fixed").reduce((s, c) => s + n(c.value), 0);
-
-  const base: PricingResult = {
+  const p = applyPricing(directCost, i);
+  return {
     powerKwp,
     inverterTotalKw,
     dcAcRatio,
     lines,
+    ...p,
+    pricePerWp: powerKwp > 0 && p.valid ? p.finalPrice / (powerKwp * 1000) : 0,
+  };
+}
+
+export type PricingTerms = Pick<ProposalInputs, "commission" | "tax" | "profit" | "discount" | "roundTo">;
+
+/**
+ * Formação de preço comum a todos os produtos (solar e S.A.V.E):
+ * preço = (custo direto + valores fixos) ÷ (1 − Σ percentuais), com desconto e arredondamento saindo do lucro.
+ */
+export function applyPricing(directCost: number, i: PricingTerms) {
+  const comps = [i.commission, i.tax, i.profit];
+  const pctSum = comps.filter((c) => c.mode === "percent").reduce((s, c) => s + n(c.value), 0);
+  const fixedSum = comps.filter((c) => c.mode === "fixed").reduce((s, c) => s + n(c.value), 0);
+  const empty = {
     directCost,
     commissionValue: 0,
     taxValue: 0,
@@ -184,14 +197,13 @@ export function calcPricing(i: ProposalInputs): PricingResult {
     discountValue: 0,
     roundingAdjust: 0,
     finalPrice: 0,
-    pricePerWp: 0,
     netMargin: 0,
     markup: 0,
-    valid: true,
+    valid: true as boolean,
+    error: undefined as string | undefined,
   };
-
   if (pctSum >= 100) {
-    return { ...base, valid: false, error: "A soma dos percentuais (comissão + imposto + lucro) precisa ser menor que 100%." };
+    return { ...empty, valid: false, error: "A soma dos percentuais (comissão + imposto + lucro) precisa ser menor que 100%." };
   }
 
   const grossPrice = (directCost + fixedSum) / (1 - pctSum / 100);
@@ -210,14 +222,13 @@ export function calcPricing(i: ProposalInputs): PricingResult {
   const profitValue = finalPrice - directCost - commissionValue - taxValue;
 
   return {
-    ...base,
+    ...empty,
     commissionValue: round2(commissionValue),
     taxValue: round2(taxValue),
     profitValue: round2(profitValue),
     discountValue: discount,
     roundingAdjust: round2(roundingAdjust),
     finalPrice: round2(finalPrice),
-    pricePerWp: powerKwp > 0 ? finalPrice / (powerKwp * 1000) : 0,
     netMargin: finalPrice > 0 ? profitValue / finalPrice : 0,
     markup: directCost > 0 ? finalPrice / directCost : 0,
     valid: finalPrice > 0 || directCost === 0,
