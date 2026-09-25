@@ -44,10 +44,10 @@ export const STATION = {
   operatingHours: 16,
   crossBuyRate: 0.6, // motoristas que consomem no local enquanto carregam
   /** Investimento de referência por potência (equipamento DC + infraestrutura), em R$. */
-  invest: { 40: 110000, 60: 150000, 120: 260000 } as Record<number, number>,
+  invest: { 40: 60000, 60: 80000, 80: 100000 } as Record<number, number>,
 };
 
-export const POWERS = [40, 60, 120];
+export const POWERS = [40, 60, 80];
 
 export const BUSINESSES = [
   { id: "posto", label: "Posto de combustível", ticket: 35 },
