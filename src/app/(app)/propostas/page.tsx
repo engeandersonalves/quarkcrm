@@ -12,6 +12,7 @@ import { formatDate, relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
 import { downloadCsv, today } from "@/lib/csv";
+import { Mantra } from "@/components/app/mantra";
 import { supabase } from "@/lib/supabase/client";
 import type { Product, Proposal, ProposalStatus } from "@/lib/types";
 
@@ -131,6 +132,7 @@ function Proposals() {
           </>
         }
       />
+      <Mantra seed={17} />
 
       <Segmented<"todos" | Product>
         className="mb-4"

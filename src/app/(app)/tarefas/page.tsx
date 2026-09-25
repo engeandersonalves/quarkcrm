@@ -7,6 +7,7 @@ import { useQuick } from "@/components/app/shell";
 import { TaskRow } from "@/components/app/task-row";
 import { Button, Card, Empty, PageHeader, Segmented, Skeleton, cx } from "@/components/ui";
 import { must, useLive } from "@/lib/live";
+import { Mantra } from "@/components/app/mantra";
 import { supabase } from "@/lib/supabase/client";
 import type { Task } from "@/lib/types";
 
@@ -55,6 +56,7 @@ export default function TasksPage() {
           </Button>
         }
       />
+      <Mantra seed={21} />
       <div className="mb-5 flex items-center justify-between gap-3">
         <Segmented
           value={scope}

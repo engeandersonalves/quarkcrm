@@ -126,7 +126,7 @@ export default function RankingPage() {
       ) : (
         <>
           {/* Pódio */}
-          <div className="mb-5 grid grid-cols-3 items-end gap-2 sm:gap-4">
+          <div className="mx-auto mb-5 grid max-w-3xl grid-cols-3 items-end gap-2 sm:gap-4">
             {podium.map((r, i) => {
               const place = i === 1 ? 1 : i === 0 ? 2 : 3;
               if (!r) return <div key={i} />;

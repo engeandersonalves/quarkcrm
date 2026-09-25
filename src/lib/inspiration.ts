@@ -9,6 +9,15 @@ export interface Quote {
 export const QUOTES: Quote[] = [
   { text: "O mundo é seu.", author: "Scarface (1983)", tag: "filme" },
   { text: "Me venda esta caneta.", author: "O Lobo de Wall Street (2013)", tag: "filme" },
+  { text: "Aja como se.", author: "Jordan Belfort, O Lobo de Wall Street", tag: "filme" },
+  { text: "A ganância, por falta de palavra melhor, é boa.", author: "Gordon Gekko, Wall Street (1987)", tag: "filme" },
+  { text: "Vou fazer uma oferta que ele não pode recusar.", author: "O Poderoso Chefão (1972)", tag: "filme" },
+  { text: "Mantenha seus amigos perto e seus inimigos mais perto ainda.", author: "O Poderoso Chefão II (1974)", tag: "filme" },
+  { text: "Quem quer respeito, dá respeito.", author: "Tony Soprano, Família Soprano", tag: "filme" },
+  { text: "A-B-C. Always Be Closing. Sempre esteja fechando.", author: "O Sucesso a Qualquer Preço (1992)", tag: "filme" },
+  { text: "Café é só para quem fecha.", author: "O Sucesso a Qualquer Preço (1992)", tag: "filme" },
+  { text: "Não deixe ninguém dizer que você não pode fazer algo.", author: "À Procura da Felicidade (2006)", tag: "filme" },
+  { text: "Vencedores não dão desculpas quando o outro lado joga o jogo.", author: "Harvey Specter, Suits", tag: "filme" },
   { text: "A única coisa entre você e o seu objetivo é a história que você conta a si mesmo sobre por que não pode alcançá-lo.", author: "Jordan Belfort", tag: "negócios" },
   { text: "Não é sobre o quão forte você bate. É sobre o quanto aguenta apanhar e continuar seguindo em frente.", author: "Rocky Balboa (2006)", tag: "filme" },
   { text: "O impedimento à ação faz a ação avançar. O que está no caminho se torna o caminho.", author: "Marco Aurélio", tag: "filosofia" },
@@ -59,15 +68,16 @@ export const SALES_TIPS: { title: string; text: string }[] = [
  * própria no lugar. Em Configurações → App você pode usar as suas próprias imagens.
  */
 export const DEFAULT_IMAGES: string[] = [
-  "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b",
+  // Manhattan à noite, pregão, arranha-céus e escritórios — clima Wall Street, sem carros.
   "https://images.unsplash.com/photo-1514565131-fce0801e5785",
-  "https://images.unsplash.com/photo-1503376780353-7e6692767b70",
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
-  "https://images.unsplash.com/photo-1509391366360-2e959784a276",
-  "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df",
-  "https://images.unsplash.com/photo-1507679799987-c73779587ccf",
-  "https://images.unsplash.com/photo-1497440001374-f26997328c1b",
+  "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b",
+  "https://images.unsplash.com/photo-1444723121867-7a241cacace9",
   "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3",
+  "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f",
+  "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab",
+  "https://images.unsplash.com/photo-1507679799987-c73779587ccf",
+  "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df",
+  "https://images.unsplash.com/photo-1497366216548-37526070297c",
 ];
 
 export function imageUrl(src: string, width = 1920) {

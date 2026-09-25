@@ -15,6 +15,7 @@ import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
 import { downloadCsv, today } from "@/lib/csv";
 import { useReward } from "@/components/app/rewards";
+import { Mantra } from "@/components/app/mantra";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead, LeadStatus, Segment } from "@/lib/types";
 
@@ -133,6 +134,7 @@ function Leads() {
           </>
         }
       />
+      <Mantra seed={13} />
 
       <div className="mb-5 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
