@@ -2,7 +2,8 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { CheckSquare, FileText, LayoutDashboard, LogOut, Plus, PlugZap, Settings, Sun, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
+import { CheckSquare, FileText, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
+import { CommandPalette } from "./command";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
@@ -52,6 +53,18 @@ function ShellInner({ children }: { children: ReactNode }) {
   const [leadModal, setLeadModal] = useState<{ open: boolean; lead?: Lead | null; onCreated?: (id: string) => void }>({ open: false });
   const [taskModal, setTaskModal] = useState<{ open: boolean; task?: Task | null; leadId?: string | null }>({ open: false });
   const [fab, setFab] = useState(false);
+  const [palette, setPalette] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPalette((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const openLead = useCallback(
     (lead?: Lead | null, opts?: { onCreated?: (id: string) => void }) => setLeadModal({ open: true, lead, onCreated: opts?.onCreated }),
@@ -86,6 +99,13 @@ function ShellInner({ children }: { children: ReactNode }) {
           </Link>
 
           <div className="relative px-4">
+            <button
+              onClick={() => setPalette(true)}
+              className="mb-3 flex h-10 w-full items-center gap-2.5 rounded-xl bg-white/[0.06] px-3 text-sm text-ink-400 ring-1 ring-white/[0.06] transition hover:bg-white/[0.09] hover:text-white"
+            >
+              <Search className="h-4 w-4" /> Buscar…
+              <kbd className="ml-auto rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-ink-300">Ctrl K</kbd>
+            </button>
             <Link
               href="/propostas/nova"
               className="mb-6 flex h-11 items-center justify-center gap-2 rounded-xl bg-sun-gradient text-sm font-semibold text-ink-950 shadow-glow transition hover:brightness-105"
@@ -139,9 +159,14 @@ function ShellInner({ children }: { children: ReactNode }) {
           <Link href="/" className="flex items-center" aria-label={settings.company_name || "Quark Energia"}>
             <BrandLogo variant="color" className="h-8" />
           </Link>
-          <button onClick={signOut} className="grid h-9 w-9 place-items-center rounded-xl text-ink-500" aria-label="Sair">
-            <LogOut className="h-[18px] w-[18px]" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setPalette(true)} className="grid h-9 w-9 place-items-center rounded-xl text-ink-600" aria-label="Buscar">
+              <Search className="h-[18px] w-[18px]" />
+            </button>
+            <button onClick={signOut} className="grid h-9 w-9 place-items-center rounded-xl text-ink-500" aria-label="Sair">
+              <LogOut className="h-[18px] w-[18px]" />
+            </button>
+          </div>
         </header>
 
         <main className="mx-auto w-full max-w-[1400px] px-4 pt-5 pb-32 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">{children}</main>
@@ -180,6 +205,7 @@ function ShellInner({ children }: { children: ReactNode }) {
           </div>
         )}
 
+        <CommandPalette open={palette} onClose={() => setPalette(false)} onNewLead={() => openLead()} onNewTask={() => openTask()} />
         <LeadFormModal open={leadModal.open} lead={leadModal.lead} onCreated={leadModal.onCreated} onClose={() => setLeadModal({ open: false })} />
         <TaskFormModal open={taskModal.open} task={taskModal.task} leadId={taskModal.leadId} onClose={() => setTaskModal({ open: false })} />
       </div>

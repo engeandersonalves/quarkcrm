@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   Copy,
+  CopyPlus,
   ExternalLink,
   FileText,
   Hammer,
@@ -35,6 +36,7 @@ import { mergeInputs, toStoredSettings, type KitPreset } from "@/lib/defaults";
 import { addDays, formatPhone, whatsappUrl } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, calcEnergy, calcPricing, fmtNum, type AmountMode, type PriceComponent, type ProposalInputs } from "@/lib/pricing";
+import { duplicateProposal } from "@/lib/proposal-actions";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead, Proposal } from "@/lib/types";
 import { BillPreview, Checkout, StepNav } from "./checkout";
@@ -267,6 +269,22 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
               </Button>
               <Button variant="secondary" onClick={() => share("copy")}>
                 <Copy className="h-4 w-4" /> Copiar link
+              </Button>
+              <Button
+                variant="secondary"
+                title="Criar uma cópia deste orçamento (ex.: opção B para o cliente)"
+                onClick={async () => {
+                  if (dirty) await save({ silent: true });
+                  try {
+                    const copy = await duplicateProposal(proposal.id, user.id);
+                    toast.success(`Cópia criada: #${copy.number}`);
+                    router.push(`/propostas/${copy.id}`);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Não foi possível duplicar");
+                  }
+                }}
+              >
+                <CopyPlus className="h-4 w-4" /> Duplicar
               </Button>
               <Button variant="secondary" onClick={() => share("whatsapp")} className="text-emerald-700">
                 <MessageCircle className="h-4 w-4" /> WhatsApp

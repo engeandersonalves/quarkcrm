@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, LayoutGrid, List, MapPin, Phone, Plus, Search, Snowflake, Users, Zap } from "lucide-react";
+import { Download, Flame, LayoutGrid, List, MapPin, Phone, Plus, Search, Snowflake, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -13,6 +13,7 @@ import { SEGMENTS, SOURCES, STAGES, stageOf } from "@/lib/constants";
 import { formatPhone, relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
+import { downloadCsv, today } from "@/lib/csv";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead, LeadStatus, Segment } from "@/lib/types";
 
@@ -94,6 +95,33 @@ function Leads() {
                 { value: "lista", label: <><List className="h-3.5 w-3.5" /> Lista</> },
               ]}
             />
+            <Button
+              variant="secondary"
+              title="Baixar planilha (Excel) com os leads filtrados"
+              onClick={() =>
+                downloadCsv(
+                  `leads-${today()}.csv`,
+                  ["Nome", "Telefone", "E-mail", "Cidade", "UF", "Interesse", "Etapa", "Temperatura", "Origem", "Consumo (kWh)", "Conta média (R$)", "Valor estimado (R$)", "Criado em"],
+                  filtered.map((l) => [
+                    l.name,
+                    formatPhone(l.phone),
+                    l.email,
+                    l.city,
+                    l.state,
+                    SEGMENTS[l.segment ?? "solar"]?.label,
+                    stageOf(l.status).label,
+                    l.temperature,
+                    l.source,
+                    l.consumption_kwh,
+                    l.avg_bill,
+                    l.estimated_value,
+                    new Date(l.created_at).toLocaleDateString("pt-BR"),
+                  ]),
+                )
+              }
+            >
+              <Download className="h-4 w-4" /> <span className="hidden sm:inline">Exportar</span>
+            </Button>
             <Button onClick={() => openLead()}>
               <Plus className="h-4 w-4" /> Novo lead
             </Button>

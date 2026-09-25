@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, Copy, ExternalLink, FileText, Loader2, MessageCircle, Percent, PlugZap, Plus, Receipt, Trash2, User, Wallet, Wrench, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, CopyPlus, ExternalLink, FileText, Loader2, MessageCircle, Percent, PlugZap, Plus, Receipt, Trash2, User, Wallet, Wrench, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -15,6 +15,7 @@ import { addDays, whatsappUrl } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, fmtNum, pct } from "@/lib/pricing";
 import { CHARGER_OPTIONS, calcSave, mergeSave, type SaveCostItem, type SaveInputs } from "@/lib/save";
+import { duplicateProposal } from "@/lib/proposal-actions";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead, Proposal } from "@/lib/types";
 
@@ -154,7 +155,7 @@ export function SaveEditor({ proposal, initialLeadId }: { proposal?: Proposal; i
           </Link>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="grid h-7 w-7 place-items-center rounded-lg bg-sky-600 text-white">
+              <span className="grid h-7 w-7 place-items-center rounded-lg bg-sun-gradient text-ink-900">
                 <PlugZap className="h-4 w-4" />
               </span>
               <h1 className="truncate font-display text-xl font-semibold tracking-tight sm:text-2xl">{proposal ? `S.A.V.E #${proposal.number}` : "Novo orçamento S.A.V.E"}</h1>
@@ -185,6 +186,22 @@ export function SaveEditor({ proposal, initialLeadId }: { proposal?: Proposal; i
               </Button>
               <Button variant="secondary" onClick={() => share("copy")}>
                 <Copy className="h-4 w-4" /> Copiar link
+              </Button>
+              <Button
+                variant="secondary"
+                title="Criar uma cópia deste orçamento (ex.: opção B para o cliente)"
+                onClick={async () => {
+                  if (dirty) await save({ silent: true });
+                  try {
+                    const copy = await duplicateProposal(proposal.id, user.id);
+                    toast.success(`Cópia criada: #${copy.number}`);
+                    router.push(`/propostas/${copy.id}`);
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Não foi possível duplicar");
+                  }
+                }}
+              >
+                <CopyPlus className="h-4 w-4" /> Duplicar
               </Button>
               <Button variant="secondary" onClick={() => share("whatsapp")} className="text-emerald-700">
                 <MessageCircle className="h-4 w-4" /> WhatsApp
@@ -466,7 +483,7 @@ export function SaveEditor({ proposal, initialLeadId }: { proposal?: Proposal; i
 
 function ScopeToggle({ label, hint, checked, onChange }: { label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className={cx("flex cursor-pointer items-center justify-between gap-3 rounded-xl px-4 py-3 ring-1 transition", checked ? "bg-sky-50 ring-sky-600/25" : "bg-ink-50 ring-ink-200/60")}>
+    <label className={cx("flex cursor-pointer items-center justify-between gap-3 rounded-xl px-4 py-3 ring-1 transition", checked ? "bg-sun-50 ring-sun-600/25" : "bg-ink-50 ring-ink-200/60")}>
       <div>
         <p className="text-sm font-semibold">{label}</p>
         <p className="text-xs text-ink-500">{hint}</p>
@@ -489,7 +506,7 @@ function SaveCheckout({ inputs, result }: { inputs: SaveInputs; result: ReturnTy
   const comp = (name: string, c: SaveInputs["commission"]) => (c.mode === "percent" ? `${name} (${fmtNum(c.value, c.value % 1 ? 1 : 0)}%)` : name);
   return (
     <div className="relative overflow-hidden rounded-3xl bg-ink-950 text-white shadow-lift">
-      <div className="pointer-events-none absolute -top-24 -right-20 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl" />
+      <div className="pointer-events-none absolute -top-24 -right-20 h-64 w-64 rounded-full bg-sun-500/20 blur-3xl" />
       <div className="relative px-6 pt-6">
         <p className="text-[11px] font-bold tracking-[0.14em] text-ink-500 uppercase">Resumo S.A.V.E</p>
         <div className="mt-4 grid grid-cols-3 gap-2">
@@ -522,7 +539,7 @@ function SaveCheckout({ inputs, result }: { inputs: SaveInputs; result: ReturnTy
           <>
             <div className="flex items-end justify-between gap-3">
               <p className="pb-1 text-sm font-medium text-ink-400">Preço final</p>
-              <p className="tnum font-display text-[34px] leading-none font-semibold tracking-tight text-sky-300">{brl(result.finalPrice)}</p>
+              <p className="tnum font-display text-[34px] leading-none font-semibold tracking-tight text-brand-lime">{brl(result.finalPrice)}</p>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-center">
               <Mini label="Markup" value={`${fmtNum(result.markup, 2)}×`} />

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useApp } from "@/components/app/app-context";
 import { useQuick } from "@/components/app/shell";
+import { AttentionCard } from "@/components/app/attention";
 import { TaskRow } from "@/components/app/task-row";
 import { CinematicBackdrop } from "@/components/app/cinematic";
 import { SALES_TIPS, imagePool, pickDaily, quotePool } from "@/lib/inspiration";
@@ -66,6 +67,8 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {data && <AttentionCard leads={data.leads} proposals={data.proposals} tasks={data.tasks} />}
 
       {settings.app.showTips && <TipCard />}
 

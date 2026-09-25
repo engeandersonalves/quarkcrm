@@ -1,6 +1,6 @@
 "use client";
 
-import { Calculator, PlugZap, Copy, Eye, FileText, MoreHorizontal, Search, Trash2 } from "lucide-react";
+import { Calculator, Download, PlugZap, Copy, Eye, FileText, MoreHorizontal, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -11,6 +11,7 @@ import { proposalSummary } from "@/lib/proposal-summary";
 import { formatDate, relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
+import { downloadCsv, today } from "@/lib/csv";
 import { supabase } from "@/lib/supabase/client";
 import type { Product, Proposal, ProposalStatus } from "@/lib/types";
 
@@ -96,11 +97,37 @@ function Proposals() {
             )}
             {product !== "solar" && (
               <Link href="/propostas/nova?tipo=save">
-                <Button className="bg-sky-600 hover:bg-sky-700">
+                <Button>
                   <PlugZap className="h-4 w-4" /> Orçamento S.A.V.E
                 </Button>
               </Link>
             )}
+            <Button
+              variant="secondary"
+              title="Baixar planilha (Excel) com as propostas filtradas"
+              onClick={() =>
+                downloadCsv(
+                  `propostas-${today()}.csv`,
+                  ["Nº", "Tipo", "Cliente", "Resumo", "Status", "Valor final (R$)", "Custo direto (R$)", "Lucro (R$)", "Comissão (R$)", "Visualizações", "Criada em", "Aceita em"],
+                  rows.map((p) => [
+                    p.number,
+                    PRODUCTS[productOf(p.inputs)].short,
+                    p.lead?.name,
+                    proposalSummary(p),
+                    PROPOSAL_STATUS[p.status]?.label,
+                    Number(p.final_price),
+                    Number(p.direct_cost),
+                    Number(p.profit_value),
+                    Number(p.commission_value),
+                    p.view_count,
+                    new Date(p.created_at).toLocaleDateString("pt-BR"),
+                    p.accepted_at ? new Date(p.accepted_at).toLocaleDateString("pt-BR") : "",
+                  ]),
+                )
+              }
+            >
+              <Download className="h-4 w-4" /> <span className="hidden sm:inline">Exportar</span>
+            </Button>
           </>
         }
       />

@@ -33,10 +33,11 @@ import { SegmentTag } from "@/components/app/segment-tag";
 import { proposalHeadline, proposalSummary } from "@/lib/proposal-summary";
 import { Avatar, Badge, Button, Card, CardHeader, Empty, Input, Textarea, cx } from "@/components/ui";
 import { PROPOSAL_STATUS, STAGES, stageOf } from "@/lib/constants";
-import { formatDateTime, formatPhone, relativeTime, whatsappUrl } from "@/lib/format";
+import { formatDateTime, formatPhone, relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
 import { supabase } from "@/lib/supabase/client";
+import { WhatsAppMenu } from "@/components/app/whatsapp-menu";
 import type { Activity, Lead, LeadStatus, Proposal, Task } from "@/lib/types";
 
 interface Data {
@@ -155,11 +156,13 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
           <div className="flex flex-wrap gap-2">
             {lead.phone && (
               <>
-                <a href={whatsappUrl(lead.phone, `Olá, ${lead.name.split(" ")[0]}! Tudo bem?`)} target="_blank" rel="noreferrer">
-                  <Button variant="secondary" className="text-emerald-700">
-                    <MessageCircle className="h-4 w-4" /> WhatsApp
-                  </Button>
-                </a>
+                <WhatsAppMenu
+                  lead={lead}
+                  proposalUrl={(() => {
+                    const last = data?.proposals.find((p) => p.status !== "rascunho");
+                    return last && typeof window !== "undefined" ? `${window.location.origin}/p/${last.public_token}` : null;
+                  })()}
+                />
                 <a href={`tel:${lead.phone}`}>
                   <Button variant="secondary" size="icon" aria-label="Ligar">
                     <Phone className="h-4 w-4" />
@@ -186,7 +189,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
             )}
             {seg !== "solar" && (
               <Link href={`/propostas/nova?tipo=save&lead=${lead.id}`}>
-                <Button className="bg-sky-600 hover:bg-sky-700">
+                <Button>
                   <PlugZap className="h-4 w-4" /> Orçamento S.A.V.E
                 </Button>
               </Link>
