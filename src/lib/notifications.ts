@@ -28,6 +28,8 @@ export async function notifyNewLead(sb: SupabaseClient, lead: Lead, notifyEmails
         ["Origem", lead.source],
         ["Consumo médio", lead.consumption_kwh ? `${fmtNum(lead.consumption_kwh)} kWh/mês` : null],
         ["Conta média", lead.avg_bill ? brl(lead.avg_bill) : null],
+        ["Telhado", lead.roof_type],
+        ["Urgência", lead.temperature === "quente" ? "🔥 Quer instalar o quanto antes" : lead.temperature === "frio" ? "Pesquisando" : lead.temperature === "morno" ? "Próximos meses" : null],
         ["Etapa", stageOf(lead.status).label],
         ["Observações", lead.notes],
       ],

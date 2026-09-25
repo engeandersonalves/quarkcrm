@@ -60,12 +60,12 @@ export function emailTemplate({
         `<tr><td style="padding:10px 0;color:#64748b;font-size:13px;border-bottom:1px solid #eef1f5;width:40%">${esc(k)}</td><td style="padding:10px 0;color:#0c1220;font-size:14px;font-weight:600;border-bottom:1px solid #eef1f5">${esc(v)}</td></tr>`,
     )
     .join("");
-  return `<!doctype html><html><body style="margin:0;background:#f6f7f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+  return `<!doctype html><html><body style="margin:0;background:#f0eff5;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px"><tr><td align="center">
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(12,18,32,.08)">
-      <tr><td style="background:#0c1220;padding:28px 32px">
-        <div style="display:inline-block;width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#fbbf24,#f59e0b,#f97316);text-align:center;line-height:36px;font-size:18px">☀️</div>
-        <p style="margin:18px 0 0;color:#fbbf24;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase">${esc(eyebrow)}</p>
+      <tr><td style="background:#1c1234;padding:28px 32px">
+        <div style="display:inline-block;width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#f3ea3b,#9bd373,#6cc690);text-align:center;line-height:36px;font-size:18px">⚡</div>
+        <p style="margin:18px 0 0;color:#f3ea3b;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase">${esc(eyebrow)}</p>
         <h1 style="margin:6px 0 0;color:#ffffff;font-size:22px;line-height:1.3">${esc(title)}</h1>
       </td></tr>
       <tr><td style="padding:28px 32px">
@@ -73,7 +73,7 @@ export function emailTemplate({
         ${rowsHtml ? `<table width="100%" cellpadding="0" cellspacing="0">${rowsHtml}</table>` : ""}
         ${
           cta
-            ? `<a href="${esc(cta.url)}" style="display:inline-block;margin-top:24px;background:#0c1220;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:12px">${esc(cta.label)} →</a>`
+            ? `<a href="${esc(cta.url)}" style="display:inline-block;margin-top:24px;background:#1c1234;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:12px">${esc(cta.label)} →</a>`
             : ""
         }
       </td></tr>

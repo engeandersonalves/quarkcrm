@@ -360,31 +360,76 @@ set search_path = public
 as $$
 declare
   new_lead public.leads;
+  v_phone text := left(trim(p ->> 'phone'), 30);
+  v_email text := lower(left(nullif(trim(p ->> 'email'), ''), 160));
 begin
-  if coalesce(trim(p ->> 'name'), '') = '' or coalesce(trim(p ->> 'phone'), '') = '' then
+  if coalesce(trim(p ->> 'name'), '') = '' or coalesce(v_phone, '') = '' then
     raise exception 'nome e telefone são obrigatórios';
   end if;
-  insert into public.leads (name, phone, email, city, state, avg_bill, consumption_kwh, source, notes, segment)
+
+  -- Envio repetido (duplo clique, recarregar a página): devolve o mesmo lead, sem duplicar.
+  select * into new_lead from public.leads
+  where created_at > now() - interval '15 minutes'
+    and (regexp_replace(coalesce(phone, ''), '\D', '', 'g') = regexp_replace(v_phone, '\D', '', 'g') or (v_email is not null and lower(email) = v_email))
+  order by created_at desc limit 1;
+  if found then
+    return to_jsonb(new_lead) || jsonb_build_object('duplicate', true);
+  end if;
+
+  insert into public.leads (name, phone, email, city, state, address, avg_bill, consumption_kwh, source, notes, segment, roof_type, connection_type, temperature)
   values (
     left(trim(p ->> 'name'), 120),
-    left(trim(p ->> 'phone'), 30),
-    left(nullif(trim(p ->> 'email'), ''), 160),
+    v_phone,
+    v_email,
     left(nullif(trim(p ->> 'city'), ''), 80),
-    left(nullif(trim(p ->> 'state'), ''), 2),
+    upper(left(nullif(trim(p ->> 'state'), ''), 2)),
+    left(nullif(trim(p ->> 'address'), ''), 200),
     nullif(p ->> 'avg_bill', '')::numeric,
     nullif(p ->> 'consumption_kwh', '')::numeric,
     left(coalesce(nullif(trim(p ->> 'source'), ''), 'Site'), 40),
     left(nullif(trim(p ->> 'notes'), ''), 1000),
-    case when p ->> 'segment' in ('solar', 'save', 'ambos') then p ->> 'segment' else 'solar' end
+    case when p ->> 'segment' in ('solar', 'save', 'ambos') then p ->> 'segment' else 'solar' end,
+    left(nullif(trim(p ->> 'roof_type'), ''), 60),
+    case when p ->> 'connection_type' in ('mono', 'bi', 'tri') then p ->> 'connection_type' else null end,
+    case when p ->> 'temperature' in ('frio', 'morno', 'quente') then p ->> 'temperature' else 'morno' end
   )
   returning * into new_lead;
 
   insert into public.activities (lead_id, type, content)
-  values (new_lead.id, 'nota', 'Lead recebido pelo formulário público');
+  values (new_lead.id, 'nota', 'Lead recebido pelo formulário público' || coalesce(' (' || nullif(trim(p ->> 'source'), '') || ')', ''));
 
-  return to_jsonb(new_lead);
+  return to_jsonb(new_lead) || jsonb_build_object('duplicate', false);
 end;
 $$;
+
+-- Dados públicos da empresa para a página de captura (sem custos, margens ou configurações internas).
+create or replace function public.get_public_company()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'company_name', data ->> 'company_name',
+    'whatsapp', data ->> 'whatsapp',
+    'instagram', data ->> 'instagram',
+    'logo_url', data ->> 'logo_url',
+    'city', data ->> 'city',
+    'about', data ->> 'about',
+    'tech_name', data ->> 'tech_name',
+    'tech_registry', data ->> 'tech_registry',
+    'warranty_modules_performance_years', data -> 'warranty_modules_performance_years',
+    'tariff', data -> 'defaults' -> 'tariff',
+    'sunHours', data -> 'defaults' -> 'sunHours',
+    'fioBTariff', data -> 'defaults' -> 'fioBTariff',
+    'publicLighting', data -> 'defaults' -> 'publicLighting',
+    'gallery', data -> 'proposal' -> 'gallery'
+  )
+  from public.settings where id = 1;
+$$;
+revoke all on function public.get_public_company() from public;
+grant execute on function public.get_public_company() to anon, authenticated;
 
 revoke all on function public.get_public_proposal(text) from public;
 revoke all on function public.track_proposal_view(text) from public;

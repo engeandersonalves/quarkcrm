@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/lib/pricing.test.ts src/lib/save.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/pricing.test.ts src/lib/save.test.ts src/lib/quick-estimate.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

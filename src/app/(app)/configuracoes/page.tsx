@@ -343,7 +343,22 @@ export default function SettingsPage() {
                   <Button variant="secondary" size="icon" onClick={() => { navigator.clipboard.writeText(captureUrl); toast.success("Link copiado"); }} aria-label="Copiar"><Copy className="h-4 w-4" /></Button>
                   <a href="/captura" target="_blank"><Button variant="secondary" size="icon" aria-label="Abrir"><ExternalLink className="h-4 w-4" /></Button></a>
                 </div>
-                <p className="text-xs text-ink-500">Dica: use <code className="rounded bg-ink-100 px-1">{captureUrl}?origem=Instagram</code> para registrar de onde veio o lead.</p>
+                <p className="text-xs text-ink-500">Links prontos: cada um já registra de onde veio o lead e abre no assunto certo.</p>
+                <div className="grid gap-2">
+                  {[
+                    ["Bio do Instagram", "?origem=Instagram"],
+                    ["Stories · energia solar", "?origem=Stories&interesse=solar"],
+                    ["Stories · carregador veicular", "?origem=Stories&interesse=save"],
+                    ["Anúncio pago", "?origem=Anuncio"],
+                    ["WhatsApp / indicação", "?origem=Indicacao"],
+                  ].map(([label, q]) => (
+                    <div key={label} className="flex items-center gap-2 rounded-xl bg-ink-50 px-3 py-2 ring-1 ring-ink-200/60">
+                      <span className="w-44 shrink-0 text-sm font-medium">{label}</span>
+                      <code className="min-w-0 flex-1 truncate text-xs text-ink-500">{captureUrl + q}</code>
+                      <Button variant="ghost" size="icon" onClick={() => { navigator.clipboard.writeText(captureUrl + q); toast.success(`Link copiado: ${label}`); }} aria-label={`Copiar ${label}`}><Copy className="h-4 w-4" /></Button>
+                    </div>
+                  ))}
+                </div>
                 <Field label="Código para incorporar no site">
                   <Textarea readOnly value={embed} className="font-mono text-xs" onFocus={(e) => e.target.select()} />
                 </Field>
