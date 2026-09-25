@@ -32,12 +32,23 @@ export function WhatsAppMenu({ lead, proposalUrl }: { lead: Lead; proposalUrl?: 
   const first = lead.name.split(" ")[0];
   const me = (profile?.full_name ?? "").split(" ")[0];
   const company = settings.company_name || "Quark Energia";
-  const interest = lead.segment === "save" ? "carregador para veículo elétrico" : lead.segment === "ambos" ? "energia solar e carregador veicular" : "energia solar";
+  const interest =
+    lead.segment === "save"
+      ? "carregador para veículo elétrico"
+      : lead.segment === "ambos"
+        ? "energia solar e carregador veicular"
+        : lead.segment === "eletroposto"
+          ? "investir em um eletroposto"
+          : lead.segment === "manutencao"
+            ? "limpeza e manutenção da sua usina solar"
+            : lead.segment === "gestao"
+              ? "gestão energética"
+              : "energia solar";
   const hi = `Olá, ${first}! ${me ? `Aqui é ${me}, da ${company}.` : `Aqui é da ${company}.`}`;
 
   const templates: Template[] = [
     { id: "contato", label: "Primeiro contato", text: `${hi} Recebi seu interesse em ${interest}. Posso te fazer algumas perguntas rápidas para preparar o seu orçamento?` },
-    ...(lead.segment !== "save"
+    ...(!["save", "eletroposto"].includes(lead.segment ?? "solar")
       ? [{ id: "conta", label: "Pedir a conta de luz", text: `${hi} Para eu dimensionar o sistema ideal, você pode me enviar uma foto da sua última conta de luz (frente e verso)?` }]
       : [{ id: "local", label: "Pedir fotos do local", text: `${hi} Para eu orçar o carregador, pode me enviar uma foto do quadro de energia e do local onde o carro fica estacionado?` }]),
     { id: "visita", label: "Agendar visita técnica", text: `${hi} Gostaria de agendar a visita técnica, sem custo. Qual o melhor dia e horário para você?` },

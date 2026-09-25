@@ -349,6 +349,9 @@ export default function SettingsPage() {
                     ["Bio do Instagram", "?origem=Instagram"],
                     ["Stories · energia solar", "?origem=Stories&interesse=solar"],
                     ["Stories · carregador veicular", "?origem=Stories&interesse=save"],
+                    ["Eletroposto (investidores)", "?origem=Instagram&interesse=eletroposto"],
+                    ["Limpeza e manutenção de usina", "?origem=Instagram&interesse=manutencao"],
+                    ["Gestão energética", "?origem=Instagram&interesse=gestao"],
                     ["Anúncio pago", "?origem=Anuncio"],
                     ["WhatsApp / indicação", "?origem=Indicacao"],
                   ].map(([label, q]) => (

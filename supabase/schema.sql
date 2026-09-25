@@ -129,12 +129,9 @@ create table if not exists public.leads (
 );
 -- Segmento do cliente: energia solar, carregador veicular (S.A.V.E) ou ambos.
 alter table public.leads add column if not exists segment text not null default 'solar';
-do $$
-begin
-  if not exists (select 1 from pg_constraint where conname = 'leads_segment_check') then
-    alter table public.leads add constraint leads_segment_check check (segment in ('solar', 'save', 'ambos'));
-  end if;
-end $$;
+-- Segmentos: solar, carregador (save), ambos, eletroposto, manutenção de usina e gestão energética.
+alter table public.leads drop constraint if exists leads_segment_check;
+alter table public.leads add constraint leads_segment_check check (segment in ('solar', 'save', 'ambos', 'eletroposto', 'manutencao', 'gestao'));
 create index if not exists leads_status_idx on public.leads (status);
 create index if not exists leads_created_idx on public.leads (created_at desc);
 
@@ -388,7 +385,7 @@ begin
     nullif(p ->> 'consumption_kwh', '')::numeric,
     left(coalesce(nullif(trim(p ->> 'source'), ''), 'Site'), 40),
     left(nullif(trim(p ->> 'notes'), ''), 1000),
-    case when p ->> 'segment' in ('solar', 'save', 'ambos') then p ->> 'segment' else 'solar' end,
+    case when p ->> 'segment' in ('solar', 'save', 'ambos', 'eletroposto', 'manutencao', 'gestao') then p ->> 'segment' else 'solar' end,
     left(nullif(trim(p ->> 'roof_type'), ''), 60),
     case when p ->> 'connection_type' in ('mono', 'bi', 'tri') then p ->> 'connection_type' else null end,
     case when p ->> 'temperature' in ('frio', 'morno', 'quente') then p ->> 'temperature' else 'morno' end

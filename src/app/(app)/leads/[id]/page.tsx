@@ -30,6 +30,7 @@ import { useCelebrate } from "@/components/app/celebration";
 import { useQuick } from "@/components/app/shell";
 import { TaskRow } from "@/components/app/task-row";
 import { SegmentTag } from "@/components/app/segment-tag";
+import { CHARGER_SEGMENTS } from "@/lib/constants";
 import { proposalHeadline, proposalSummary } from "@/lib/proposal-summary";
 import { Avatar, Badge, Button, Card, CardHeader, Empty, Input, Textarea, cx } from "@/components/ui";
 import { PROPOSAL_STATUS, STAGES, stageOf } from "@/lib/constants";
@@ -184,14 +185,14 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
             <Button variant="secondary" size="icon" onClick={() => openLead(lead)} aria-label="Editar">
               <Pencil className="h-4 w-4" />
             </Button>
-            {seg !== "save" && (
+            {!["save", "eletroposto"].includes(seg) && (
               <Link href={`/propostas/nova?lead=${lead.id}`}>
                 <Button variant="sun">
                   <Calculator className="h-4 w-4" /> Orçamento solar
                 </Button>
               </Link>
             )}
-            {seg !== "solar" && (
+            {CHARGER_SEGMENTS.includes(seg) && (
               <Link href={`/propostas/nova?tipo=save&lead=${lead.id}`}>
                 <Button>
                   <PlugZap className="h-4 w-4" /> Orçamento S.A.V.E

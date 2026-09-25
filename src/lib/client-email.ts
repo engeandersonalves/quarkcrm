@@ -30,26 +30,43 @@ function wa(phone: string | null | undefined, text: string) {
 }
 
 /** E-mail que o cliente recebe ao preencher a página de captura: estudo + autoridade + próximo passo. */
+/** Conteúdo específico de cada serviço (carregador, eletroposto, manutenção, gestão). */
+export interface EmailCustom {
+  subject: string;
+  kicker: string;
+  headline: string;
+  intro: string;
+  stats: [string, string, string?][];
+  reasons: [string, string][];
+  payments: boolean;
+  note: string;
+  topic: string;
+}
+
 export function clientWelcomeEmail({
   origin,
   name,
   segment,
   estimate,
   company,
+  custom,
 }: {
   origin: string;
   name: string;
-  segment: "solar" | "save" | "ambos";
+  segment: string;
   estimate: QuickEstimate | null;
   company: Company;
+  custom?: EmailCustom | null;
 }) {
   const first = name.trim().split(/\s+/)[0] || "tudo bem";
   const brand = company.company_name || "Quark Energia";
   const solar = segment !== "save" && estimate && estimate.monthlySavings > 0;
-  const waLink = wa(company.whatsapp, `Olá! Sou ${first}, recebi meu estudo ${solar ? "solar" : "do carregador veicular"} por e-mail e quero falar com um especialista.`);
+  const waLink = wa(company.whatsapp, `Olá! Sou ${first}, recebi meu estudo ${custom ? custom.topic : solar ? "solar" : "do carregador veicular"} por e-mail e quero falar com um especialista.`);
   const tech = company.tech_name ? `${company.tech_name}${company.tech_registry ? ` (${company.tech_registry})` : ""}` : null;
 
-  const subject = solar
+  const subject = custom
+    ? custom.subject
+    : solar
     ? `${first}, seu estudo solar: economia de ${brl(estimate!.monthlySavings, 0)} por mês ☀️`
     : `${first}, seu ponto de recarga para veículo elétrico ⚡`;
 
@@ -62,7 +79,14 @@ export function clientWelcomeEmail({
       </div>
     </td>`;
 
-  const numbers = solar
+  const grid = (stats: [string, string, string?][]) => {
+    const rows: string[] = [];
+    for (let i = 0; i < stats.length; i += 2) rows.push(`<tr>${stats.slice(i, i + 2).map(([l, v, sub]) => stat(l, v, sub)).join("")}</tr>`);
+    return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:8px -6px 0">${rows.join("")}</table>`;
+  };
+  const numbers = custom
+    ? grid(custom.stats)
+    : solar
     ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:8px -6px 0">
         <tr>${stat("Economia por mês", brl(estimate!.monthlySavings, 0), `${fmtNum(estimate!.savingsPct * 100)}% a menos na conta`)}${stat("Em 25 anos", brl(estimate!.savings25y, 0), "com reajuste da tarifa")}</tr>
         <tr>${stat("Sua conta", `${brl(estimate!.billBefore, 0)} → ${brl(estimate!.billAfter, 0)}`, "com fio B e taxas inclusos")}${stat("Sistema estimado", `${fmtNum(estimate!.kwp, 2)} kWp`, `${estimate!.modules} placas · ~${estimate!.areaM2} m² de telhado`)}</tr>
@@ -89,7 +113,9 @@ export function clientWelcomeEmail({
   </td></tr>`;
 
   const reasons = (
-    solar
+    custom
+      ? custom.reasons
+      : solar
       ? [
           ["Engenharia própria", tech ? `Projetos assinados por ${tech}.` : "Projeto elétrico feito pela nossa equipe técnica, não terceirizado."],
           ["Tudo resolvido por nós", "Projeto, ART e homologação na distribuidora por nossa conta. Você só acompanha."],
@@ -125,21 +151,23 @@ export function clientWelcomeEmail({
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border-radius:22px;overflow:hidden;box-shadow:0 8px 32px rgba(28,18,52,.12)">
   <tr><td style="background:${PURPLE};padding:28px 32px 30px">
     <img src="${esc(origin)}/brand/logo-h-white.png" alt="${esc(brand)}" height="40" style="display:block;height:40px;width:auto;border:0" />
-    <p style="margin:26px 0 0;color:#F3EA3B;font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase">${solar ? "Seu estudo solar personalizado" : "Seu ponto de recarga"}</p>
+    <p style="margin:26px 0 0;color:#F3EA3B;font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase">${esc(custom ? custom.kicker : solar ? "Seu estudo solar personalizado" : "Seu ponto de recarga")}</p>
     <h1 style="margin:8px 0 0;color:#ffffff;font-size:26px;line-height:1.25">${
-      solar ? `${esc(first)}, você pode deixar de pagar ${esc(brl(estimate!.monthlySavings, 0))} por mês para a distribuidora.` : `${esc(first)}, seu carro elétrico merece carregar em casa, com segurança.`
+      custom ? `${esc(first)}, ${esc(custom.headline)}` : solar ? `${esc(first)}, você pode deixar de pagar ${esc(brl(estimate!.monthlySavings, 0))} por mês para a distribuidora.` : `${esc(first)}, seu carro elétrico merece carregar em casa, com segurança.`
     }</h1>
   </td></tr>
   <tr><td style="height:6px;background:${GRAD};background-color:#9BD373"></td></tr>
   <tr><td style="padding:26px 32px 8px">
     <p style="margin:0 0 10px;color:#4B4766;font-size:14px;line-height:1.6">${
-      solar
+      custom
+        ? esc(custom.intro)
+        : solar
         ? `Com base na conta que você informou, este é o retrato do seu projeto. É uma estimativa inicial: na visita técnica ajustamos cada detalhe ao seu telhado.`
         : `Recebemos o seu interesse em um carregador veicular. Veja o que muda na sua rotina:`
     }</p>
     ${numbers}
   </td></tr>
-  ${payments}
+  ${custom && !custom.payments ? "" : payments}
   ${
     waLink
       ? `<tr><td style="padding:18px 32px 6px" align="center">
@@ -158,7 +186,7 @@ export function clientWelcomeEmail({
   </td></tr>
   <tr><td style="background:#F7F6FA;padding:18px 32px;color:#9A97AE;font-size:11px;line-height:1.6">
     ${esc(brand)}${company.city ? ` · ${esc(company.city)}` : ""}${company.instagram ? ` · @${esc(String(company.instagram).replace(/^@/, ""))}` : ""}<br/>
-    ${solar ? "Valores estimados a partir da conta informada, com as regras da Lei 14.300 (fio B), taxa mínima e iluminação pública. O resultado final depende da visita técnica." : "Você recebeu este e-mail porque pediu um orçamento em nosso site."}
+    ${custom ? esc(custom.note) : solar ? "Valores estimados a partir da conta informada, com as regras da Lei 14.300 (fio B), taxa mínima e iluminação pública. O resultado final depende da visita técnica." : "Você recebeu este e-mail porque pediu um orçamento em nosso site."}
   </td></tr>
 </table>
 </td></tr></table></body></html>`;

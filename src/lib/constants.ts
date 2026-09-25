@@ -43,7 +43,15 @@ export const SEGMENTS: Record<Segment, { label: string; short: string; cls: stri
   solar: { label: "Energia solar", short: "Solar", cls: "bg-amber-50 text-amber-800 ring-amber-600/20" },
   save: { label: "Carregador veicular", short: "S.A.V.E", cls: "bg-sky-50 text-sky-800 ring-sky-600/20" },
   ambos: { label: "Solar + carregador", short: "Solar + S.A.V.E", cls: "bg-violet-50 text-violet-800 ring-violet-600/20" },
+  eletroposto: { label: "Eletroposto (investimento)", short: "Eletroposto", cls: "bg-emerald-50 text-emerald-800 ring-emerald-600/20" },
+  manutencao: { label: "Limpeza e manutenção de usina", short: "Manutenção", cls: "bg-cyan-50 text-cyan-800 ring-cyan-600/20" },
+  gestao: { label: "Gestão energética", short: "Gestão", cls: "bg-rose-50 text-rose-800 ring-rose-600/20" },
 };
+
+/** Segmentos que usam os dados de conta de luz / energia solar. */
+export const SOLAR_SEGMENTS: Segment[] = ["solar", "ambos", "manutencao", "gestao"];
+/** Segmentos ligados a recarga veicular (orçamento S.A.V.E). */
+export const CHARGER_SEGMENTS: Segment[] = ["save", "ambos", "eletroposto"];
 
 export const PRODUCTS: Record<Product, { label: string; short: string; cls: string }> = {
   solar: { label: "Energia solar", short: "Solar", cls: "bg-amber-50 text-amber-800 ring-amber-600/20" },

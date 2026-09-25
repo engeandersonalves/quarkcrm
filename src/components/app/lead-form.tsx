@@ -4,12 +4,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useReward } from "./rewards";
-import { ROOF_TYPES, SEGMENTS, SOURCES, STAGES, UFS } from "@/lib/constants";
+import { ROOF_TYPES, SEGMENTS, SOLAR_SEGMENTS, SOURCES, STAGES, UFS } from "@/lib/constants";
 import { notify } from "@/lib/live";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead, Segment } from "@/lib/types";
 import { useApp } from "./app-context";
 import { Button, Field, Input, Modal, MoneyInput, NumberInput, Segmented, Select, Textarea, cx } from "../ui";
+
+const SEGMENT_EMOJI: Record<string, string> = { solar: "☀️", save: "⚡", ambos: "☀️⚡", eletroposto: "🔌", manutencao: "🧽", gestao: "📊" };
 
 type Form = Partial<Lead>;
 
@@ -114,7 +116,7 @@ export function LeadFormModal({
                   (form.segment ?? "solar") === k ? "bg-ink-900 text-white ring-ink-900" : "bg-white text-ink-700 ring-ink-200 hover:ring-ink-300",
                 )}
               >
-                <p className="text-sm font-semibold">{k === "solar" ? "☀️ Solar" : k === "save" ? "⚡ S.A.V.E" : "☀️⚡ Ambos"}</p>
+                <p className="text-sm font-semibold">{SEGMENT_EMOJI[k]} {SEGMENTS[k].short}</p>
                 <p className={cx("text-[11px]", (form.segment ?? "solar") === k ? "text-ink-300" : "text-ink-500")}>{SEGMENTS[k].label}</p>
               </button>
             ))}
@@ -144,7 +146,7 @@ export function LeadFormModal({
           <Input value={form.address ?? ""} onChange={(e) => set("address", e.target.value)} placeholder="Rua, número, bairro" />
         </Field>
 
-        {form.segment !== "save" && (
+        {SOLAR_SEGMENTS.includes(form.segment ?? "solar") && (
         <div className="sm:col-span-2 mt-2 border-t border-ink-100 pt-4">
           <p className="mb-3 text-xs font-bold tracking-wider text-ink-400 uppercase">Consumo de energia</p>
           <div className="grid gap-4 sm:grid-cols-3">
