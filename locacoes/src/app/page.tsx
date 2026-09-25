@@ -122,13 +122,14 @@ function PrimeirosPassos() {
 function Conteudo() {
   const params = useSearchParams();
   const editar = params.get("editar");
-  const { dados } = useDados();
+  const { dados, session } = useDados();
+  const primeiroNome = (session?.user.user_metadata?.nome as string | undefined)?.trim().split(" ")[0];
   const emEdicao = editar ? dados.locacoes.find((l) => l.id === editar) : null;
   return (
     <>
       <div className="mb-6 flex flex-col gap-5">
         <div>
-          <p className="text-sm font-medium text-brand-700">{saudacao()} 👷</p>
+          <p className="text-sm font-medium text-brand-700">{saudacao()}{primeiroNome ? `, ${primeiroNome}` : ""} 👷</p>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink-950 sm:text-[30px]">{emEdicao ? `Editar ${emEdicao.status === "orcamento" ? "orçamento" : "locação"} ${codigo(emEdicao.numero)}` : editar ? "Editar orçamento" : "Orçamento rápido"}</h1>
         </div>
         {!editar && <AvisoDemonstracao />}

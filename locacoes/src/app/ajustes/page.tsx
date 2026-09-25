@@ -12,6 +12,7 @@ import { CONFIG_PADRAO } from "@/lib/defaults";
 import { hoje } from "@/lib/format";
 import { brl, PERIODOS, sugerirPrecos } from "@/lib/pricing";
 import type { Config, Dados } from "@/lib/types";
+import { nomeDoUsuario } from "@/components/login";
 
 /* ------------------------------------------------------------------ Nuvem */
 
@@ -46,7 +47,7 @@ function Nuvem() {
             <div className="min-w-0">
               <p className="font-semibold text-brand-900">Conectado</p>
               <p className="truncate text-brand-800/80">{conexao.url.replace("https://", "")}</p>
-              <p className="mt-0.5 text-brand-800/80">Você entrou como {session?.user.email}</p>
+              <p className="mt-0.5 text-brand-800/80">Você entrou como {nomeDoUsuario(session?.user)}{session?.user.user_metadata?.nome ? ` (${session.user.email})` : ""}</p>
             </div>
           </div>
           {bancoDesatualizado ? (

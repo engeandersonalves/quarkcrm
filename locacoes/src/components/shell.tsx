@@ -7,7 +7,7 @@ import { BarChart3, Boxes, CalendarClock, DatabaseZap, Check, ClipboardList, Clo
 import { useDados } from "@/lib/store";
 import { diffDias, hoje } from "@/lib/format";
 import { Busca } from "./busca";
-import { Login, NovaSenha } from "./login";
+import { Login, NovaSenha, nomeDoUsuario } from "./login";
 import { Logo } from "./logo";
 import { Button, cx, Modal, Skeleton } from "./ui";
 
@@ -203,7 +203,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <div className="relative mt-auto space-y-2">
           <div className="rounded-xl bg-white/5 px-3 py-2.5 ring-1 ring-white/10">
             <IndicadorSync escuro />
-            {modo === "nuvem" && <p className="mt-1 truncate text-[11.5px] text-ink-400">{session?.user.email}</p>}
+            {modo === "nuvem" && <p className="mt-1 truncate text-[11.5px] text-ink-400" title={session?.user.email}>{nomeDoUsuario(session?.user)}</p>}
           </div>
           {modo === "nuvem" && (
             <button onClick={sair} className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[13px] text-ink-400 hover:bg-white/5 hover:text-white">
@@ -283,7 +283,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="mt-2 flex items-center justify-between rounded-2xl px-4 py-2 text-sm">
             <span className="min-w-0">
               <IndicadorSync />
-              {modo === "nuvem" && <span className="block truncate text-[12px] text-ink-500">{session?.user.email}</span>}
+              {modo === "nuvem" && <span className="block truncate text-[12px] text-ink-500">{nomeDoUsuario(session?.user)}</span>}
             </span>
             {modo === "nuvem" && (
               <Button variant="ghost" size="sm" onClick={sair}>
