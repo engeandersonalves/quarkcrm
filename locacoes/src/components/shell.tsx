@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Boxes, CalendarClock, Check, ClipboardList, CloudOff, CloudUpload, HardDrive, Loader2, LogOut, MoreHorizontal, Search, Settings, Sparkles, Users, Wallet } from "lucide-react";
+import { BarChart3, Boxes, CalendarClock, DatabaseZap, Check, ClipboardList, CloudOff, CloudUpload, HardDrive, Loader2, LogOut, MoreHorizontal, Search, Settings, Sparkles, Users, Wallet } from "lucide-react";
 import { useDados } from "@/lib/store";
 import { diffDias, hoje } from "@/lib/format";
 import { Busca } from "./busca";
@@ -18,6 +18,7 @@ const NAV = [
   { href: "/estoque", label: "Estoque", icon: Boxes },
   { href: "/financeiro", label: "Financeiro", icon: Wallet },
   { href: "/clientes", label: "Clientes", icon: Users },
+  { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
 const MOBILE = ["/", "/locacoes", "/agenda", "/estoque"];
@@ -98,7 +99,7 @@ function Migracao() {
 
 export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
-  const { dados, modo, session, authPronto, semAcesso, carregando, sair } = useDados();
+  const { dados, modo, session, authPronto, semAcesso, carregando, sair, bancoDesatualizado } = useDados();
   const [mais, setMais] = useState(false);
   const [busca, setBusca] = useState(false);
 
@@ -161,9 +162,9 @@ export function Shell({ children }: { children: ReactNode }) {
   if (path.startsWith("/documento")) return <>{children}</>;
 
   return (
-    <div className="min-h-dvh lg:pl-[248px]">
+    <div className="min-h-dvh lg:pl-[248px] print:pl-0">
       {/* Menu lateral (computador) */}
-      <aside className="bg-navy-gradient fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col px-4 py-6 lg:flex">
+      <aside className="bg-navy-gradient fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col px-4 py-6 lg:flex print:hidden">
         <div className="bg-grid pointer-events-none absolute inset-0 opacity-60 [mask-image:linear-gradient(to_bottom,black,transparent_40%)]" />
         <Link href="/" className="relative px-2">
           <Logo />
@@ -213,7 +214,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Topo (celular) */}
-      <header className="bg-navy-gradient sticky top-0 z-30 flex items-center gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 lg:hidden">
+      <header className="bg-navy-gradient sticky top-0 z-30 flex items-center gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 lg:hidden print:hidden">
         <Link href="/" className="mr-auto">
           <Logo />
         </Link>
@@ -223,7 +224,15 @@ export function Shell({ children }: { children: ReactNode }) {
         </button>
       </header>
 
-      <main className="mx-auto w-full max-w-[1320px] px-4 pt-5 pb-28 sm:px-6 lg:px-10 lg:pt-9 lg:pb-12">
+      <main className="mx-auto w-full max-w-[1320px] px-4 pt-5 pb-28 sm:px-6 lg:px-10 lg:pt-9 lg:pb-12 print:max-w-none print:p-0">
+        {bancoDesatualizado && (
+          <Link href="/ajustes" className="mb-5 flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-[13.5px] text-amber-900 ring-1 ring-amber-300 print:hidden">
+            <DatabaseZap className="h-5 w-5 shrink-0 text-amber-600" />
+            <span className="flex-1">
+              <b>Atualize o banco de dados:</b> no Supabase, abra o SQL Editor, cole o arquivo <code className="rounded bg-amber-100 px-1">supabase/schema.sql</code> e clique em Run. Nada é apagado. Até lá, a assinatura por link fica desligada.
+            </span>
+          </Link>
+        )}
         {carregando && dados.equipamentos.length === 0 && dados.locacoes.length === 0 ? (
           <div className="grid gap-5" aria-busy="true" aria-label="Carregando">
             <Skeleton className="h-9 w-64" />
@@ -240,7 +249,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </main>
 
       {/* Barra inferior (celular) */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden print:hidden">
         <div className="grid grid-cols-5">
           {NAV.filter((n) => MOBILE.includes(n.href)).map((n) => {
             const on = ativo(path, n.href);
@@ -255,8 +264,8 @@ export function Shell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
-          <button onClick={() => setMais(true)} className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold", ["/financeiro", "/clientes", "/ajustes"].some((h) => path.startsWith(h)) ? "text-ink-950" : "text-ink-400")}>
-            <span className={cx("grid h-8 w-12 place-items-center rounded-full", ["/financeiro", "/clientes", "/ajustes"].some((h) => path.startsWith(h)) && "bg-brand-100")}>
+          <button onClick={() => setMais(true)} className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold", ["/financeiro", "/clientes", "/relatorios", "/ajustes"].some((h) => path.startsWith(h)) ? "text-ink-950" : "text-ink-400")}>
+            <span className={cx("grid h-8 w-12 place-items-center rounded-full", ["/financeiro", "/clientes", "/relatorios", "/ajustes"].some((h) => path.startsWith(h)) && "bg-brand-100")}>
               <MoreHorizontal className="h-5 w-5" />
             </span>
             Mais

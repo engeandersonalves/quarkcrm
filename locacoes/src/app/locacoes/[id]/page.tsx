@@ -26,6 +26,7 @@ import {
   Undo2,
   XCircle,
 } from "lucide-react";
+import { AssinaturaCard } from "@/components/assinatura-card";
 import { ProximaAcao } from "@/components/card-locacao";
 import { confirmar } from "@/components/dialogo";
 import { ReceberModal } from "@/components/receber-modal";
@@ -312,7 +313,13 @@ export default function DetalheLocacao() {
               <div className="mt-4 grid gap-3 border-t border-ink-100 pt-4 text-sm sm:grid-cols-2">
                 <div>
                   <p className="text-xs font-medium text-ink-500">Cliente</p>
-                  <p className="font-semibold">{l.cliente_nome || "—"}</p>
+                  {l.cliente_id ? (
+                    <Link href={`/clientes/${l.cliente_id}`} className="font-semibold text-ink-900 underline-offset-2 hover:underline">
+                      {l.cliente_nome} <span className="text-[12px] font-normal text-brand-700">· ver histórico</span>
+                    </Link>
+                  ) : (
+                    <p className="font-semibold">{l.cliente_nome || "—"}</p>
+                  )}
                   <p className="text-ink-600">{l.cliente_documento && fmtDocumento(l.cliente_documento)}</p>
                   {l.cliente_telefone && (
                     <div className="mt-2 flex gap-2">
@@ -457,6 +464,8 @@ export default function DetalheLocacao() {
               )}
             </div>
           </Card>
+
+          {l.status !== "orcamento" && l.status !== "recusada" && <AssinaturaCard l={l} />}
 
           {/* Financeiro da locação */}
           <Card>

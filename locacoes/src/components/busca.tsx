@@ -65,7 +65,7 @@ export function Busca({ aberta, onClose }: { aberta: boolean; onClose: () => voi
     }
     for (const c of dados.clientes) {
       if (normalizar(`${c.nome} ${c.documento} ${c.endereco.bairro}`).includes(t) || (td.length >= 4 && c.telefone.replace(/\D/g, "").includes(td))) {
-        out.push({ id: c.id, grupo: "Clientes", titulo: c.nome, sub: [fmtTelefone(c.telefone), c.endereco.bairro].filter(Boolean).join(" · "), href: `/clientes?id=${c.id}`, icone: <UserRound className="h-4 w-4" /> });
+        out.push({ id: c.id, grupo: "Clientes", titulo: c.nome, sub: [fmtTelefone(c.telefone), c.endereco.bairro].filter(Boolean).join(" · "), href: `/clientes/${c.id}`, icone: <UserRound className="h-4 w-4" /> });
       }
       if (out.filter((x) => x.grupo === "Clientes").length >= 5) break;
     }

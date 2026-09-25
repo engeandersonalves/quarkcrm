@@ -11,7 +11,10 @@ App para locação de andaimes e equipamentos. Funciona no celular e no computad
 | **Agenda** | Entregas e coletas: atrasadas, hoje, amanhã, próximos dias. **Rota de hoje** no Google Maps passando por todas as obras, e **“Enviar rota ao entregador”** no WhatsApp com endereço, referência, link do mapa e itens. |
 | **Estoque** | Total, na obra, a entregar, em manutenção e disponível de cada item, **onde está cada peça** e quanto o estoque está rendendo por mês. O orçamento avisa quando falta peça. |
 | **Financeiro** | Recebido **por dia** e **por mês**, despesas, resultado, **a receber** (com vencidos), receita por plano, recebimento parcial e cobrança pelo WhatsApp. Aprovar um orçamento lança a cobrança sozinho; renovar lança a da renovação. |
-| **Clientes** | Criados automaticamente nos orçamentos. Histórico, total gasto e em aberto de cada um. |
+| **Clientes** | Criados automaticamente nos orçamentos. Cada cliente tem uma **página de histórico**: todas as locações, pagamentos (e se paga em dia), o que está com ele agora, o que mais aluga e os endereços de obra. |
+| **Relatórios** | **Financeiro** mensal e anual (entradas × saídas, demonstrativo por categoria, receita por plano, mês a mês), **Locações** (orçamentos, conversão, ticket médio, melhores clientes, bairros) e **Estoque** (ocupação, receita por equipamento, patrimônio, itens parados). Imprime em PDF e baixa em CSV para o Excel. |
+| **Assinatura do termo** | Na ficha da locação: **Enviar link no WhatsApp** — o cliente abre no celular (sem login), lê o termo, assina com o dedo e tira uma **selfie**. Fica registrado: nome, CPF/CNPJ, assinatura, selfie, data e hora, IP, localização (se ele permitir) e o código SHA-256 do termo. Ou **Assinar aqui**, no celular da empresa, na entrega. |
+| **Conferência na coleta** | Ao marcar recolhido: “Tudo certo” num toque, ou informe peças com avaria (vão para manutenção) e faltando (saem do estoque e a reposição pode ser cobrada do cliente). |
 | **Ajustes** | Dados da empresa e do PIX, regra de preços, taxas, cláusulas do termo, **equipe** (quem tem acesso) e backup. |
 
 ### Endereço para o entregador
@@ -39,6 +42,8 @@ Sem configurar nada, os dados ficam salvos **só no navegador** — bom para tes
 
 ## Salvar na nuvem (≈ 10 minutos, plano gratuito)
 
+> **Atualizou o app?** Rode de novo o `supabase/schema.sql` no SQL Editor do Supabase (não apaga nada). O app avisa com uma faixa amarela quando o banco precisa ser atualizado.
+
 1. **Supabase** — crie um projeto em [supabase.com](https://supabase.com) (região *South America – São Paulo*). Em **SQL Editor → New query**, cole todo o [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run** (pode rodar de novo quando atualizar o app). Em **Authentication → Sign In / Providers → Email**, desligue *Confirm email* para a equipe entrar sem confirmar. Em **Authentication → URL Configuration**, coloque o endereço do site em *Site URL*.
 2. **Ligar o app à nuvem** — escolha **um** dos jeitos:
    - **Pelo próprio app (mais fácil):** abra o site, vá em **Ajustes → Nuvem**, cole a *Project URL* e a chave pública (*anon* ou *publishable*, em **Project Settings → API**) e toque em **Testar e conectar**. O app testa e explica o que estiver errado (URL, chave ou tabelas faltando). Para os outros celulares, use o **QR Code / link** que aparece em Ajustes → Nuvem.
@@ -65,6 +70,10 @@ src/lib/mesclar.ts        junta backup / dados do aparelho com a nuvem sem dupli
 src/lib/backend.ts        Supabase (nuvem) ou navegador (demonstração), conexão pelo app ou pela Vercel
 src/lib/mensagens.ts      textos do WhatsApp (orçamento, entregador, cobrança, vencimento)
 src/lib/pix.ts            PIX copia e cola / QR Code (padrão BR Code do Banco Central) + testes
+src/lib/relatorios.ts     cálculos dos relatórios financeiro, de locações e de estoque + testes
+src/lib/publico.ts        página pública de assinatura (sem login) e código SHA-256 do termo
+src/components/assinar.tsx     assinatura com o dedo + selfie
+src/app/assinar/[token]/  página que o cliente abre pelo link
 src/components/orcamento.tsx   tela de orçamento rápido
 src/app/                  telas (locacoes, agenda, estoque, financeiro, clientes, ajustes, documento)
 supabase/schema.sql       tabelas, segurança (só a equipe logada) e tempo real

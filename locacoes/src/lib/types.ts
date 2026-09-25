@@ -88,6 +88,38 @@ export interface Locacao {
   historico: Evento[];
   criado_em: string;
   atualizado_em: string;
+  /** Preenchidos quando o cliente assina o termo (link ou no aparelho). */
+  assinado_em?: string | null;
+  assinado_por?: string | null;
+}
+
+/** O termo exatamente como foi enviado para assinar (não muda depois). */
+export interface TermoCongelado {
+  locacao: Omit<Locacao, "historico">;
+  config: Config;
+  /** Valor de reposição de cada equipamento na época. */
+  reposicao: Record<string, number>;
+  gerado_em: string;
+}
+
+export interface Assinatura {
+  locacao_id: string;
+  token: string;
+  criado_em: string;
+  termo: TermoCongelado;
+  assinado_em: string | null;
+  nome: string | null;
+  documento: string | null;
+  /** Assinatura desenhada (PNG em data URL). */
+  imagem: string | null;
+  /** Selfie (JPEG em data URL). */
+  selfie: string | null;
+  via: "link" | "presencial" | null;
+  /** SHA-256 do termo assinado: prova de que o texto não mudou depois. */
+  hash: string | null;
+  ip: string | null;
+  dispositivo: string | null;
+  geo: string | null;
 }
 
 export type TipoLancamento = "entrada" | "saida";

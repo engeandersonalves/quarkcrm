@@ -4,12 +4,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 import { confirmar } from "@/components/dialogo";
-import { conexaoAtual, criarBackend, ehErroDeRede, ErroBanco, lerLocal, supabase, type Backend } from "./backend";
+import { colunasFaltando, conexaoAtual, criarBackend, ehErroDeRede, ErroBanco, lerLocal, supabase, VERSAO_SCHEMA, type Backend } from "./backend";
 import { addDias, codigo, fmtData, hoje, uid } from "./format";
 import { catalogoInicial, mesclarConfig } from "./defaults";
 import { mesclarDados, temDadosReais, type ResultadoMescla } from "./mesclar";
-import { descreverModalidade, diasDaLocacao, totalLocacao } from "./pricing";
-import type { Cliente, Config, Dados, Equipamento, Lancamento, Locacao, Tabela } from "./types";
+import { brl, descreverModalidade, diasDaLocacao, totalLocacao } from "./pricing";
+import type { Assinatura, Cliente, Config, Dados, Equipamento, Lancamento, Locacao, Tabela, TermoCongelado } from "./types";
 
 export interface SaldoEstoque {
   total: number;
@@ -21,6 +21,15 @@ export interface SaldoEstoque {
   /** Em orçamentos abertos (não bloqueia o estoque). */
   emOrcamento: number;
   disponivel: number;
+}
+
+/** Resultado da conferência na coleta: peças com avaria vão para manutenção; faltando saem do estoque. */
+export interface Conferencia {
+  itens: { equipamento_id: string; avariadas: number; perdidas: number }[];
+  /** Cobrar do cliente o valor de reposição das peças que faltaram. */
+  cobrarPerdas: boolean;
+  /** Valor extra de conserto das avarias (0 = não cobra). */
+  valorConserto: number;
 }
 
 /** Situação do salvamento: tudo salvo, enviando, ou esperando a internet voltar. */
@@ -45,6 +54,8 @@ interface Ctx {
   /** Abriu pelo link "esqueci a senha": precisa definir a nova. */
   recuperandoSenha: boolean;
   sync: Sync;
+  /** O banco da nuvem é de uma versão anterior: é preciso rodar o schema.sql de novo. */
+  bancoDesatualizado: boolean;
   /** Dados do modo demonstração encontrados neste aparelho, prontos para irem à nuvem. */
   migracao: Dados | null;
   backend: Backend;
@@ -69,9 +80,13 @@ interface Ctx {
   voltarEtapa(l: Locacao): Promise<void>;
   cancelar(l: Locacao, motivo: string): Promise<void>;
   marcarEntregue(l: Locacao): Promise<void>;
-  marcarRecolhido(l: Locacao): Promise<void>;
+  marcarRecolhido(l: Locacao, conferencia?: Conferencia): Promise<void>;
   renovar(l: Locacao): Promise<void>;
   definirSenha(nova: string): Promise<void>;
+  /* assinatura do termo */
+  termoCongelado(l: Locacao): TermoCongelado;
+  prepararAssinatura(l: Locacao): Promise<Assinatura>;
+  assinarPresencial(l: Locacao, dados: { nome: string; documento: string; imagem: string; selfie: string; hash: string; geo: string }): Promise<void>;
   sair(): Promise<void>;
 }
 
@@ -139,6 +154,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [semAcesso, setSemAcesso] = useState(false);
   const [recuperandoSenha, setRecuperandoSenha] = useState(false);
   const [migracao, setMigracao] = useState<Dados | null>(null);
+  const [bancoDesatualizado, setBancoDesatualizado] = useState(false);
 
   /* ---------------------------------------------------------------- fila de salvamento */
 
@@ -186,6 +202,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
         fila.current.shift();
         persistirFila();
         tentativa.current = 0;
+        if (colunasFaltando.size) setBancoDesatualizado(true);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         if (ehErroDeRede(e)) {
@@ -351,6 +368,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       await recarregar();
       if (cancelado) return;
       parar = backend.current.ouvir(recarregar);
+      if (nuvem) backend.current.versaoSchema().then((v) => !cancelado && setBancoDesatualizado(v < VERSAO_SCHEMA)).catch(() => {});
       if (fila.current.length) void processar();
       // Dados do modo demonstração neste aparelho? Oferece levar para a nuvem.
       if (nuvem && localStorage.getItem(CHAVE_MIGRADO) !== "1") {
@@ -467,11 +485,28 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   );
 
   const marcarRecolhido = useCallback(
-    async (l: Locacao) => {
-      const salva = await salvarLocacao({ ...l, status: "finalizada", recolhido_em: new Date().toISOString() }, "Equipamentos recolhidos — voltaram ao estoque");
-      toast.success(`${codigo(l.numero)} finalizada`, { description: "Os itens voltaram para o estoque.", action: desfazer(salva) });
+    async (l: Locacao, conf?: Conferencia) => {
+      const problemas = (conf?.itens ?? []).filter((c) => c.avariadas > 0 || c.perdidas > 0);
+      const partes: string[] = [];
+      let reposicao = 0;
+      for (const c of problemas) {
+        const e = dadosRef.current.equipamentos.find((x) => x.id === c.equipamento_id);
+        const nome = l.itens.find((i) => i.equipamento_id === c.equipamento_id)?.nome ?? e?.nome ?? "item";
+        if (c.avariadas > 0) partes.push(`${c.avariadas} ${nome} com avaria (foi para manutenção)`);
+        if (c.perdidas > 0) partes.push(`${c.perdidas} ${nome} faltando`);
+        reposicao += c.perdidas * (e?.valor_reposicao ?? 0);
+        if (e) await gravar("equipamentos", { ...e, em_manutencao: e.em_manutencao + c.avariadas, estoque_total: Math.max(0, e.estoque_total - c.perdidas) });
+      }
+      const evento = partes.length ? `Recolhido com ocorrências: ${partes.join("; ")}` : "Equipamentos recolhidos e conferidos — voltaram ao estoque";
+      const salva = await salvarLocacao({ ...l, status: "finalizada", recolhido_em: new Date().toISOString() }, evento);
+      const cobrancaTotal = (conf?.cobrarPerdas ? reposicao : 0) + (conf?.valorConserto ?? 0);
+      if (cobrancaTotal > 0) await cobrar(salva, Math.round(cobrancaTotal * 100) / 100, "Avaria / reposição", `Avarias e peças faltando — ${codigo(l.numero)}`, hoje());
+      toast.success(`${codigo(l.numero)} finalizada`, {
+        description: partes.length ? `${partes.join("; ")}.${cobrancaTotal > 0 ? ` Cobrança de ${brl(cobrancaTotal)} lançada.` : ""}` : "Os itens voltaram para o estoque.",
+        action: partes.length ? undefined : desfazer(salva),
+      });
     },
-    [salvarLocacao],
+    [salvarLocacao, gravar, cobrar],
   );
 
   /** Apaga as cobranças ainda não pagas da locação (ao cancelar ou voltar para orçamento). */
@@ -520,6 +555,55 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     [salvarLocacao, cobrar],
   );
 
+  const termoCongelado = useCallback((l: Locacao): TermoCongelado => {
+    const { historico: _h, ...locacao } = l;
+    void _h;
+    const reposicao = Object.fromEntries(dadosRef.current.equipamentos.filter((e) => l.itens.some((i) => i.equipamento_id === e.id)).map((e) => [e.id, e.valor_reposicao]));
+    return { locacao, config: dadosRef.current.config, reposicao, gerado_em: new Date().toISOString() };
+  }, []);
+
+  const prepararAssinatura = useCallback(
+    async (l: Locacao) => {
+      const a = await backend.current.prepararAssinatura(l.id, termoCongelado(l));
+      if (!l.historico.some((h) => h.texto.startsWith("Link de assinatura"))) await salvarLocacao(l, "Link de assinatura do termo gerado para o cliente");
+      return a;
+    },
+    [termoCongelado, salvarLocacao],
+  );
+
+  const assinarPresencial = useCallback(
+    async (l: Locacao, d: { nome: string; documento: string; imagem: string; selfie: string; hash: string; geo: string }) => {
+      const atual = await backend.current.assinatura(l.id).catch(() => null);
+      const agora = new Date().toISOString();
+      const termo = atual?.termo ?? termoCongelado(l);
+      await backend.current.salvarAssinatura({
+        locacao_id: l.id,
+        token: atual?.token ?? uid().replace(/-/g, ""),
+        criado_em: atual?.criado_em ?? agora,
+        termo,
+        assinado_em: agora,
+        nome: d.nome,
+        documento: d.documento,
+        imagem: d.imagem,
+        selfie: d.selfie,
+        via: "presencial",
+        hash: d.hash,
+        ip: null,
+        dispositivo: navigator.userAgent.slice(0, 300),
+        geo: d.geo || null,
+      });
+      await salvarLocacao(
+        { ...l, assinado_em: agora, assinado_por: d.nome, cliente_documento: l.cliente_documento || d.documento },
+        `Termo assinado no aparelho da empresa (com selfie): ${d.nome}`,
+      );
+      // CPF informado na assinatura completa o cadastro do cliente.
+      const cli = l.cliente_id ? dadosRef.current.clientes.find((c) => c.id === l.cliente_id) : null;
+      if (cli && !cli.documento && d.documento) await gravar("clientes", { ...cli, documento: d.documento });
+      toast.success("Termo assinado", { description: `${d.nome} assinou com selfie.` });
+    },
+    [termoCongelado, salvarLocacao, gravar],
+  );
+
   const importar = useCallback(
     async (d: Dados, opcoes?: { config?: boolean }) => {
       const r = mesclarDados(dadosRef.current, d);
@@ -543,6 +627,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       semAcesso,
       recuperandoSenha,
       sync,
+      bancoDesatualizado,
       migracao,
       backend: backend.current,
       estoque: calcularEstoque(dados),
@@ -588,6 +673,9 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       marcarEntregue,
       marcarRecolhido,
       renovar,
+      termoCongelado,
+      prepararAssinatura,
+      assinarPresencial,
       async definirSenha(nova) {
         const r = await supabase().auth.updateUser({ password: nova });
         if (r.error) throw r.error;
@@ -603,7 +691,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
         setDados(VAZIO);
       },
     }),
-    [dados, carregando, session, authPronto, semAcesso, recuperandoSenha, sync, migracao, recarregar, gravar, apagar, enfileirar, salvarLocacao, salvarLancamento, importar, proximoNumero, aprovar, voltarEtapa, cancelar, marcarEntregue, marcarRecolhido, renovar, nuvem],
+    [dados, carregando, session, authPronto, semAcesso, recuperandoSenha, sync, bancoDesatualizado, migracao, termoCongelado, prepararAssinatura, assinarPresencial, recarregar, gravar, apagar, enfileirar, salvarLocacao, salvarLancamento, importar, proximoNumero, aprovar, voltarEtapa, cancelar, marcarEntregue, marcarRecolhido, renovar, nuvem],
   );
 
   return <C.Provider value={value}>{children}</C.Provider>;

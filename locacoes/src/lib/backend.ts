@@ -2,7 +2,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { mesclarConfig } from "./defaults";
-import type { Config, Dados, Tabela } from "./types";
+import type { Assinatura, Config, Dados, Tabela, TermoCongelado } from "./types";
 
 /**
  * Duas formas de guardar os dados, com a mesma interface:
@@ -24,6 +24,26 @@ export interface Backend {
   removerEquipe(email: string): Promise<void>;
   /** Avisa quando outro aparelho alterou algo. Retorna a função para parar de ouvir. */
   ouvir(cb: () => void): () => void;
+  /** Assinatura do termo (as imagens só são buscadas quando precisa). */
+  assinatura(locacaoId: string): Promise<Assinatura | null>;
+  /** Cria (ou atualiza, se ainda não assinado) o link de assinatura com o termo congelado. */
+  prepararAssinatura(locacaoId: string, termo: TermoCongelado): Promise<Assinatura>;
+  /** Assinatura feita no aparelho da equipe (presencial). */
+  salvarAssinatura(a: Assinatura): Promise<void>;
+  /** Versão do banco (0 = antigo, sem a função). */
+  versaoSchema(): Promise<number>;
+}
+
+/** Versão do supabase/schema.sql que este app espera. */
+export const VERSAO_SCHEMA = 3;
+
+/** Colunas que o banco ainda não tem (schema antigo): o app segue funcionando sem elas. */
+export const colunasFaltando = new Set<string>();
+
+export function novoToken() {
+  const b = new Uint8Array(24);
+  crypto.getRandomValues(b);
+  return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /** Erro do banco com o código do Postgres (ex.: 23505 = valor repetido). */
@@ -173,7 +193,22 @@ function nuvem(): Backend {
       };
     },
     async salvar(tabela, linha) {
-      must(await c.from(tabela).upsert(linha));
+      // Banco com schema antigo (coluna nova ainda não criada)? Grava sem ela e avisa para atualizar.
+      let dados: Record<string, unknown> = { ...linha };
+      for (const col of colunasFaltando) if (col.startsWith(`${tabela}.`)) delete dados[col.split(".")[1]];
+      for (let i = 0; i < 6; i++) {
+        const r = await c.from(tabela).upsert(dados);
+        const falta = r.error?.message.match(/Could not find the '(\w+)' column/);
+        if (falta && falta[1] in dados) {
+          colunasFaltando.add(`${tabela}.${falta[1]}`);
+          const { [falta[1]]: _, ...resto } = dados;
+          void _;
+          dados = resto;
+          continue;
+        }
+        must(r);
+        return;
+      }
     },
     async excluir(tabela, id) {
       must(await c.from(tabela).delete().eq("id", id));
@@ -184,6 +219,23 @@ function nuvem(): Backend {
     async maiorNumero() {
       const r = must(await c.from("locacoes").select("numero").order("numero", { ascending: false }).limit(1)) as { numero: number }[];
       return r[0]?.numero ?? 0;
+    },
+    async assinatura(locacaoId) {
+      return must(await c.from("assinaturas").select("*").eq("locacao_id", locacaoId).maybeSingle()) as Assinatura | null;
+    },
+    async prepararAssinatura(locacaoId, termo) {
+      const atual = must(await c.from("assinaturas").select("locacao_id, token, assinado_em").eq("locacao_id", locacaoId).maybeSingle()) as Pick<Assinatura, "locacao_id" | "token" | "assinado_em"> | null;
+      if (atual?.assinado_em) return (await this.assinatura(locacaoId))!;
+      const token = atual?.token ?? novoToken();
+      must(await c.from("assinaturas").upsert({ locacao_id: locacaoId, token, termo }));
+      return (await this.assinatura(locacaoId))!;
+    },
+    async salvarAssinatura(a) {
+      must(await c.from("assinaturas").upsert(a));
+    },
+    async versaoSchema() {
+      const r = await c.rpc("versao_schema");
+      return r.error ? 0 : Number(r.data) || 0;
     },
     async entrarEquipe() {
       const r = await c.rpc("entrar_equipe");
@@ -250,6 +302,22 @@ function gravarLocal(d: Dados) {
   }
 }
 
+const CHAVE_ASSINATURAS = "quark-locacoes:assinaturas";
+function lerAssinaturas(): Record<string, Assinatura> {
+  try {
+    return JSON.parse(localStorage.getItem(CHAVE_ASSINATURAS) || "{}");
+  } catch {
+    return {};
+  }
+}
+function gravarAssinaturas(a: Record<string, Assinatura>) {
+  try {
+    localStorage.setItem(CHAVE_ASSINATURAS, JSON.stringify(a));
+  } catch {
+    /* sem espaço */
+  }
+}
+
 function local(): Backend {
   let mem: Dados | null = null;
   const atual = () => (mem ??= lerLocal() ?? { equipamentos: [], clientes: [], locacoes: [], lancamentos: [], config: mesclarConfig(null) });
@@ -282,6 +350,26 @@ function local(): Backend {
     async maiorNumero() {
       return atual().locacoes.reduce((m, l) => Math.max(m, l.numero || 0), 0);
     },
+    async assinatura(locacaoId) {
+      return lerAssinaturas()[locacaoId] ?? null;
+    },
+    async prepararAssinatura(locacaoId, termo) {
+      const todas = lerAssinaturas();
+      const atual = todas[locacaoId];
+      if (atual?.assinado_em) return atual;
+      const a: Assinatura = atual
+        ? { ...atual, termo }
+        : { locacao_id: locacaoId, token: novoToken(), criado_em: new Date().toISOString(), termo, assinado_em: null, nome: null, documento: null, imagem: null, selfie: null, via: null, hash: null, ip: null, dispositivo: null, geo: null };
+      todas[locacaoId] = a;
+      gravarAssinaturas(todas);
+      return a;
+    },
+    async salvarAssinatura(a) {
+      const todas = lerAssinaturas();
+      todas[a.locacao_id] = a;
+      gravarAssinaturas(todas);
+    },
+    versaoSchema: async () => VERSAO_SCHEMA,
     entrarEquipe: async () => true,
     equipe: async () => [],
     adicionarEquipe: async () => {},

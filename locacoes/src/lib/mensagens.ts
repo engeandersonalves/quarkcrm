@@ -81,3 +81,12 @@ export function mensagemVencimento(l: Locacao, cfg: Config): string {
     `Lembrando: andaimes e escoras precisam estar desmontados na coleta (senão há taxa de ${cfg.taxa_desmontagem_pct}%).`,
   ].join("\n");
 }
+
+export function mensagemAssinatura(l: Locacao, link: string, cfg: Config): string {
+  return [
+    `Olá, ${l.cliente_nome.split(" ")[0]}! Aqui é da *${cfg.empresa_nome}*.`,
+    `Segue o termo da locação nº ${codigo(l.numero).slice(1)} para você ler e assinar pelo celular (leva 1 minuto, com uma selfie):`,
+    link,
+    "Qualquer dúvida, é só chamar. 🙏",
+  ].join("\n");
+}

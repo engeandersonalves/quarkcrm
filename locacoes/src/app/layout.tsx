@@ -2,8 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Plus_Jakarta_Sans, Sora } from "next/font/google";
 import { Toaster } from "sonner";
 import { Dialogos } from "@/components/dialogo";
-import { Shell } from "@/components/shell";
-import { DadosProvider } from "@/lib/store";
+import { Raiz } from "@/components/raiz";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "swap" });
@@ -29,9 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" className={`${jakarta.variable} ${sora.variable} ${mono.variable}`}>
       <body className="min-h-dvh font-sans">
-        <DadosProvider>
-          <Shell>{children}</Shell>
-        </DadosProvider>
+        <Raiz>{children}</Raiz>
         <Dialogos />
         <Toaster position="top-center" richColors closeButton toastOptions={{ style: { fontFamily: "var(--font-jakarta)" } }} />
       </body>

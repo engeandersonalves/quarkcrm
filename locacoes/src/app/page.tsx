@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { AlertTriangle, ArrowUpRight, Boxes, HardDrive, Building2, Check, FileClock, PackageCheck, Truck, Users } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Boxes, HardDrive, Wallet, Building2, Check, FileClock, PackageCheck, Truck, Users } from "lucide-react";
 import { Orcamento } from "@/components/orcamento";
 import { Button, ButtonLink, cx } from "@/components/ui";
 import { useDados } from "@/lib/store";
 import { codigo, diffDias, hoje } from "@/lib/format";
 import { mesclarConfig } from "@/lib/defaults";
+import { brl } from "@/lib/pricing";
 
 function saudacao() {
   const h = new Date().getHours();
@@ -25,16 +26,18 @@ function Resumo() {
       coletas: ls.filter((l) => l.status === "na_obra" && l.data_coleta === h).length,
       vencidas: ls.filter((l) => l.status === "na_obra" && l.data_coleta && diffDias(h, l.data_coleta) < 0).length,
       orcamentos: ls.filter((l) => l.status === "orcamento").length,
+      vencido: dados.lancamentos.filter((x) => x.tipo === "entrada" && !x.pago && x.data < h).reduce((s, x) => s + x.valor, 0),
     };
-  }, [dados.locacoes]);
+  }, [dados.locacoes, dados.lancamentos]);
   const chips = [
     { href: "/agenda", label: "Entregar hoje", v: r.entregas, icon: Truck, alerta: false },
     { href: "/agenda", label: "Coletar hoje", v: r.coletas, icon: PackageCheck, alerta: false },
     { href: "/agenda", label: "Vencidas", v: r.vencidas, icon: AlertTriangle, alerta: r.vencidas > 0 },
     { href: "/locacoes", label: "Orçamentos abertos", v: r.orcamentos, icon: FileClock, alerta: false },
+    { href: "/financeiro", label: "A receber vencido", v: brl(r.vencido), icon: Wallet, alerta: r.vencido > 0 },
   ];
   return (
-    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:grid sm:grid-cols-4 sm:px-0">
+    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 xl:grid-cols-5">
       {chips.map((c) => (
         <Link
           key={c.label}

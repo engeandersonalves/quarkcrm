@@ -16,7 +16,7 @@ import type { Config, Dados } from "@/lib/types";
 /* ------------------------------------------------------------------ Nuvem */
 
 function Nuvem() {
-  const { modo, session } = useDados();
+  const { modo, session, bancoDesatualizado } = useDados();
   const conexao = conexaoAtual();
   const [url, setUrl] = useState("");
   const [chave, setChave] = useState("");
@@ -49,6 +49,18 @@ function Nuvem() {
               <p className="mt-0.5 text-brand-800/80">Você entrou como {session?.user.email}</p>
             </div>
           </div>
+          {bancoDesatualizado ? (
+            <div className="flex gap-3 rounded-2xl bg-amber-50 p-4 text-[13px] text-amber-900 ring-1 ring-amber-300">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <p>
+                <b>Banco desatualizado.</b> No Supabase, abra <b>SQL Editor → New query</b>, cole todo o arquivo <code>supabase/schema.sql</code> do repositório e clique em <b>Run</b>. Não apaga nada. Depois recarregue o app.
+              </p>
+            </div>
+          ) : (
+            <p className="flex items-center gap-2 text-[13px] text-ink-600">
+              <CheckCircle2 className="h-4 w-4 text-brand-600" /> Banco de dados atualizado (assinatura por link, equipe e tempo real prontos)
+            </p>
+          )}
           {conexao.origem === "aparelho" && (
             <div className="grid gap-3 rounded-2xl p-4 ring-1 ring-ink-200 sm:grid-cols-[1fr_120px] sm:items-center">
               <div>

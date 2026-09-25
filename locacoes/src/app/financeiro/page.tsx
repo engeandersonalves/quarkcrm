@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowDownRight, ArrowUpRight, Check, ChevronLeft, ChevronRight, Clock, MessageCircle, Plus, Scale, Wallet } from "lucide-react";
+import { BarrasEntradaSaida } from "@/components/graficos";
 import { ReceberModal } from "@/components/receber-modal";
+import { periodoAno, periodoMes, relatorioFinanceiro } from "@/lib/relatorios";
 import { Button, Card, CardHeader, cx, Empty, Field, Input, Modal, MoneyInput, PageHeader, Segmented, Select, Stat, Switch, ButtonLink } from "@/components/ui";
 import { useDados } from "@/lib/store";
 import { CATEGORIAS_ENTRADA, CATEGORIAS_SAIDA, FORMAS_PAGAMENTO } from "@/lib/defaults";
@@ -19,57 +21,6 @@ type Escala = "mes" | "ano";
 
 /** Data em que o dinheiro entrou/saiu de fato (ou vencimento, se ainda aberto). */
 const dataCaixa = (x: Lancamento) => (x.pago ? x.pago_em || x.data : x.data);
-
-function Barras({ dados, rotulo }: { dados: { chave: string; label: string; valor: number; destaque?: boolean }[]; rotulo: string }) {
-  const [hover, setHover] = useState<number | null>(null);
-  const max = Math.max(...dados.map((d) => d.valor), 1);
-  const h = hover != null ? dados[hover] : null;
-  const passo = dados.length > 20 ? 5 : 1;
-  return (
-    <div>
-      <div className="mb-2 h-10">
-        {h ? (
-          <div className="animate-fade-up">
-            <p className="text-[12px] text-ink-500">{h.label}</p>
-            <p className="tnum font-display text-lg font-semibold">{brl(h.valor)}</p>
-          </div>
-        ) : (
-          <p className="pt-3 text-[12px] text-ink-400">{rotulo} — passe o dedo/mouse nas barras</p>
-        )}
-      </div>
-      <div className="relative h-44" onMouseLeave={() => setHover(null)}>
-        {[0.25, 0.5, 0.75, 1].map((g) => (
-          <div key={g} className="pointer-events-none absolute inset-x-0 border-t border-dashed border-ink-200/70" style={{ bottom: `${g * 100}%` }} />
-        ))}
-        <div className="absolute inset-0 flex items-end gap-[2px]">
-          {dados.map((d, i) => (
-            <button
-              key={d.chave}
-              type="button"
-              onMouseEnter={() => setHover(i)}
-              onFocus={() => setHover(i)}
-              onClick={() => setHover(i)}
-              className="group flex h-full min-w-0 flex-1 items-end justify-center"
-              aria-label={`${d.label}: ${brl(d.valor)}`}
-            >
-              <div
-                className={cx("w-full max-w-[28px] rounded-t-[4px] transition-colors", d.valor > 0 ? (hover === i ? "bg-brand-700" : d.destaque ? "bg-ink-900" : "bg-brand-500") : "bg-ink-200")}
-                style={{ height: d.valor > 0 ? `${Math.max(2, (d.valor / max) * 100)}%` : "2px" }}
-              />
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="mt-1.5 flex gap-[2px] border-t border-ink-200 pt-1.5">
-        {dados.map((d, i) => (
-          <span key={d.chave} className="tnum min-w-0 flex-1 text-center text-[10px] text-ink-400">
-            {i % passo === 0 || i === dados.length - 1 ? d.label.split(" ")[0] : ""}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function EditarLancamento({ lanc, onClose }: { lanc: Lancamento; onClose: () => void }) {
   const { dados, salvarLancamento, excluirLancamento } = useDados();
@@ -180,18 +131,6 @@ export default function Financeiro() {
     const aPagar = ls.filter((x) => x.tipo === "saida" && !x.pago);
     const h = hoje();
 
-    // Série do gráfico
-    let serie: { chave: string; label: string; valor: number; destaque?: boolean }[];
-    if (escala === "mes") {
-      const dias = new Date(ref.ano, ref.mes + 1, 0).getDate();
-      serie = Array.from({ length: dias }, (_, i) => {
-        const dia = `${ref.ano}-${String(ref.mes + 1).padStart(2, "0")}-${String(i + 1).padStart(2, "0")}`;
-        return { chave: dia, label: `${i + 1} de ${MESES[ref.mes]}`, valor: soma(entradas.filter((x) => dataCaixa(x) === dia)), destaque: dia === h };
-      });
-    } else {
-      serie = MESES.map((m, i) => ({ chave: m, label: `${m} ${ref.ano}`, valor: soma(entradas.filter((x) => parseData(dataCaixa(x)).getMonth() === i)) }));
-    }
-
     // Receita por plano e por categoria
     const porPlano = new Map<Modalidade | "outros", number>();
     for (const x of entradas) {
@@ -210,7 +149,6 @@ export default function Financeiro() {
       totalReceber: soma(aReceber),
       atrasado: soma(aReceber.filter((x) => x.data < h)),
       movimentos: ls.filter((x) => x.pago && noPeriodo(dataCaixa(x))).sort((a, b) => dataCaixa(b).localeCompare(dataCaixa(a))),
-      serie,
       porPlano,
       porCategoria,
       nEntradas: entradas.length,
@@ -225,6 +163,7 @@ export default function Financeiro() {
       return { ano: x.ano + Math.floor(m / 12), mes: ((m % 12) + 12) % 12 };
     });
 
+  const graf = useMemo(() => relatorioFinanceiro(dados, escala === "mes" ? periodoMes(ref.ano, ref.mes) : periodoAno(ref.ano), hoje()), [dados, escala, ref]);
   const nomePeriodo = escala === "ano" ? String(ref.ano) : `${MESES[ref.mes]} ${ref.ano}`;
   const saldo = r.recebido - r.despesas;
   const locacaoDe = (id: string | null) => (id ? dados.locacoes.find((l) => l.id === id) : undefined);
@@ -279,9 +218,14 @@ export default function Financeiro() {
 
       <div className="mb-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Card className="p-5">
-          <h3 className="font-display text-[15px] font-semibold">Entradas recebidas {escala === "mes" ? "por dia" : "por mês"}</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-display text-[15px] font-semibold">Entradas e saídas {escala === "mes" ? "por dia" : "por mês"}</h3>
+            <Link href="/relatorios" className="text-[12.5px] font-semibold text-brand-700 hover:text-brand-800">
+              Relatório completo →
+            </Link>
+          </div>
           <div className="mt-3">
-            <Barras dados={r.serie} rotulo={nomePeriodo} />
+            <BarrasEntradaSaida dados={graf.serie} />
           </div>
         </Card>
         <Card className="p-5">
