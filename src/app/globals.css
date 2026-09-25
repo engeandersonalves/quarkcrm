@@ -233,3 +233,56 @@
   border: 5px solid #fff;
   box-shadow: 0 4px 14px rgb(28 18 52 / 0.35);
 }
+
+/* ---------------------------------------------------------- Captura (estilo iOS) */
+.ios-font {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter), "Helvetica Neue", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+.ios-rounded {
+  font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, var(--font-inter), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+@keyframes ios-push { from { opacity: 0; transform: translate3d(28px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes ios-pop { from { opacity: 0; transform: translate3d(-28px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes ios-rise { from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes ios-check { from { stroke-dashoffset: 48; } to { stroke-dashoffset: 0; } }
+@keyframes ios-bounce { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes ios-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -10px, 0); } }
+.ios-push { animation: ios-push 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.ios-pop { animation: ios-pop 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.ios-rise { animation: ios-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.ios-bounce { animation: ios-bounce 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.ios-float { animation: ios-float 7s ease-in-out infinite; }
+.ios-check path { stroke-dasharray: 48; animation: ios-check 0.5s 0.25s ease-out both; }
+.ios-press { transition: transform 0.15s ease, background-color 0.15s ease; }
+.ios-press:active { transform: scale(0.97); }
+
+.ios-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1c1234 var(--fill, 50%), rgba(120, 120, 128, 0.2) var(--fill, 50%));
+  outline: none;
+}
+.ios-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 0.5px 4px rgba(0, 0, 0, 0.12), 0 6px 13px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+}
+.ios-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 0.5px 4px rgba(0, 0, 0, 0.12), 0 6px 13px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}

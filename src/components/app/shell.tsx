@@ -79,7 +79,9 @@ function ShellInner({ children }: { children: ReactNode }) {
   );
   const openTask = useCallback((o?: { task?: Task | null; leadId?: string | null }) => setTaskModal({ open: true, ...o }), []);
 
-  useEffect(() => setFab(false), [pathname]);
+  useEffect(() => {
+    setFab(false);
+  }, [pathname]);
 
   const search = useSearchParams();
   const isActive = (href: string) => {

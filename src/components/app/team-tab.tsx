@@ -26,7 +26,9 @@ export function TeamTab() {
   const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
   const [reset, setReset] = useState<Profile | null>(null);
 
-  useEffect(() => setOrigin(window.location.origin), []);
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   const { data: people, reload } = useLive(
     async () => {

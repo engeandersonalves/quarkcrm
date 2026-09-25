@@ -106,7 +106,9 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
     return [...actions.filter(match), ...leads.filter(match).slice(0, 8), ...proposals.filter(match).slice(0, 8), ...pages.filter(match)];
   }, [data, q, router, onNewLead, onNewTask]);
 
-  useEffect(() => setActive(0), [q]);
+  useEffect(() => {
+    setActive(0);
+  }, [q]);
   useEffect(() => {
     listRef.current?.querySelector(`[data-idx="${active}"]`)?.scrollIntoView({ block: "nearest" });
   }, [active]);
