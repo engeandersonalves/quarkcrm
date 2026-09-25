@@ -32,7 +32,36 @@ export interface CompanySettings {
   app: AppPrefs;
   /** O que aparece na proposta do cliente (público). */
   proposal: ProposalPrefs;
+  /** Página de captura (pública): fotos dos telhados e condições de pagamento. */
+  capture: CapturePrefs;
 }
+
+export type RoofKey = "ceramic" | "fiber" | "metal" | "slab" | "ground";
+
+export interface CapturePrefs {
+  roofImages: Partial<Record<RoofKey, string>>;
+  paymentTitle: string;
+  payments: { title: string; text: string }[];
+}
+
+/** Fotos padrão dos telhados (Wikimedia Commons, licenças livres). Troque pelas fotos das suas obras em Configurações → Captura. */
+export const DEFAULT_ROOF_IMAGES: Record<RoofKey, string> = {
+  ceramic: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Terracotta_clay_tile_%28Unsplash%29.jpg/500px-Terracotta_clay_tile_%28Unsplash%29.jpg",
+  fiber: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Corrugated-fibro-roofing.jpg/500px-Corrugated-fibro-roofing.jpg",
+  metal: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Corrugated_metal_roof.jpg/500px-Corrugated_metal_roof.jpg",
+  slab: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Hatil_rooftop_solar_panels.jpg/500px-Hatil_rooftop_solar_panels.jpg",
+  ground: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Ground_mounted_solar_panels.gk.jpg/500px-Ground_mounted_solar_panels.gk.jpg",
+};
+
+export const DEFAULT_CAPTURE: CapturePrefs = {
+  roofImages: {},
+  paymentTitle: "Condições que cabem no seu bolso",
+  payments: [
+    { title: "À vista", text: "Desconto especial no pagamento à vista" },
+    { title: "Cartão de crédito", text: "Parcele no cartão" },
+    { title: "Financiamento em até 72x", text: "Com a primeira parcela em até 3 meses" },
+  ],
+};
 
 export interface KitPreset {
   id: string;
@@ -190,6 +219,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
     timeline: [],
     faq: [],
   },
+  capture: DEFAULT_CAPTURE,
 };
 
 type StoredDefaults = Partial<ProposalInputs> & { kits?: KitPreset[]; app?: Partial<AppPrefs>; save?: Partial<SaveInputs> };
@@ -210,6 +240,7 @@ export function mergeSettings(s: Partial<CompanySettings> | null | undefined): C
     kits: kits ?? s?.kits ?? [],
     saveDefaults: save ?? {},
     app: { ...DEFAULT_SETTINGS.app, ...(s?.app ?? {}), ...(app ?? {}) },
+    capture: { ...DEFAULT_CAPTURE, ...((s?.capture ?? {}) as Partial<CapturePrefs>) },
     proposal: {
       ...DEFAULT_SETTINGS.proposal,
       ...proposal,

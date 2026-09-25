@@ -28,7 +28,7 @@ import { TeamTab } from "@/components/app/team-tab";
 import { Button, Card, CardHeader, Field, ImageField, Input, MoneyInput, NumberInput, PageHeader, Segmented, Select, Switch, Textarea, cx } from "@/components/ui";
 import { ROOF_TYPES } from "@/lib/constants";
 import { mergeSave, type SaveInputs } from "@/lib/save";
-import { DEFAULT_INPUTS, toStoredSettings, type CompanySettings, type KitPreset, type ProposalSections, type SplashMode } from "@/lib/defaults";
+import { DEFAULT_INPUTS, toStoredSettings, type CompanySettings, type KitPreset, type ProposalSections, type RoofKey, type SplashMode } from "@/lib/defaults";
 import { imagePool, pickDaily, quotePool } from "@/lib/inspiration";
 import { brl, fmtNum, type AmountMode, type PriceComponent, type ProposalInputs } from "@/lib/pricing";
 import { DEFAULT_FAQ, DEFAULT_TIMELINE, SECTION_LABELS } from "@/lib/proposal-content";
@@ -362,6 +362,44 @@ export default function SettingsPage() {
                 <Field label="Código para incorporar no site">
                   <Textarea readOnly value={embed} className="font-mono text-xs" onFocus={(e) => e.target.select()} />
                 </Field>
+              </div>
+            </Card>
+          )}
+          {tab === "captura" && (
+            <Card>
+              <CardHeader icon={<ImageIcon className="h-[18px] w-[18px]" />} title="Fotos dos telhados" subtitle="Use fotos das suas obras: passam muito mais confiança. Sem foto, usamos uma imagem padrão." />
+              <div className="grid grid-cols-2 gap-3 px-5 pb-5 sm:grid-cols-5">
+                {(
+                  [
+                    ["ceramic", "Cerâmico / colonial"],
+                    ["fiber", "Fibrocimento"],
+                    ["metal", "Metálico"],
+                    ["slab", "Laje"],
+                    ["ground", "Solo"],
+                  ] as [RoofKey, string][]
+                ).map(([k, label]) => (
+                  <Field key={k} label={label}>
+                    <ImageField
+                      value={form.capture.roofImages[k] ?? ""}
+                      onChange={(v) => set("capture", { ...form.capture, roofImages: { ...form.capture.roofImages, [k]: v } })}
+                      folder="telhados"
+                      aspect="aspect-[4/3]"
+                      label="Enviar foto"
+                    />
+                  </Field>
+                ))}
+              </div>
+              <div className="grid gap-3 border-t border-ink-100 px-5 py-5">
+                <Field label="Título das condições de pagamento">
+                  <Input value={form.capture.paymentTitle} onChange={(e) => set("capture", { ...form.capture, paymentTitle: e.target.value })} />
+                </Field>
+                {form.capture.payments.map((p, i) => (
+                  <div key={i} className="grid gap-3 sm:grid-cols-[220px_1fr]">
+                    <Input value={p.title} placeholder="Ex.: À vista" onChange={(e) => set("capture", { ...form.capture, payments: form.capture.payments.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)) })} />
+                    <Input value={p.text} placeholder="Detalhe" onChange={(e) => set("capture", { ...form.capture, payments: form.capture.payments.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)) })} />
+                  </div>
+                ))}
+                <p className="text-xs text-ink-500">Aparecem no resultado da simulação e na tela final da página de captura.</p>
               </div>
             </Card>
           )}

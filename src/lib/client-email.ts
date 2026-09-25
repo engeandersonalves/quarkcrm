@@ -17,6 +17,7 @@ export interface Company {
   tech_name?: string | null;
   tech_registry?: string | null;
   warranty_modules_performance_years?: number | null;
+  capture?: { paymentTitle?: string; payments?: { title: string; text: string }[] } | null;
 }
 
 const PURPLE = "#1C1234";
@@ -70,6 +71,23 @@ export function clientWelcomeEmail({
         <tr>${stat("Recarga completa", "Da noite para o dia", "em vez de horas na tomada comum")}${stat("Até 10× mais rápido", "que a tomada comum", "com carregador de 22 kW")}</tr>
       </table>`;
 
+  const pay = company.capture?.payments?.length
+    ? company.capture.payments
+    : [
+        { title: "À vista", text: "Desconto especial no pagamento à vista" },
+        { title: "Cartão de crédito", text: "Parcele no cartão" },
+        { title: "Financiamento em até 72x", text: "Com a primeira parcela em até 3 meses" },
+      ];
+  const payments = `<tr><td style="padding:18px 32px 0">
+    <div style="border:1px solid #E5E3EE;border-radius:16px;padding:16px 18px">
+      <p style="margin:0 0 8px;color:#2C7A52;font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase">${esc(company.capture?.paymentTitle || "Condições que cabem no seu bolso")}</p>
+      ${pay
+        .filter((p) => p.title?.trim())
+        .map((p) => `<p style="margin:6px 0;color:${PURPLE};font-size:14px"><b>${esc(p.title)}</b>${p.text ? ` <span style="color:#6D6985">· ${esc(p.text)}</span>` : ""}</p>`)
+        .join("")}
+    </div>
+  </td></tr>`;
+
   const reasons = (
     solar
       ? [
@@ -121,6 +139,7 @@ export function clientWelcomeEmail({
     }</p>
     ${numbers}
   </td></tr>
+  ${payments}
   ${
     waLink
       ? `<tr><td style="padding:18px 32px 6px" align="center">

@@ -205,3 +205,31 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Controle deslizante da página de captura */
+.capture-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f3ea3b, #9bd373 var(--fill, 50%), #eeedf4 var(--fill, 50%));
+  outline: none;
+  cursor: pointer;
+}
+.capture-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #1c1234;
+  border: 5px solid #fff;
+  box-shadow: 0 4px 14px rgb(28 18 52 / 0.35);
+}
+.capture-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #1c1234;
+  border: 5px solid #fff;
+  box-shadow: 0 4px 14px rgb(28 18 52 / 0.35);
+}

@@ -424,7 +424,8 @@ as $$
     'sunHours', data -> 'defaults' -> 'sunHours',
     'fioBTariff', data -> 'defaults' -> 'fioBTariff',
     'publicLighting', data -> 'defaults' -> 'publicLighting',
-    'gallery', data -> 'proposal' -> 'gallery'
+    'gallery', data -> 'proposal' -> 'gallery',
+    'capture', data -> 'capture'
   )
   from public.settings where id = 1;
 $$;
