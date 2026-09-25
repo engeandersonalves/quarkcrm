@@ -66,7 +66,11 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
   const source = params.get("origem") || params.get("utm_source") || "Site";
   const initialSegment = params.get("interesse");
   const startedAt = useRef(Date.now());
-  const capture: CapturePrefs = { ...DEFAULT_CAPTURE, ...(company.capture ?? {}) };
+  const capture: CapturePrefs = {
+    roofImages: company.capture?.roofImages ?? {},
+    paymentTitle: company.capture?.paymentTitle || DEFAULT_CAPTURE.paymentTitle,
+    payments: Array.isArray(company.capture?.payments) && company.capture.payments.length ? company.capture.payments : DEFAULT_CAPTURE.payments,
+  };
 
   const [segment, setSegment] = useState<Segment | null>(initialSegment === "save" || initialSegment === "ambos" || initialSegment === "solar" ? initialSegment : null);
   const [step, setStep] = useState<StepId>(segment ? (segment === "save" ? "veiculo" : "conta") : "interesse");
@@ -310,7 +314,7 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
           <footer className="border-t border-[#EEEDF4] px-6 py-5 text-center text-xs text-[#9A97AE]">
             {brand}
             {company.city ? ` · ${company.city}` : ""}
-            {company.instagram ? ` · @${company.instagram.replace(/^@/, "")}` : ""}
+            {company.instagram ? ` · @${String(company.instagram).replace(/^@/, "")}` : ""}
           </footer>
         )}
       </div>
@@ -450,8 +454,8 @@ function Payments({ capture }: { capture: CapturePrefs }) {
     <div className="mt-5 rounded-2xl border border-[#E5E3EE] p-5">
       <p className="text-[11px] font-semibold tracking-[0.2em] text-[#2C7A52] uppercase">{capture.paymentTitle}</p>
       <ul className="mt-3 grid gap-3">
-        {capture.payments
-          .filter((p) => p.title.trim())
+        {(capture.payments ?? [])
+          .filter((p) => p?.title?.trim())
           .map((p, i) => {
             const Icon = PAY_ICONS[i % PAY_ICONS.length];
             return (
