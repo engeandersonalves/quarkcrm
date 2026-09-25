@@ -315,7 +315,7 @@ function HeroBanner({ greet, firstName, wonMonth, deals, onNewLead }: { greet: s
       <CinematicBackdrop src={image} dim="medium" />
       <div className="relative grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="max-w-2xl">
-          <p className="text-[11px] font-semibold tracking-[0.35em] text-[#f7d774] uppercase">
+          <p className="text-[11px] font-semibold tracking-[0.35em] text-[#F3EA3B] uppercase">
             {now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
           </p>
           <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -330,7 +330,7 @@ function HeroBanner({ greet, firstName, wonMonth, deals, onNewLead }: { greet: s
           )}
           <div className="mt-6 flex flex-wrap gap-2">
             <Link href="/propostas/nova">
-              <Button className="bg-gradient-to-r from-[#f7d774] via-[#e0a93b] to-[#b8862b] text-black shadow-[0_8px_30px_-8px_rgba(224,169,59,0.6)] hover:brightness-110">
+              <Button className="bg-gradient-to-r from-[#F3EA3B] via-[#9BD373] to-[#6CC690] text-black shadow-[0_8px_30px_-8px_rgba(224,169,59,0.6)] hover:brightness-110">
                 <Calculator className="h-4 w-4" /> Novo orçamento
               </Button>
             </Link>
@@ -344,8 +344,8 @@ function HeroBanner({ greet, firstName, wonMonth, deals, onNewLead }: { greet: s
             <svg viewBox="0 0 100 100" className="h-24 w-24 -rotate-90">
               <defs>
                 <linearGradient id="goalGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stopColor="#f7d774" />
-                  <stop offset="1" stopColor="#b8862b" />
+                  <stop offset="0" stopColor="#F3EA3B" />
+                  <stop offset="1" stopColor="#6CC690" />
                 </linearGradient>
               </defs>
               <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="9" />
@@ -360,7 +360,7 @@ function HeroBanner({ greet, firstName, wonMonth, deals, onNewLead }: { greet: s
               </p>
               <p className="tnum mt-1 font-serif text-2xl">{brl(wonMonth, 0)}</p>
               <p className="tnum text-xs text-white/60">de {brl(prefs.monthlyGoal, 0)} · {deals}/{prefs.monthlyGoalDeals} contratos</p>
-              <p className="mt-1 text-xs text-[#f7d774]">{missing > 0 ? `Faltam ${brl(missing, 0)} em ${daysLeft} dias` : "Meta batida! 🏆"}</p>
+              <p className="mt-1 text-xs text-[#F3EA3B]">{missing > 0 ? `Faltam ${brl(missing, 0)} em ${daysLeft} dias` : "Meta batida! 🏆"}</p>
             </div>
           </div>
         )}
@@ -373,15 +373,15 @@ function TipCard() {
   const [shift, setShift] = useState(0);
   const tip = pickDaily(SALES_TIPS, shift)!;
   return (
-    <div className="mt-5 flex items-center gap-4 rounded-2xl bg-gradient-to-r from-amber-50 to-white p-4 ring-1 ring-amber-500/20">
-      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700">
+    <div className="mt-5 flex items-center gap-4 rounded-2xl bg-gradient-to-r from-sun-50 to-white p-4 ring-1 ring-sun-500/20">
+      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sun-100 text-sun-700">
         <Lightbulb className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-bold tracking-wider text-amber-700 uppercase">Dica de venda · {tip.title}</p>
+        <p className="text-[11px] font-bold tracking-wider text-sun-700 uppercase">Dica de venda · {tip.title}</p>
         <p className="text-sm text-ink-700">{tip.text}</p>
       </div>
-      <button onClick={() => setShift((v) => v + 1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-amber-700 hover:bg-amber-100" aria-label="Próxima dica">
+      <button onClick={() => setShift((v) => v + 1)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sun-700 hover:bg-sun-100" aria-label="Próxima dica">
         <ChevronRight className="h-5 w-5" />
       </button>
     </div>

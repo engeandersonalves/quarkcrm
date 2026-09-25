@@ -83,7 +83,7 @@ const BRAND_COLORS: Record<string, string> = {
 /** Inversor string de parede, com display, LEDs, chave CC e conectores. */
 export function InverterRender({ brand = "", power = "", ...props }: R & { brand?: string; power?: string }) {
   const key = brand.toLowerCase().replace(/[^a-z]/g, "");
-  const color = Object.entries(BRAND_COLORS).find(([k]) => key.includes(k))?.[1] ?? "#0E2A47";
+  const color = Object.entries(BRAND_COLORS).find(([k]) => key.includes(k))?.[1] ?? "#1C1234";
   return (
     <svg viewBox="0 0 240 320" {...props}>
       <defs>
@@ -150,7 +150,7 @@ export function InverterRender({ brand = "", power = "", ...props }: R & { brand
 
 /** Diagrama técnico do sistema on-grid (padrão de engenharia, linhas finas). */
 export function SystemDiagram({ brand, className }: { brand?: string; className?: string }) {
-  const ink = "#0E2A47";
+  const ink = "#1C1234";
   const muted = "#64748B";
   const node = (x: number, label: string, sub: string) => (
     <g>
@@ -243,9 +243,9 @@ export function WallboxRender({ power = "22 kW", ...props }: R & { power?: strin
           <stop offset="1" stopColor="#0b1220" stopOpacity="0" />
         </radialGradient>
         <linearGradient id="wbLed" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#38bdf8" stopOpacity="0" />
-          <stop offset="0.5" stopColor="#38bdf8" />
-          <stop offset="1" stopColor="#38bdf8" stopOpacity="0" />
+          <stop offset="0" stopColor="#9BD373" stopOpacity="0" />
+          <stop offset="0.5" stopColor="#9BD373" />
+          <stop offset="1" stopColor="#9BD373" stopOpacity="0" />
         </linearGradient>
       </defs>
       <ellipse cx="120" cy="306" rx="96" ry="8" fill="url(#wbShadow)" />
@@ -254,14 +254,14 @@ export function WallboxRender({ power = "22 kW", ...props }: R & { power?: strin
       <rect x="62" y="28" width="116" height="180" rx="20" fill="url(#wbFace)" />
       {/* anel de LED */}
       <rect x="84" y="56" width="72" height="4" rx="2" fill="url(#wbLed)" />
-      <text x="120" y="100" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontWeight="800" fontSize="22" fill="#0E2A47">
+      <text x="120" y="100" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontWeight="800" fontSize="22" fill="#1C1234">
         {power}
       </text>
       <text x="120" y="116" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontSize="8.5" letterSpacing="1.5" fill="#64748b">
         AC · MODO 3
       </text>
       <circle cx="120" cy="150" r="18" fill="none" stroke="#cbd5e1" strokeWidth="2" />
-      <path d="M116 140 L110 152 H119 L114 162 L128 147 H120 L125 140 Z" fill="#0ea5e9" />
+      <path d="M116 140 L110 152 H119 L114 162 L128 147 H120 L125 140 Z" fill="#3F9C6A" />
       <rect x="96" y="184" width="48" height="6" rx="3" fill="#cbd5e1" />
       {/* cabo */}
       <path d="M120 218 C120 250 70 244 70 276 C70 292 96 296 150 290" fill="none" stroke="#111827" strokeWidth="7" strokeLinecap="round" />
@@ -299,7 +299,7 @@ export function SaveDiagram({
   socket?: boolean;
   className?: string;
 }) {
-  const ink = "#0E2A47";
+  const ink = "#1C1234";
   const muted = "#64748B";
   const node = (x: number, label: string, sub: string) => (
     <g>
@@ -341,11 +341,11 @@ export function SaveDiagram({
           {wire(150, 320, "CIRCUITO DEDICADO")}
           <g>
             <rect x={boardX} y="34" width="120" height="118" rx="8" fill="#fff" stroke={ink} strokeWidth="2" />
-            <rect x={boardX + 12} y="46" width="96" height="10" rx="2" fill="#E7C27A" />
+            <rect x={boardX + 12} y="46" width="96" height="10" rx="2" fill="#F3EA3B" />
             {[0, 1, 2].map((i) => (
               <g key={i}>
                 <rect x={boardX + 16 + i * 32} y="66" width="22" height="40" rx="3" fill="#F1F5F9" stroke="#94A3B8" />
-                <rect x={boardX + 22 + i * 32} y="74" width="10" height="14" rx="1.5" fill={i === 1 ? "#0EA5E9" : "#16A34A"} />
+                <rect x={boardX + 22 + i * 32} y="74" width="10" height="14" rx="1.5" fill={i === 1 ? "#9BD373" : "#3F9C6A"} />
               </g>
             ))}
             <text x={boardX + 60} y="130" textAnchor="middle" fontSize="10" fontWeight="700" fill={muted} letterSpacing="1">

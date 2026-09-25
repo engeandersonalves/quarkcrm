@@ -46,7 +46,7 @@ const example: PublicProposal = {
   },
   lead: { name: "Mariana Albuquerque", city: "Campinas", state: "SP", address: null },
   seller: { name: "Carlos Mendes", email: null, phone: null },
-  settings: { ...DEFAULT_SETTINGS, company_name: "Quark Energia Solar", whatsapp: "11999999999", email: "contato@quarkenergia.com.br", cnpj: "00.000.000/0001-00" },
+  settings: { ...DEFAULT_SETTINGS, company_name: "Quark Energia", whatsapp: "11999999999", email: "contato@quarkenergia.com.br", cnpj: "00.000.000/0001-00" },
 };
 
 export default function ExamplePage() {

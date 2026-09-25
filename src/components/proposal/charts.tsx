@@ -22,11 +22,11 @@ export function GenerationChart({ data }: { data: { month: string; generation: n
     <div className="relative">
       <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-ink-600">
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-[3px] bg-[#1F5A8C]" /> Geração estimada
+          <span className="h-2.5 w-2.5 rounded-[3px] bg-[#6CC690]" /> Geração estimada
         </span>
         {hasConsumption && (
           <span className="flex items-center gap-1.5">
-            <span className="h-0.5 w-4 border-t-2 border-dashed border-[#B8862B]" /> Seu consumo
+            <span className="h-0.5 w-4 border-t-2 border-dashed border-[#1C1234]" /> Seu consumo
           </span>
         )}
       </div>
@@ -49,7 +49,7 @@ export function GenerationChart({ data }: { data: { month: string; generation: n
               <rect x={pad.l + i * bw} y={pad.t} width={bw} height={ih} fill="transparent" />
               <path
                 d={`M${x},${pad.t + ih} v${-(h - r)} q0,${-r} ${r},${-r} h${w - 2 * r} q${r},0 ${r},${r} v${h - r} z`}
-                fill="#1F5A8C"
+                fill="#6CC690"
                 opacity={hover === null || hover === i ? 1 : 0.45}
                 className="transition-opacity"
               />
@@ -63,7 +63,7 @@ export function GenerationChart({ data }: { data: { month: string; generation: n
           <polyline
             points={data.map((d, i) => `${pad.l + i * bw + bw / 2},${y(d.consumption)}`).join(" ")}
             fill="none"
-            stroke="#B8862B"
+            stroke="#1C1234"
             strokeWidth={2}
             strokeDasharray="6 5"
             strokeLinecap="round"

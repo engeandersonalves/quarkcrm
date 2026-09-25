@@ -8,7 +8,7 @@ import { cx } from "../ui";
 export function CinematicBackdrop({ src, className, dim = "strong" }: { src?: string; className?: string; dim?: "strong" | "medium" }) {
   const [failed, setFailed] = useState(false);
   return (
-    <div className={cx("absolute inset-0 overflow-hidden bg-[#07080c]", className)}>
+    <div className={cx("absolute inset-0 overflow-hidden bg-[#0E0920]", className)}>
       <SkylineArt />
       {src && !failed && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -25,11 +25,11 @@ export function CinematicBackdrop({ src, className, dim = "strong" }: { src?: st
         className={cx(
           "absolute inset-0",
           dim === "strong"
-            ? "bg-[radial-gradient(ellipse_at_center,rgba(7,8,12,0.35)_0%,rgba(7,8,12,0.85)_70%,#07080c_100%)]"
-            : "bg-gradient-to-r from-[#07080c]/95 via-[#07080c]/70 to-[#07080c]/20",
+            ? "bg-[radial-gradient(ellipse_at_center,rgba(7,8,12,0.35)_0%,rgba(7,8,12,0.85)_70%,#0E0920_100%)]"
+            : "bg-gradient-to-r from-[#0E0920]/95 via-[#0E0920]/70 to-[#0E0920]/20",
         )}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#07080c] via-transparent to-[#07080c]/40" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0E0920] via-transparent to-[#0E0920]/40" />
     </div>
   );
 }
@@ -45,27 +45,27 @@ export function SkylineArt() {
     <svg viewBox="0 0 412 200" preserveAspectRatio="xMidYMax slice" className="absolute inset-0 h-full w-full" aria-hidden>
       <defs>
         <linearGradient id="nightSky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#07080c" />
-          <stop offset="0.6" stopColor="#1a1408" />
-          <stop offset="1" stopColor="#3a2a0c" />
+          <stop offset="0" stopColor="#0E0920" />
+          <stop offset="0.6" stopColor="#1C1234" />
+          <stop offset="1" stopColor="#2A2046" />
         </linearGradient>
         <radialGradient id="glow" cx="0.72" cy="0.35" r="0.5">
-          <stop offset="0" stopColor="#f7d774" stopOpacity="0.35" />
-          <stop offset="1" stopColor="#f7d774" stopOpacity="0" />
+          <stop offset="0" stopColor="#F3EA3B" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#F3EA3B" stopOpacity="0" />
         </radialGradient>
       </defs>
       <rect width="412" height="200" fill="url(#nightSky)" />
       <rect width="412" height="200" fill="url(#glow)" />
-      <circle cx="298" cy="62" r="16" fill="#f7d774" opacity="0.85" />
+      <circle cx="298" cy="62" r="16" fill="#F3EA3B" opacity="0.85" />
       {Array.from({ length: 40 }, (_, i) => (
-        <circle key={i} cx={(i * 97) % 412} cy={(i * 53) % 90} r={i % 3 ? 0.4 : 0.7} fill="#fff3c4" opacity={0.3 + (i % 4) * 0.15} />
+        <circle key={i} cx={(i * 97) % 412} cy={(i * 53) % 90} r={i % 3 ? 0.4 : 0.7} fill="#F6F1A0" opacity={0.3 + (i % 4) * 0.15} />
       ))}
       {buildings.map(([x, h, w], i) => (
         <g key={i}>
-          <rect x={x} y={200 - h} width={w} height={h} fill={i % 2 ? "#0b0c10" : "#101116"} />
+          <rect x={x} y={200 - h} width={w} height={h} fill={i % 2 ? "#120C24" : "#160F2C"} />
           {Array.from({ length: Math.floor(h / 9) }, (_, r) =>
             Array.from({ length: Math.floor(w / 7) }, (_, c) =>
-              (r * 7 + c * 3 + i) % 4 === 0 ? <rect key={`${r}-${c}`} x={x + 3 + c * 7} y={200 - h + 5 + r * 9} width="3" height="4" fill="#e0a93b" opacity="0.7" /> : null,
+              (r * 7 + c * 3 + i) % 4 === 0 ? <rect key={`${r}-${c}`} x={x + 3 + c * 7} y={200 - h + 5 + r * 9} width="3" height="4" fill="#9BD373" opacity="0.7" /> : null,
             ),
           )}
         </g>

@@ -364,7 +364,7 @@ export default function SettingsPage() {
         <div className="animate-fade-up fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 px-4 lg:bottom-6 lg:left-[264px]">
           <div className="mx-auto flex max-w-xl items-center justify-between gap-3 rounded-2xl bg-ink-950 px-4 py-3 text-white shadow-lift">
             <span className="text-sm">Você tem alterações não salvas</span>
-            <Button onClick={save} loading={saving} className="bg-gradient-to-r from-[#f7d774] to-[#e0a93b] text-black">
+            <Button onClick={save} loading={saving} className="bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] text-black">
               Salvar
             </Button>
           </div>
@@ -465,7 +465,7 @@ function AppTab({ form, setApp }: { form: CompanySettings; setApp: <K extends ke
       <div className="relative h-64 overflow-hidden rounded-[28px] text-white shadow-lift">
         <CinematicBackdrop src={image} />
         <div className="relative flex h-full flex-col justify-end p-6">
-          <p className="text-[11px] tracking-[0.35em] text-[#f7d774] uppercase">Prévia da abertura</p>
+          <p className="text-[11px] tracking-[0.35em] text-[#F3EA3B] uppercase">Prévia da abertura</p>
           <p className="mt-2 max-w-xl font-serif text-2xl leading-snug italic">“{quote.text}”</p>
           <p className="mt-2 text-[11px] tracking-[0.2em] text-white/60 uppercase">— {quote.author}</p>
           <button onClick={() => setShift((s) => s + 1)} className="absolute top-4 right-4 rounded-full bg-white/10 px-3 py-1.5 text-xs backdrop-blur hover:bg-white/20">

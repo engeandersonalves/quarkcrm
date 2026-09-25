@@ -5,33 +5,40 @@
   --font-serif: var(--font-playfair), Georgia, serif;
   --font-display: var(--font-sora), var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 
-  --color-ink-950: #070b14;
-  --color-ink-900: #0c1220;
-  --color-ink-800: #141c2e;
-  --color-ink-700: #1f2a40;
-  --color-ink-600: #334155;
-  --color-ink-500: #64748b;
-  --color-ink-400: #94a3b8;
-  --color-ink-300: #cbd5e1;
-  --color-ink-200: #e2e8f0;
-  --color-ink-100: #eef1f5;
-  --color-ink-50: #f6f7f9;
+  /* Identidade Quark Energia: roxo profundo + degradê amarelo → verde */
+  --color-brand-purple: #1c1234;
+  --color-brand-yellow: #f3ea3b;
+  --color-brand-lime: #9bd373;
+  --color-brand-green: #6cc690;
+  --color-brand-olive: #c7be40;
 
-  --color-sun-50: #fffbeb;
-  --color-sun-100: #fef3c7;
-  --color-sun-200: #fde68a;
-  --color-sun-300: #fcd34d;
-  --color-sun-400: #fbbf24;
-  --color-sun-500: #f59e0b;
-  --color-sun-600: #d97706;
-  --color-sun-700: #b45309;
+  --color-ink-950: #120b24;
+  --color-ink-900: #1c1234;
+  --color-ink-800: #2a2046;
+  --color-ink-700: #3b3160;
+  --color-ink-600: #4b4766;
+  --color-ink-500: #6d6985;
+  --color-ink-400: #9a97ae;
+  --color-ink-300: #cfccdc;
+  --color-ink-200: #e5e3ee;
+  --color-ink-100: #f0eff5;
+  --color-ink-50: #f7f6fa;
 
-  --color-chart-1: #d97706;
-  --color-chart-2: #2563eb;
+  --color-sun-50: #f4fbe9;
+  --color-sun-100: #e7f6d2;
+  --color-sun-200: #d2eeaa;
+  --color-sun-300: #bde480;
+  --color-sun-400: #a8db6e;
+  --color-sun-500: #7fcb86;
+  --color-sun-600: #3f9c6a;
+  --color-sun-700: #2c7a52;
 
-  --shadow-soft: 0 1px 2px rgb(12 18 32 / 0.04), 0 4px 16px -4px rgb(12 18 32 / 0.08);
-  --shadow-lift: 0 2px 4px rgb(12 18 32 / 0.04), 0 16px 40px -12px rgb(12 18 32 / 0.18);
-  --shadow-glow: 0 8px 30px -6px rgb(245 158 11 / 0.45);
+  --color-chart-1: #6cc690;
+  --color-chart-2: #1c1234;
+
+  --shadow-soft: 0 1px 2px rgb(28 18 52 / 0.04), 0 4px 16px -4px rgb(28 18 52 / 0.08);
+  --shadow-lift: 0 2px 4px rgb(28 18 52 / 0.04), 0 16px 40px -12px rgb(28 18 52 / 0.2);
+  --shadow-glow: 0 8px 30px -6px rgb(155 211 115 / 0.5);
 }
 
 @layer base {
@@ -60,11 +67,11 @@
 }
 
 @utility bg-sun-gradient {
-  background-image: linear-gradient(135deg, #fbbf24 0%, #f59e0b 45%, #f97316 100%);
+  background-image: linear-gradient(135deg, #f3ea3b 0%, #9bd373 55%, #6cc690 100%);
 }
 
 @utility text-sun-gradient {
-  background-image: linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #fb923c 100%);
+  background-image: linear-gradient(135deg, #f3ea3b 0%, #9bd373 50%, #6cc690 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowRight, Shuffle, Sun } from "lucide-react";
+import { ArrowRight, Shuffle } from "lucide-react";
+import { BrandLogo } from "./brand";
 import { useEffect, useMemo, useState } from "react";
 import { imagePool, pickDaily, quotePool } from "@/lib/inspiration";
 import { brl } from "@/lib/pricing";
@@ -99,19 +100,14 @@ export function Splash() {
       <CinematicBackdrop src={image} />
 
       <div className="relative flex items-center justify-between px-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-12">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#f7d774] to-[#b8862b]">
-            <Sun className="h-5 w-5 text-black" strokeWidth={2.5} />
-          </div>
-          <span className="truncate font-serif text-lg tracking-wide">{settings.company_name}</span>
-        </div>
+        <BrandLogo className="h-10 sm:h-12" />
         <p className="hidden text-xs tracking-[0.3em] text-white/60 uppercase sm:block">
           {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
         </p>
       </div>
 
       <div className="relative flex flex-1 flex-col justify-center px-6 sm:px-12 lg:px-24">
-        <p key={`g${shift}`} className="animate-rise text-xs font-semibold tracking-[0.4em] text-[#f7d774] uppercase sm:text-sm">
+        <p key={`g${shift}`} className="animate-rise text-xs font-semibold tracking-[0.4em] text-[#F3EA3B] uppercase sm:text-sm">
           {greet}
           {firstName && `, ${firstName}`}
         </p>
@@ -122,7 +118,7 @@ export function Splash() {
             <span className="text-gold not-italic">”</span>
           </p>
           <footer className="mt-6 flex items-center gap-4 text-sm tracking-[0.2em] text-white/70 uppercase">
-            <span className="h-px w-12 bg-gradient-to-r from-[#f7d774] to-transparent" />
+            <span className="h-px w-12 bg-gradient-to-r from-[#F3EA3B] to-transparent" />
             {quote.author}
           </footer>
         </blockquote>
@@ -134,7 +130,7 @@ export function Splash() {
             {prefs.monthlyGoal > 0 && (
               <>
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-gradient-to-r from-[#b8862b] to-[#f7d774] transition-all duration-1000" style={{ width: `${goalPct * 100}%` }} />
+                  <div className="h-full rounded-full bg-gradient-to-r from-[#6CC690] to-[#F3EA3B] transition-all duration-1000" style={{ width: `${goalPct * 100}%` }} />
                 </div>
                 <p className="mt-1.5 hidden text-[11px] text-white/50 sm:block">
                   {Math.round(goalPct * 100)}% da meta de {brl(prefs.monthlyGoal, 0)} · {daysLeft} dias restantes
@@ -157,7 +153,7 @@ export function Splash() {
           <button
             autoFocus
             onClick={close}
-            className="group flex h-14 items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#f7d774] via-[#e0a93b] to-[#b8862b] px-8 text-base font-bold text-black shadow-[0_10px_40px_-8px_rgba(224,169,59,0.6)] transition hover:brightness-110"
+            className="group flex h-14 items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#F3EA3B] via-[#9BD373] to-[#6CC690] px-8 text-base font-bold text-black shadow-[0_10px_40px_-8px_rgba(224,169,59,0.6)] transition hover:brightness-110"
           >
             Entrar no jogo <ArrowRight className="h-5 w-5 transition group-hover:translate-x-1" />
           </button>

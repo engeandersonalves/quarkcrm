@@ -132,7 +132,7 @@ export const DEFAULT_INPUTS: ProposalInputs = {
 };
 
 export const DEFAULT_SETTINGS: CompanySettings = {
-  company_name: "Quark Energia Solar",
+  company_name: "Quark Energia",
   legal_name: "",
   cnpj: "",
   phone: "",
@@ -144,7 +144,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   logo_url: "",
   instagram: "",
   about:
-    "Projetamos e instalamos sistemas fotovoltaicos com engenharia própria, equipamentos de primeira linha e acompanhamento do início ao fim — da análise da sua conta até a homologação na concessionária.",
+    "Projetamos e instalamos sistemas de energia solar e pontos de recarga para veículos elétricos, com engenharia própria, equipamentos de primeira linha e acompanhamento do início ao fim.",
   seller_name: "",
   tech_name: "",
   tech_registry: "",

@@ -1,6 +1,7 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
+import { BrandLogo } from "./brand";
 import { CheckSquare, FileText, LayoutDashboard, LogOut, Plus, PlugZap, Settings, Sun, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -79,14 +80,9 @@ function ShellInner({ children }: { children: ReactNode }) {
         {/* Sidebar desktop */}
         <aside className="fixed inset-y-0 left-0 z-30 hidden w-[264px] flex-col bg-ink-950 text-ink-300 lg:flex">
           <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sun-500/15 blur-3xl" />
-          <Link href="/" className="relative flex items-center gap-3 px-6 pt-7 pb-8">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-sun-gradient shadow-glow">
-              <Sun className="h-5 w-5 text-ink-950" strokeWidth={2.5} />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate font-display text-[15px] font-semibold text-white">{settings.company_name || "Quark"}</p>
-              <p className="text-xs text-ink-500">CRM Solar</p>
-            </div>
+          <Link href="/" className="relative flex items-end gap-2.5 px-6 pt-7 pb-8" aria-label={settings.company_name || "Quark Energia"}>
+            <BrandLogo className="h-10" />
+            <span className="mb-1 rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tracking-[0.18em] text-brand-lime">CRM</span>
           </Link>
 
           <div className="relative px-4">
@@ -140,11 +136,8 @@ function ShellInner({ children }: { children: ReactNode }) {
 
         {/* Topbar mobile */}
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink-200/60 bg-ink-50/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-sun-gradient">
-              <Sun className="h-4 w-4 text-ink-950" strokeWidth={2.5} />
-            </div>
-            <span className="font-display text-[15px] font-semibold">{settings.company_name || "Quark"}</span>
+          <Link href="/" className="flex items-center" aria-label={settings.company_name || "Quark Energia"}>
+            <BrandLogo variant="color" className="h-8" />
           </Link>
           <button onClick={signOut} className="grid h-9 w-9 place-items-center rounded-xl text-ink-500" aria-label="Sair">
             <LogOut className="h-[18px] w-[18px]" />
@@ -220,7 +213,7 @@ function SidebarQuote() {
   const q = pickDaily(quotePool(settings.app.customQuotes, settings.app.useDefaultQuotes), 7);
   if (!q) return null;
   return (
-    <div className="relative mx-4 mb-2 border-l-2 border-[#e0a93b]/60 pl-3">
+    <div className="relative mx-4 mb-2 border-l-2 border-[#9BD373]/60 pl-3">
       <p className="font-serif text-[13px] leading-snug text-ink-300 italic">“{q.text}”</p>
       <p className="mt-1 text-[10px] tracking-[0.18em] text-ink-500 uppercase">{q.author}</p>
     </div>

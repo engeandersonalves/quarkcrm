@@ -18,7 +18,7 @@ const Ctx = createContext<(w: Win) => void>(() => {});
 export const useCelebrate = () => useContext(Ctx);
 
 const LINES = ["O mundo é seu.", "Isso é só o começo.", "Mais um telhado gerando dinheiro.", "Fortuna favorece os audazes.", "Contrato fechado. Próximo!"];
-const COLORS = ["#f7d774", "#e0a93b", "#ffffff", "#fbbf24", "#34d399"];
+const COLORS = ["#F3EA3B", "#9BD373", "#ffffff", "#F3EA3B", "#34d399"];
 
 /** Comemoração em tela cheia quando uma venda fecha ou uma proposta é aceita. */
 export function CelebrationProvider({ children }: { children: ReactNode }) {
@@ -99,10 +99,10 @@ function Overlay({ win, images, onClose }: { win: Win; images: string[]; onClose
         <X className="h-5 w-5" />
       </button>
       <div className="animate-rise relative px-6 text-center">
-        <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-gradient-to-br from-[#f7d774] to-[#b8862b] shadow-[0_0_80px_rgba(247,215,116,0.5)]">
+        <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-gradient-to-br from-[#F3EA3B] to-[#6CC690] shadow-[0_0_80px_rgba(247,215,116,0.5)]">
           <Trophy className="h-10 w-10 text-black" />
         </div>
-        <p className="mt-6 text-sm tracking-[0.4em] text-[#f7d774] uppercase">{win.title}</p>
+        <p className="mt-6 text-sm tracking-[0.4em] text-[#F3EA3B] uppercase">{win.title}</p>
         <h2 className="mt-3 font-serif text-5xl italic sm:text-7xl">{line}</h2>
         <p className="mt-5 text-lg text-white/80">
           {win.name}

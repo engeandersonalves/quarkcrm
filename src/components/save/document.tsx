@@ -6,13 +6,13 @@ import { mergeSettings } from "@/lib/defaults";
 import { formatDate, formatPhone, whatsappUrl } from "@/lib/format";
 import { brl, fmtNum } from "@/lib/pricing";
 import { COMMON_SOCKET_KW, REF_BATTERY_KWH, chargeHours, fillCondition, mergeSave, saveCardInstallment, type SaveInputs } from "@/lib/save";
-import { Button, cx } from "../ui";
-import { AcceptModal, Brand, CoverKpi, Explain, PayOption, Photo, Section, SectionTitle, type PublicProposal } from "../proposal/document";
+import { Button } from "../ui";
+import { AcceptModal, Brand, BrandFooter, BrandRule, CTA_STYLE, CoverKpi, LeafMark, Explain, PayOption, Photo, Section, SectionTitle, type PublicProposal } from "../proposal/document";
 import { SaveDiagram, WallboxRender } from "../proposal/renders";
 
 /** Foto padrão da capa (recarga de veículo elétrico). Troque em Configurações → Proposta. */
 const DEFAULT_SAVE_COVER = "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=2000&q=75";
-const NAVY = "#0E2A47";
+const NAVY = "#1C1234";
 
 export function SaveDocument({ data, token }: { data: PublicProposal; token: string | null }) {
   const s = mergeSettings(data.settings);
@@ -65,13 +65,13 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
   }, [token]);
 
   return (
-    <div className="min-h-dvh bg-[#F6F4EF] text-ink-900 print:bg-white">
+    <div className="min-h-dvh bg-[#F6F5FA] text-ink-900 print:bg-white">
       <div className="no-print fixed top-4 right-4 z-40 hidden gap-2 sm:flex">
         <Button variant="secondary" size="sm" onClick={() => window.print()}>
           <Download className="h-4 w-4" /> Baixar PDF
         </Button>
         {!accepted && !expired && token && (
-          <Button size="sm" onClick={() => setAcceptOpen(true)} style={{ background: NAVY }}>
+          <Button size="sm" onClick={() => setAcceptOpen(true)} style={CTA_STYLE}>
             <Check className="h-4 w-4" /> Aceitar proposta
           </Button>
         )}
@@ -82,8 +82,9 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
           {/* ============================================================ CAPA */}
           <header className="relative flex min-h-[640px] flex-col overflow-hidden text-white print:min-h-[297mm]">
             <Photo src={s.proposal.saveCoverImage || DEFAULT_SAVE_COVER} className="absolute inset-0 h-full w-full" fallback={<SaveCoverFallback power={kwLabel} />} />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0B1B2E]/95 via-[#0B1B2E]/75 to-[#0B1B2E]/20" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0B1B2E] via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#120B24]/95 via-[#120B24]/75 to-[#120B24]/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#120B24] via-transparent to-transparent" />
+            <LeafMark className="right-[-6%] bottom-[18%] w-[46%] max-w-[420px] opacity-[0.12]" />
 
             <div className="relative flex items-start justify-between gap-6 px-6 pt-8 sm:px-14 sm:pt-12">
               <Brand settings={s} />
@@ -95,9 +96,9 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
             </div>
 
             <div className="relative mt-auto px-6 pb-10 sm:px-14 sm:pb-14">
-              <p className="text-xs font-semibold tracking-[0.3em] text-[#E7C27A] uppercase">S.A.V.E · Sistema de Abastecimento de Veículo Elétrico</p>
+              <p className="text-xs font-semibold tracking-[0.3em] text-[#F3EA3B] uppercase">S.A.V.E · Sistema de Abastecimento de Veículo Elétrico</p>
               <h1 className="mt-4 max-w-2xl font-display text-[34px] leading-[1.08] font-semibold tracking-tight sm:text-[50px]">
-                Recarga do seu veículo elétrico para <span className="text-[#E7C27A]">{data.lead.name}</span>
+                Recarga do seu veículo elétrico para <span className="text-[#F3EA3B]">{data.lead.name}</span>
               </h1>
               {location && (
                 <p className="mt-3 flex items-center gap-1.5 text-sm text-white/70">
@@ -112,6 +113,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
               </dl>
             </div>
           </header>
+          <BrandRule />
 
           {accepted && (
             <div className="flex items-center gap-3 bg-emerald-700 px-6 py-4 text-sm text-white sm:px-14">
@@ -136,7 +138,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
             </p>
             <div className="mt-8 grid gap-8 md:grid-cols-[1fr_1.35fr] md:items-start">
               <div className="overflow-hidden rounded-xl border border-ink-200">
-                <div className="relative grid aspect-[4/5] place-items-center bg-gradient-to-b from-[#EEF1F5] to-[#DDE3EA]">
+                <div className="relative grid aspect-[4/5] place-items-center bg-gradient-to-b from-[#F3F2F8] to-[#E4E1EE]">
                   {chargerImg ? (
                     <Photo src={chargerImg} className="absolute inset-0 h-full w-full" fallback={<WallboxRender className="h-[80%] w-auto" power={kwLabel} />} />
                   ) : (
@@ -219,15 +221,19 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
 
           {/* ================================================= INVESTIMENTO */}
           <section className="print-break relative overflow-hidden px-6 py-14 text-white sm:px-14 sm:py-16" style={{ background: NAVY }}>
+            <LeafMark className="right-[-8%] bottom-[-12%] w-[420px] opacity-[0.07]" />
+            <BrandRule className="absolute inset-x-0 top-0" />
             <SectionTitle num={num()} kicker="Investimento" title="Condições comerciais" dark />
-            <div className="mt-8 grid gap-8 md:grid-cols-[1fr_1.2fr] md:items-start">
+            <div className="relative mt-8 grid gap-8 md:grid-cols-[1fr_1.2fr] md:items-start">
               <div>
                 <p className="text-sm text-white/60">Valor total, com equipamentos e instalação</p>
-                <p className="tnum mt-1 font-display text-5xl font-semibold tracking-tight sm:text-6xl">{brl(price)}</p>
+                <p className="tnum mt-1 bg-gradient-to-r from-[#F3EA3B] via-[#C9E97A] to-[#9BD373] bg-clip-text font-display text-5xl font-semibold tracking-tight text-transparent sm:text-6xl">
+                  {brl(price)}
+                </p>
                 <ul className="mt-6 grid gap-2 text-sm text-white/80">
                   {["Equipamentos com nota fiscal", "Materiais e infraestrutura inclusos", "Instalação por equipe técnica própria", "Testes e comissionamento"].map((t) => (
                     <li key={t} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-[#E7C27A]" /> {t}
+                      <Check className="h-4 w-4 text-[#F3EA3B]" /> {t}
                     </li>
                   ))}
                 </ul>
@@ -258,7 +264,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
               <ul className="grid gap-3">
                 {conditions.map((c) => (
                   <li key={c} className="flex gap-3 text-sm leading-relaxed text-ink-700">
-                    <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#9A6F1E]" />
+                    <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#2C7A52]" />
                     {c}
                   </li>
                 ))}
@@ -268,7 +274,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
 
           {/* ===================================================== ASSINATURA */}
           <section className="avoid-break px-6 py-14 sm:px-14">
-            <p className="text-xs font-semibold tracking-[0.22em] text-[#9A6F1E] uppercase">De acordo</p>
+            <p className="text-xs font-semibold tracking-[0.22em] text-[#2C7A52] uppercase">De acordo</p>
             <div className="mt-12 grid gap-12 sm:grid-cols-2">
               <Signature name={s.tech_name || s.company_name} role={s.tech_name ? `Responsável técnico${s.tech_registry ? ` · ${s.tech_registry}` : ""}` : s.cnpj ? `CNPJ ${s.cnpj}` : "Contratada"} />
               <Signature name={accepted?.by || data.lead.name} role="Contratante" />
@@ -276,7 +282,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
           </section>
 
           {/* ======================================================= SOBRE */}
-          <section className="border-t border-ink-100 bg-[#F6F4EF]/70 px-6 py-10 sm:px-14">
+          <section className="border-t border-ink-100 bg-[#F6F5FA]/70 px-6 py-10 sm:px-14">
             <div className="grid gap-6 sm:grid-cols-[1.4fr_1fr]">
               <div>
                 <p className="font-display text-xl font-semibold" style={{ color: NAVY }}>
@@ -327,7 +333,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 {!accepted && !expired && token && (
-                  <Button size="lg" onClick={() => setAcceptOpen(true)} style={{ background: NAVY }}>
+                  <Button size="lg" onClick={() => setAcceptOpen(true)} style={CTA_STYLE}>
                     <Check className="h-5 w-5" /> Aceitar proposta
                   </Button>
                 )}
@@ -349,6 +355,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
             Tempos de recarga estimados para uma bateria de {fmtNum(REF_BATTERY_KWH)} kWh, de 20% a 80%, com 90% de eficiência; variam conforme o veículo e a temperatura. Proposta nº{" "}
             {data.proposal.number}.
           </footer>
+          <BrandFooter settings={s} number={data.proposal.number} phone={contactPhone} />
         </article>
       </div>
 
@@ -362,7 +369,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
                 </Button>
               </a>
             )}
-            <Button className="flex-1" style={{ background: NAVY }} onClick={() => setAcceptOpen(true)}>
+            <Button className="flex-1" style={CTA_STYLE} onClick={() => setAcceptOpen(true)}>
               <Check className="h-4 w-4" /> Aceitar
             </Button>
           </div>
@@ -398,11 +405,10 @@ function fmtHours(h: number) {
   return mm ? `${hh}h${String(mm).padStart(2, "0")}` : `${hh}h`;
 }
 
-function SaveCoverFallback({ power }: { power: string }) {
+function SaveCoverFallback(_: { power: string }) {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-[#0B1B2E] via-[#10263F] to-[#0B1B2E]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_20%,rgba(56,189,248,0.22),transparent_45%)]" />
-      <WallboxRender className="absolute top-[22%] right-[6%] h-[48%] w-auto opacity-70" power={power} />
+    <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-[#120B24] via-[#2A2046] to-[#120B24]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_20%,rgba(155,211,115,0.25),transparent_45%)]" />
     </div>
   );
 }
@@ -442,7 +448,8 @@ function WarrantyBox({ value, unit, title, text }: { value: number; unit: string
 
 function Signature({ name, role }: { name: string; role: string }) {
   return (
-    <div className={cx("border-t-2 pt-3")} style={{ borderColor: NAVY }}>
+    <div className="pt-3">
+      <BrandRule className="mb-3 h-0.5" />
       <p className="font-semibold text-ink-900">{name}</p>
       <p className="text-sm text-ink-500">{role}</p>
     </div>

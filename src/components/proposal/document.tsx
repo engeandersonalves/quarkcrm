@@ -34,7 +34,9 @@ export interface PublicProposal {
 const DEFAULT_COVER = "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=2000&q=75";
 const MODULE_AREA_M2 = 2.6;
 const CAR_KG_CO2_PER_KM = 0.12;
-const NAVY = "#0E2A47";
+const NAVY = "#1C1234"; // roxo da marca Quark
+/** Botão principal no degradê da marca (amarelo → verde) com texto roxo. */
+export const CTA_STYLE = { backgroundImage: "linear-gradient(135deg, #F3EA3B 0%, #9BD373 55%, #6CC690 100%)", color: "#1C1234" } as const;
 
 export function ProposalDocument({ data, token }: { data: PublicProposal; token: string | null }) {
   const s = mergeSettings(data.settings);
@@ -88,14 +90,14 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
   }, [token]);
 
   return (
-    <div className="min-h-dvh bg-[#F6F4EF] text-ink-900 print:bg-white">
+    <div className="min-h-dvh bg-[#F6F5FA] text-ink-900 print:bg-white">
       {/* Barra de ações */}
       <div className="no-print fixed top-4 right-4 z-40 hidden gap-2 sm:flex">
         <Button variant="secondary" size="sm" onClick={() => window.print()}>
           <Download className="h-4 w-4" /> Baixar PDF
         </Button>
         {!accepted && !expired && token && (
-          <Button size="sm" onClick={() => setAcceptOpen(true)} style={{ background: NAVY }}>
+          <Button size="sm" onClick={() => setAcceptOpen(true)} style={CTA_STYLE}>
             <Check className="h-4 w-4" /> Aceitar proposta
           </Button>
         )}
@@ -106,8 +108,9 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
           {/* ============================================================ CAPA */}
           <header className="relative flex min-h-[640px] flex-col overflow-hidden text-white print:min-h-[297mm]">
             <Photo src={s.proposal.coverImage || DEFAULT_COVER} className="absolute inset-0 h-full w-full" fallback={<CoverFallback />} />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0B1B2E]/95 via-[#0B1B2E]/75 to-[#0B1B2E]/20" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0B1B2E] via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#120B24]/95 via-[#120B24]/75 to-[#120B24]/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#120B24] via-transparent to-transparent" />
+            <LeafMark className="right-[-6%] bottom-[18%] w-[46%] max-w-[420px] opacity-[0.12]" />
 
             <div className="relative flex items-start justify-between gap-6 px-6 pt-8 sm:px-14 sm:pt-12">
               <Brand settings={s} />
@@ -119,11 +122,11 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             </div>
 
             <div className="relative mt-auto px-6 pb-10 sm:px-14 sm:pb-14">
-              <p className="text-xs font-semibold tracking-[0.3em] text-[#E7C27A] uppercase">Proposta comercial · Sistema fotovoltaico</p>
+              <p className="text-xs font-semibold tracking-[0.3em] text-[#F3EA3B] uppercase">Proposta comercial · Sistema fotovoltaico</p>
               <h1 className="mt-4 max-w-2xl font-display text-[34px] leading-[1.08] font-semibold tracking-tight sm:text-[50px]">
                 {headline || (
                   <>
-                    Energia solar para <span className="text-[#E7C27A]">{data.lead.name}</span>
+                    Energia solar para <span className="text-[#F3EA3B]">{data.lead.name}</span>
                   </>
                 )}
               </h1>
@@ -140,6 +143,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
               </dl>
             </div>
           </header>
+          <BrandRule />
 
           {accepted && (
             <Notice tone="green" icon={<CheckCircle2 className="h-5 w-5" />}>
@@ -173,7 +177,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
                   <p className="text-xs font-semibold tracking-[0.14em] text-ink-500 uppercase">Fatura mensal estimada</p>
                   <div className="mt-5 grid gap-5">
                     <Bar label="Hoje, sem energia solar" value={energy.monthlyBillBefore} max={energy.monthlyBillBefore} color="#94A3B8" />
-                    <Bar label="Com o sistema fotovoltaico" value={energy.monthlyBillAfter} max={energy.monthlyBillBefore} color="#047857" />
+                    <Bar label="Com o sistema fotovoltaico" value={energy.monthlyBillAfter} max={energy.monthlyBillBefore} color="#3F9C6A" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -199,7 +203,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
                   ["Consumo", "A energia abastece a sua casa pelo quadro de distribuição. O que é usado na hora não passa pelo medidor."],
                   ["Créditos", "O excedente vai para a rede e vira créditos em kWh, usados à noite e em dias nublados por até 60 meses."],
                 ].map(([t, d], i) => (
-                  <li key={t} className="border-t-2 pt-4" style={{ borderColor: i === 3 ? "#047857" : NAVY }}>
+                  <li key={t} className="border-t-2 pt-4" style={{ borderColor: i === 3 ? "#3F9C6A" : NAVY }}>
                     <p className="text-xs font-semibold tracking-[0.14em] text-ink-400 uppercase">Etapa {i + 1}</p>
                     <p className="mt-1 font-display text-lg font-semibold" style={{ color: NAVY }}>
                       {t}
@@ -217,7 +221,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
               <div className="grid gap-6 md:grid-cols-[1.5fr_1fr]">
                 <div className="self-start overflow-x-auto rounded-xl border border-ink-200">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#F6F4EF] text-left text-xs tracking-[0.1em] text-ink-500 uppercase">
+                    <thead className="bg-[#F6F5FA] text-left text-xs tracking-[0.1em] text-ink-500 uppercase">
                       <tr>
                         <th className="px-4 py-3 font-semibold">Composição mensal</th>
                         <th className="px-4 py-3 text-right font-semibold">Hoje</th>
@@ -234,7 +238,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
                       <tr className="text-white" style={{ background: NAVY }}>
                         <td className="px-4 py-4 font-semibold">Total estimado</td>
                         <td className="px-4 py-4 text-right font-semibold">{brl(energy.monthlyBillBefore)}</td>
-                        <td className="px-4 py-4 text-right font-semibold text-[#9FE3C4]">{brl(energy.monthlyBillAfter)}</td>
+                        <td className="px-4 py-4 text-right font-semibold text-[#9BD373]">{brl(energy.monthlyBillAfter)}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -329,7 +333,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
                 </div>
                 <div className="overflow-hidden rounded-xl border border-ink-200 bg-white">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#F6F4EF] text-left text-xs tracking-[0.1em] text-ink-500 uppercase">
+                    <thead className="bg-[#F6F5FA] text-left text-xs tracking-[0.1em] text-ink-500 uppercase">
                       <tr>
                         <th className="px-4 py-3 font-semibold">Ano</th>
                         <th className="px-4 py-3 text-right font-semibold">Economia no ano</th>
@@ -375,9 +379,9 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
                 {steps.map((st, i) => {
                   const last = i === steps.length - 1;
                   return (
-                    <li key={`${i}-${st.title}`} className="avoid-break border-t-2 pt-4" style={{ borderColor: last ? "#047857" : NAVY }}>
+                    <li key={`${i}-${st.title}`} className="avoid-break border-t-2 pt-4" style={{ borderColor: last ? "#3F9C6A" : NAVY }}>
                       <div className="flex items-center gap-3">
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold text-white" style={{ background: last ? "#047857" : NAVY }}>
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold text-white" style={{ background: last ? "#3F9C6A" : NAVY }}>
                           {last ? <Check className="h-4 w-4" /> : i + 1}
                         </span>
                         <span className="tnum text-xs font-semibold tracking-[0.14em] text-ink-400 uppercase">Dia {st.day}</span>
@@ -417,16 +421,20 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
 
           {/* ================================================= INVESTIMENTO */}
           <section className="print-break relative overflow-hidden px-6 py-14 text-white sm:px-14 sm:py-16" style={{ background: NAVY }}>
+            <LeafMark className="right-[-8%] bottom-[-12%] w-[420px] opacity-[0.07]" />
+            <BrandRule className="absolute inset-x-0 top-0" />
             <SectionTitle num={num()} kicker="Investimento" title="Condições comerciais" dark />
-            <div className="mt-8 grid gap-8 md:grid-cols-[1fr_1.2fr] md:items-start">
+            <div className="relative mt-8 grid gap-8 md:grid-cols-[1fr_1.2fr] md:items-start">
               <div>
                 <p className="text-sm text-white/60">Valor total do sistema, à vista</p>
-                <p className="tnum mt-1 font-display text-5xl font-semibold tracking-tight sm:text-6xl">{brl(price)}</p>
+                <p className="tnum mt-1 bg-gradient-to-r from-[#F3EA3B] via-[#C9E97A] to-[#9BD373] bg-clip-text font-display text-5xl font-semibold tracking-tight text-transparent sm:text-6xl">
+                  {brl(price)}
+                </p>
                 <p className="tnum mt-2 text-sm text-white/60">{brl(price / Math.max(1, kwp * 1000))} por Wp instalado</p>
                 <ul className="mt-6 grid gap-2 text-sm text-white/80">
                   {["Equipamentos com nota fiscal", "Projeto elétrico e ART", "Homologação na distribuidora", "Instalação completa e comissionamento", "Monitoramento pelo aplicativo"].map((t) => (
                     <li key={t} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-[#E7C27A]" /> {t}
+                      <Check className="h-4 w-4 text-[#F3EA3B]" /> {t}
                     </li>
                   ))}
                 </ul>
@@ -460,7 +468,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
                             <tr key={f.months}>
                               <td className="px-4 py-2.5 text-white/70">{f.months} meses</td>
                               <td className="px-4 py-2.5 text-right font-semibold">{brl(f.installment)}</td>
-                              <td className={cx("px-4 py-2.5 text-right font-semibold", diff <= 0 ? "text-[#9FE3C4]" : "text-white/70")}>
+                              <td className={cx("px-4 py-2.5 text-right font-semibold", diff <= 0 ? "text-[#9BD373]" : "text-white/70")}>
                                 {diff <= 0 ? `sobram ${brl(-diff, 0)}` : brl(diff, 0)}
                               </td>
                             </tr>
@@ -537,7 +545,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 {!accepted && !expired && token && (
-                  <Button size="lg" onClick={() => setAcceptOpen(true)} style={{ background: NAVY }}>
+                  <Button size="lg" onClick={() => setAcceptOpen(true)} style={CTA_STYLE}>
                     <Check className="h-5 w-5" /> Aceitar proposta
                   </Button>
                 )}
@@ -564,6 +572,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             simultâneo; iluminação pública de {brl(inputs.publicLighting)}; degradação dos módulos de {fmtNum(inputs.degradation, 1)}% a.a. Valores estimados: a geração real depende de clima,
             sombreamento e orientação do telhado. Proposta nº {data.proposal.number}.
           </footer>
+          <BrandFooter settings={s} number={data.proposal.number} phone={contactPhone} />
         </article>
       </div>
 
@@ -578,7 +587,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
                 </Button>
               </a>
             )}
-            <Button className="flex-1" style={{ background: NAVY }} onClick={() => setAcceptOpen(true)}>
+            <Button className="flex-1" style={CTA_STYLE} onClick={() => setAcceptOpen(true)}>
               <Check className="h-4 w-4" /> Aceitar
             </Button>
           </div>
@@ -615,9 +624,9 @@ export function Photo({ src, className, fallback }: { src?: string; className?: 
 
 function CoverFallback() {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-[#0B1B2E] via-[#10263F] to-[#0B1B2E]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_88%_10%,rgba(231,194,122,0.22),transparent_40%)]" />
-      <div className="absolute top-[8%] right-[-4%] grid w-[62%] rotate-[-12deg] grid-cols-4 gap-2 opacity-70">
+    <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-[#120B24] via-[#2A2046] to-[#120B24]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_15%,rgba(155,211,115,0.25),transparent_45%)]" />
+      <div className="absolute top-[8%] right-[-4%] grid w-[62%] rotate-[-12deg] grid-cols-4 gap-2 opacity-40">
         {Array.from({ length: 8 }, (_, i) => (
           <ModuleRender key={i} className="h-auto w-full" />
         ))}
@@ -629,14 +638,43 @@ function CoverFallback() {
 export function Brand({ settings }: { settings: CompanySettings }) {
   if (settings.logo_url) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={settings.logo_url} alt={settings.company_name} className="h-10 w-auto max-w-[180px] object-contain brightness-0 invert" />;
+    return <img src={settings.logo_url} alt={settings.company_name} className="h-11 w-auto max-w-[200px] object-contain brightness-0 invert" />;
   }
-  return <p className="font-display text-lg font-semibold tracking-tight">{settings.company_name}</p>;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/brand/logo-h-white.png" alt={settings.company_name || "Quark Energia"} className="h-11 w-auto sm:h-12" />;
+}
+
+/** Faixa de encerramento com o logotipo. */
+export function BrandFooter({ settings, number, phone }: { settings: CompanySettings; number: number; phone: string }) {
+  const info = [settings.company_name, phone && formatPhone(phone), settings.instagram && `@${settings.instagram.replace(/^@/, "")}`, settings.city].filter(Boolean);
+  return (
+    <div className="relative overflow-hidden px-6 py-8 text-white sm:px-14" style={{ background: NAVY }}>
+      <BrandRule className="absolute inset-x-0 top-0 h-1" />
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Brand settings={settings} />
+        <div className="text-xs leading-relaxed text-white/60 sm:text-right">
+          <p>{info.join(" · ")}</p>
+          <p>Proposta nº {number}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Faixa no degradê da marca. */
+export function BrandRule({ className }: { className?: string }) {
+  return <div className={cx("h-1.5 bg-gradient-to-r from-[#F3EA3B] via-[#9BD373] to-[#6CC690]", className)} />;
+}
+
+/** Folha da marca como marca-d'água. */
+export function LeafMark({ className }: { className?: string }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/brand/symbol.png" alt="" aria-hidden className={cx("pointer-events-none absolute select-none", className)} />;
 }
 
 export function CoverKpi({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-[#0B1B2E]/50 px-4 py-4 sm:px-5">
+    <div className="bg-[#120B24]/50 px-4 py-4 sm:px-5">
       <dt className="text-[10px] font-semibold tracking-[0.14em] text-white/55 uppercase sm:text-[11px]">{label}</dt>
       <dd className="tnum mt-1 font-display text-lg font-semibold sm:text-xl">{value}</dd>
     </div>
@@ -645,19 +683,20 @@ export function CoverKpi({ label, value }: { label: string; value: string }) {
 
 export function SectionTitle({ num, kicker, title, dark }: { num: string; kicker: string; title: ReactNode; dark?: boolean }) {
   return (
-    <div className="flex items-start gap-5">
-      <span className={cx("tnum font-display text-3xl font-light sm:text-4xl", dark ? "text-white/30" : "text-ink-300")}>{num}</span>
-      <div>
-        <p className={cx("text-xs font-semibold tracking-[0.22em] uppercase", dark ? "text-[#E7C27A]" : "text-[#9A6F1E]")}>{kicker}</p>
-        <h2 className={cx("mt-1.5 font-display text-2xl leading-tight font-semibold tracking-tight sm:text-[30px]", dark ? "text-white" : "text-[#0E2A47]")}>{title}</h2>
+    <div className="relative">
+      <div className="flex items-center gap-3">
+        <span className="tnum bg-gradient-to-r from-[#E8DF2E] to-[#3F9C6A] bg-clip-text font-display text-sm font-bold text-transparent">{num}</span>
+        <span className="h-0 w-0 border-y-[5px] border-l-[8px] border-y-transparent border-l-[#C7BE40]" aria-hidden />
+        <p className={cx("text-xs font-semibold tracking-[0.22em] uppercase", dark ? "text-[#F3EA3B]" : "text-[#2C7A52]")}>{kicker}</p>
       </div>
+      <h2 className={cx("mt-2 max-w-3xl font-display text-[26px] leading-tight font-semibold tracking-tight sm:text-[34px]", dark ? "text-white" : "text-[#1C1234]")}>{title}</h2>
     </div>
   );
 }
 
 export function Section({ num, kicker, title, children, tone }: { num: string; kicker: string; title: ReactNode; children: ReactNode; tone?: "paper" }) {
   return (
-    <section className={cx("avoid-break px-6 py-14 sm:px-14 sm:py-16", tone === "paper" && "bg-[#F6F4EF]/70")}>
+    <section className={cx("avoid-break px-6 py-14 sm:px-14 sm:py-16", tone === "paper" && "bg-[#F6F5FA]/70")}>
       <SectionTitle num={num} kicker={kicker} title={title} />
       <div className="mt-8">{children}</div>
     </section>
@@ -675,8 +714,8 @@ export function Notice({ tone, icon, children }: { tone: "green" | "amber"; icon
 
 export function Explain({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
   return (
-    <div className={cx("rounded-xl border-l-[3px] border-[#B8862B] bg-[#F6F4EF] p-5", className)}>
-      <p className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-[#9A6F1E] uppercase">
+    <div className={cx("rounded-xl border-l-[3px] border-[#6CC690] bg-[#F6F5FA] p-5", className)}>
+      <p className="flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-[#2C7A52] uppercase">
         <Info className="h-3.5 w-3.5" /> Entenda · {title}
       </p>
       <p className="mt-2 text-sm leading-relaxed text-ink-700">{children}</p>
@@ -702,7 +741,8 @@ function Bar({ label, value, max, color }: { label: string; value: number; max: 
 
 export function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className={cx("rounded-xl border p-4", accent ? "border-transparent text-white" : "border-ink-200 bg-white")} style={accent ? { background: NAVY } : undefined}>
+    <div className={cx("relative overflow-hidden rounded-xl border p-4", accent ? "border-transparent text-white" : "border-ink-200 bg-white")} style={accent ? { background: NAVY } : undefined}>
+      {accent && <BrandRule className="absolute inset-x-0 top-0 h-1" />}
       <p className={cx("text-[11px] font-semibold tracking-[0.1em] uppercase", accent ? "text-white/60" : "text-ink-500")}>{label}</p>
       <p className="tnum mt-1.5 font-display text-xl font-semibold tracking-tight sm:text-2xl">{value}</p>
     </div>
@@ -726,11 +766,11 @@ function BillRow({ label, hint, before, after }: { label: string; hint: string; 
 export function Product({ image, render, kicker, title, specs }: { image?: string; render: ReactNode; kicker: string; title: string; specs: [string, string][] }) {
   return (
     <div className="overflow-hidden rounded-xl border border-ink-200 bg-white">
-      <div className="relative grid aspect-[16/10] place-items-center overflow-hidden bg-gradient-to-b from-[#EEF1F5] to-[#DDE3EA]">
+      <div className="relative grid aspect-[16/10] place-items-center overflow-hidden bg-gradient-to-b from-[#F3F2F8] to-[#E4E1EE]">
         {image ? <Photo src={image} className="absolute inset-0 h-full w-full" fallback={<div className="grid h-full place-items-center">{render}</div>} /> : render}
       </div>
       <div className="p-5 sm:p-6">
-        <p className="text-xs font-semibold tracking-[0.18em] text-[#9A6F1E] uppercase">{kicker}</p>
+        <p className="text-xs font-semibold tracking-[0.18em] text-[#2C7A52] uppercase">{kicker}</p>
         <p className="mt-1 font-display text-xl font-semibold" style={{ color: NAVY }}>
           {title}
         </p>
@@ -777,7 +817,7 @@ export function PayOption({ title, main, sub, highlight }: { title: string; main
     <div className={cx("rounded-xl p-5 ring-1", highlight ? "bg-emerald-500/15 ring-emerald-400/40" : "bg-white/[0.06] ring-white/15")}>
       <p className="text-[11px] font-semibold tracking-[0.14em] text-white/55 uppercase">{title}</p>
       <p className="tnum mt-1.5 font-display text-xl font-semibold">{main}</p>
-      <p className={cx("mt-1 text-xs", highlight ? "font-semibold text-[#9FE3C4]" : "text-white/55")}>{sub}</p>
+      <p className={cx("mt-1 text-xs", highlight ? "font-semibold text-[#9BD373]" : "text-white/55")}>{sub}</p>
     </div>
   );
 }
@@ -826,7 +866,7 @@ export function AcceptModal({
           <Button variant="ghost" onClick={onClose}>
             Voltar
           </Button>
-          <Button form="accept-form" type="submit" loading={loading} style={{ background: NAVY }}>
+          <Button form="accept-form" type="submit" loading={loading} style={CTA_STYLE}>
             <Check className="h-4 w-4" /> Confirmar aceite
           </Button>
         </>
