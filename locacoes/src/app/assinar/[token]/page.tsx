@@ -137,7 +137,7 @@ export default function AssinarTermo() {
         {estado === "pronto" && t && !concluida && !dados?.assinado_em && (
           <section className="rounded-3xl bg-white p-5 shadow-soft print:hidden">
             <p className="mb-1 font-display text-lg font-semibold">2. Assine</p>
-            <p className="mb-5 text-[13.5px] text-ink-600">Leva menos de um minuto: confirme seus dados, assine com o dedo e tire uma selfie.</p>
+            <p className="mb-5 text-[13.5px] text-ink-600">Leva menos de um minuto: assine com o dedo e tire uma selfie.</p>
             <FluxoAssinatura termo={t} nomeInicial={t.locacao.cliente_nome} documentoInicial={t.locacao.cliente_documento} onConcluir={assinar} />
             <p className="mt-4 flex items-start gap-2 text-[12px] text-ink-500">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />

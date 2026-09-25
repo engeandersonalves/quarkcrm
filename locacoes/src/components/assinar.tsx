@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Check, Eraser, Loader2, MapPin, PenLine, RefreshCcw, UserRound } from "lucide-react";
-import { fmtDocumento, soDigitos } from "@/lib/format";
+import { fmtDocumento } from "@/lib/format";
 import { hashTermo } from "@/lib/publico";
 import type { TermoCongelado } from "@/lib/types";
-import { Button, cx, Field, Input } from "./ui";
+import { Button, cx } from "./ui";
 
 /* ------------------------------------------------------------------ Assinatura desenhada */
 
@@ -197,13 +197,13 @@ export interface DadosAssinatura {
 }
 
 const PASSOS = [
-  { id: "dados", nome: "Seus dados", icon: UserRound },
   { id: "assinatura", nome: "Assinatura", icon: PenLine },
   { id: "selfie", nome: "Selfie", icon: Camera },
 ] as const;
 
 /**
- * Coleta nome/CPF, assinatura desenhada e selfie. O botão final só libera com tudo preenchido
+ * Só dois passos para o cliente: assinar com o dedo e tirar a selfie.
+ * Nome e CPF vêm do próprio termo (cadastro da locação), sem digitar nada. O botão final só libera com tudo preenchido
  * e com o "li e concordo". Usado no link do cliente e na assinatura presencial.
  */
 export function FluxoAssinatura({
@@ -220,8 +220,6 @@ export function FluxoAssinatura({
   textoBotao?: string;
 }) {
   const [passo, setPasso] = useState(0);
-  const [nome, setNome] = useState(nomeInicial);
-  const [documento, setDocumento] = useState(documentoInicial);
   const [imagem, setImagem] = useState<string | null>(null);
   const [selfie, setSelfie] = useState<string | null>(null);
   const [concordo, setConcordo] = useState(false);
@@ -229,8 +227,8 @@ export function FluxoAssinatura({
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
 
-  const dadosOk = nome.trim().split(/\s+/).length >= 2 && [11, 14].includes(soDigitos(documento).length);
-  const pronto = dadosOk && imagem && selfie && concordo;
+  const nome = nomeInicial.trim() || "Cliente";
+  const pronto = imagem && selfie && concordo;
 
   async function localizacao(): Promise<string> {
     if (!local || !navigator.geolocation) return "";
@@ -249,7 +247,7 @@ export function FluxoAssinatura({
     setEnviando(true);
     try {
       const [hash, geo] = await Promise.all([hashTermo(termo), localizacao()]);
-      await onConcluir({ nome: nome.trim(), documento: fmtDocumento(documento), imagem: imagem!, selfie: selfie!, hash, geo });
+      await onConcluir({ nome, documento: documentoInicial ? fmtDocumento(documentoInicial) : "", imagem: imagem!, selfie: selfie!, hash, geo });
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível concluir. Tente de novo.");
     } finally {
@@ -260,9 +258,9 @@ export function FluxoAssinatura({
   return (
     <div className="grid gap-5">
       {/* Passos */}
-      <ol className="grid grid-cols-3 gap-2">
+      <ol className="grid grid-cols-2 gap-2">
         {PASSOS.map((p, i) => {
-          const feito = (i === 0 && dadosOk) || (i === 1 && imagem) || (i === 2 && selfie);
+          const feito = (i === 0 && imagem) || (i === 1 && selfie);
           return (
             <li key={p.id}>
               <button
@@ -285,29 +283,17 @@ export function FluxoAssinatura({
 
       {passo === 0 && (
         <div className="grid gap-4">
-          <Field label="Nome completo">
-            <Input value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" placeholder="Como no documento" />
-          </Field>
-          <Field label="CPF ou CNPJ">
-            <Input inputMode="numeric" value={documento} onChange={(e) => setDocumento(e.target.value)} onBlur={(e) => setDocumento(fmtDocumento(e.target.value))} placeholder="000.000.000-00" />
-          </Field>
-          {!dadosOk && (nome || documento) && <p className="text-[12.5px] text-ink-500">Informe nome e sobrenome e um CPF (11 números) ou CNPJ (14 números).</p>}
-          <Button type="button" size="lg" disabled={!dadosOk} onClick={() => setPasso(1)}>
+          <p className="text-center text-[13.5px] text-ink-600">
+            Assinando como <b className="text-ink-900">{nome}</b>
+          </p>
+          <PadAssinatura onChange={setImagem} />
+          <Button type="button" size="lg" disabled={!imagem} onClick={() => setPasso(1)}>
             Continuar
           </Button>
         </div>
       )}
 
       {passo === 1 && (
-        <div className="grid gap-4">
-          <PadAssinatura onChange={setImagem} />
-          <Button type="button" size="lg" disabled={!imagem} onClick={() => setPasso(2)}>
-            Continuar
-          </Button>
-        </div>
-      )}
-
-      {passo === 2 && (
         <div className="grid gap-5">
           <p className="text-center text-[13.5px] text-ink-600">Uma foto do rosto confirma que foi você quem assinou. Tire em um lugar iluminado, sem boné ou óculos escuros.</p>
           <Selfie valor={selfie} onChange={setSelfie} />
@@ -332,7 +318,7 @@ export function FluxoAssinatura({
         </Button>
         {!pronto && (
           <p className="text-center text-[12px] text-ink-500">
-            Falta: {[!dadosOk && "seus dados", !imagem && "assinatura", !selfie && "selfie", !concordo && "marcar “li e concordo”"].filter(Boolean).join(", ")}
+            Falta: {[!imagem && "assinatura", !selfie && "selfie", !concordo && "marcar “li e concordo”"].filter(Boolean).join(", ")}
           </p>
         )}
       </div>
