@@ -7,10 +7,12 @@ import { formatDateTime } from "@/lib/format";
 import { supabase } from "@/lib/supabase/client";
 import type { Task } from "@/lib/types";
 import { useQuick } from "./shell";
+import { useReward } from "./rewards";
 import { cx } from "../ui";
 
 export function TaskRow({ task, showLead = true }: { task: Task; showLead?: boolean }) {
   const { openTask } = useQuick();
+  const { reward } = useReward();
   const overdue = !task.done && task.due_at && new Date(task.due_at) < new Date();
   const toggle = async () => {
     const { error } = await supabase()
@@ -18,7 +20,10 @@ export function TaskRow({ task, showLead = true }: { task: Task; showLead?: bool
       .update({ done: !task.done, done_at: task.done ? null : new Date().toISOString() })
       .eq("id", task.id);
     if (error) toast.error(error.message);
-    else if (!task.done) toast.success("Tarefa concluída ✓");
+    else if (!task.done) {
+      toast.success("Tarefa concluída ✓");
+      reward("tarefa", task.id);
+    }
   };
   return (
     <div className="group flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-ink-50">

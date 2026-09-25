@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
+import { useReward } from "@/components/app/rewards";
 import { useQuick } from "@/components/app/shell";
 import { StepNav } from "@/components/proposal/checkout";
 import { LeadPicker, PriceComp, Stepper } from "@/components/proposal/editor";
@@ -23,6 +24,7 @@ export function SaveEditor({ proposal, initialLeadId }: { proposal?: Proposal; i
   const router = useRouter();
   const { settings, settingsLoaded, user } = useApp();
   const { openLead } = useQuick();
+  const { reward } = useReward();
 
   const [inputs, setInputs] = useState<SaveInputs | null>(proposal ? mergeSave(proposal.inputs as Partial<SaveInputs>) : null);
   const [leadId, setLeadId] = useState<string | null>(proposal?.lead_id ?? initialLeadId ?? null);
@@ -112,6 +114,7 @@ export function SaveEditor({ proposal, initialLeadId }: { proposal?: Proposal; i
       if (lead && lead.segment === "solar") await sb.from("leads").update({ segment: "ambos" }).eq("id", lead.id);
       toast.success(`Orçamento S.A.V.E #${saved.number} salvo`);
       router.replace(`/propostas/${saved.id}`);
+      reward("proposta", saved.id);
     } else if (!opts.silent) {
       toast.success("Orçamento salvo");
     }
@@ -128,6 +131,7 @@ export function SaveEditor({ proposal, initialLeadId }: { proposal?: Proposal; i
     }
     const url = `${window.location.origin}/p/${saved.public_token}`;
     if (draft) {
+      reward("envio", saved.id);
       const sb = supabase();
       await sb.from("activities").insert({ lead_id: saved.lead_id, type: "proposta", content: `Proposta S.A.V.E #${saved.number} enviada`, created_by: user.id });
       if (lead && ["novo", "contato", "visita"].includes(lead.status)) await sb.from("leads").update({ status: "proposta" }).eq("id", lead.id);

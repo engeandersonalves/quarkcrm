@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Lead } from "@/lib/types";
 import { Button } from "../ui";
 import { useApp } from "./app-context";
+import { useReward } from "./rewards";
 
 interface Template {
   id: string;
@@ -17,6 +18,7 @@ interface Template {
 /** Botão de WhatsApp com mensagens prontas; cada envio fica registrado no histórico do lead. */
 export function WhatsAppMenu({ lead, proposalUrl }: { lead: Lead; proposalUrl?: string | null }) {
   const { user, profile, settings } = useApp();
+  const { reward } = useReward();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -55,7 +57,9 @@ export function WhatsAppMenu({ lead, proposalUrl }: { lead: Lead; proposalUrl?: 
       supabase()
         .from("activities")
         .insert({ lead_id: lead.id, type: "whatsapp", content: `Mensagem enviada: ${t.label}`, created_by: user.id })
-        .then(() => {});
+        .select("id")
+        .single()
+        .then(({ data }: { data: { id: string } | null }) => reward("followup", data?.id));
   };
 
   return (

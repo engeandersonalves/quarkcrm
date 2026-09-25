@@ -21,7 +21,7 @@ export default function LoginPage() {
 function Login() {
   const router = useRouter();
   const params = useSearchParams();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup">(params.get("cadastro") ? "signup" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -39,7 +39,7 @@ function Login() {
     setLoading(false);
     if (error) return toast.error(error.message === "Invalid login credentials" ? "E-mail ou senha incorretos" : error.message);
     if (mode === "signup" && !data.session) {
-      toast.success("Conta criada! Confirme pelo link enviado ao seu e-mail.");
+      toast.success("Conta criada! Confirme pelo link enviado ao seu e-mail. Depois, um administrador libera o seu acesso.");
       setMode("login");
       return;
     }

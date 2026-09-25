@@ -14,6 +14,7 @@ import { formatPhone, relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
 import { downloadCsv, today } from "@/lib/csv";
+import { useReward } from "@/components/app/rewards";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead, LeadStatus, Segment } from "@/lib/types";
 
@@ -31,6 +32,7 @@ function Leads() {
   const params = useSearchParams();
   const { openLead } = useQuick();
   const celebrate = useCelebrate();
+  const { reward } = useReward();
   const [view, setView] = useState<"kanban" | "lista">("kanban");
   const [q, setQ] = useState("");
   const [source, setSource] = useState("");
@@ -71,7 +73,10 @@ function Leads() {
     setData((rows) => rows?.map((l) => (l.id === id ? { ...l, status, position: Date.now() / 1000 } : l)) ?? null);
     const { error } = await supabase().from("leads").update({ status, position: Date.now() / 1000 }).eq("id", id);
     if (error) toast.error(error.message);
-    else if (status === "ganho") celebrate({ title: "Venda fechada!", name: lead.name, amount: leadValue(lead) || undefined });
+    else if (status === "ganho") {
+      celebrate({ title: "Venda fechada!", name: lead.name, amount: leadValue(lead) || undefined });
+      reward("venda", id);
+    }
     else toast.success(`${lead.name} → ${stageOf(status).label}`);
   };
 

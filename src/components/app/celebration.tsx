@@ -62,39 +62,10 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
 
 function Overlay({ win, images, onClose }: { win: Win; images: string[]; onClose: () => void }) {
   const line = useMemo(() => LINES[Math.floor(Math.random() * LINES.length)], []);
-  const pieces = useMemo(
-    () =>
-      Array.from({ length: 90 }, (_, i) => ({
-        left: Math.random() * 100,
-        delay: Math.random() * 1.5,
-        dur: 2.8 + Math.random() * 2.5,
-        dx: `${(Math.random() - 0.5) * 30}vw`,
-        color: COLORS[i % COLORS.length],
-        size: 6 + Math.random() * 8,
-        round: Math.random() > 0.6,
-      })),
-    [],
-  );
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center text-white" onClick={onClose} role="dialog" aria-label="Venda fechada">
       <CinematicBackdrop src={pickDaily(imagePool(images), 3)} />
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {pieces.map((p, i) => (
-          <span
-            key={i}
-            className="absolute top-0 block"
-            style={{
-              left: `${p.left}%`,
-              width: p.size,
-              height: p.round ? p.size : p.size * 0.45,
-              borderRadius: p.round ? 999 : 2,
-              background: p.color,
-              animation: `confetti-fall ${p.dur}s ${p.delay}s cubic-bezier(.2,.6,.4,1) forwards`,
-              ["--dx" as string]: p.dx,
-            }}
-          />
-        ))}
-      </div>
+      <Confetti />
       <button onClick={onClose} className="absolute top-6 right-6 grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20" aria-label="Fechar">
         <X className="h-5 w-5" />
       </button>
@@ -114,6 +85,42 @@ function Overlay({ win, images, onClose }: { win: Win; images: string[]; onClose
           ) : null}
         </p>
       </div>
+    </div>
+  );
+}
+
+/** Chuva de confete nas cores da marca. */
+export function Confetti({ count = 90 }: { count?: number }) {
+  const pieces = useMemo(
+    () =>
+      Array.from({ length: count }, (_, i) => ({
+        left: Math.random() * 100,
+        delay: Math.random() * 1.5,
+        dur: 2.8 + Math.random() * 2.5,
+        dx: `${(Math.random() - 0.5) * 30}vw`,
+        color: COLORS[i % COLORS.length],
+        size: 6 + Math.random() * 8,
+        round: Math.random() > 0.6,
+      })),
+    [count],
+  );
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {pieces.map((p, i) => (
+        <span
+          key={i}
+          className="absolute top-0 block"
+          style={{
+            left: `${p.left}%`,
+            width: p.size,
+            height: p.round ? p.size : p.size * 0.45,
+            borderRadius: p.round ? 999 : 2,
+            background: p.color,
+            animation: `confetti-fall ${p.dur}s ${p.delay}s cubic-bezier(.2,.6,.4,1) forwards`,
+            ["--dx" as string]: p.dx,
+          }}
+        />
+      ))}
     </div>
   );
 }

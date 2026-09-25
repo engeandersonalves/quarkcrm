@@ -17,19 +17,71 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
+-- Acesso à equipe: só entra quem foi aprovado (active) por um administrador.
+-- Na primeira execução, todos os usuários que já existiam continuam com acesso.
+alter table public.profiles add column if not exists active boolean;
+update public.profiles set active = true where active is null;
+alter table public.profiles alter column active set default false;
+alter table public.profiles alter column active set not null;
+-- Garante ao menos um administrador (o usuário mais antigo).
+update public.profiles set role = 'admin'
+where id = (select id from public.profiles order by created_at limit 1)
+  and not exists (select 1 from public.profiles where role = 'admin');
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  first_user boolean := not exists (select 1 from public.profiles);
 begin
-  insert into public.profiles (id, email, full_name)
-  values (new.id, new.email, coalesce(new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)))
+  -- O primeiro usuário vira administrador. Os demais entram com acesso liberado apenas
+  -- quando cadastrados pelo administrador no app (app_metadata.invited); quem se cadastra
+  -- sozinho aguarda aprovação.
+  insert into public.profiles (id, email, full_name, role, active)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)),
+    case when first_user then 'admin' else 'vendedor' end,
+    first_user or coalesce((new.raw_app_meta_data ->> 'invited')::boolean, false)
+  )
   on conflict (id) do nothing;
   return new;
 end;
 $$;
+
+create or replace function public.is_member()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and active);
+$$;
+
+create or replace function public.is_admin()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and active and role = 'admin');
+$$;
+
+-- Só administradores mudam papel e acesso; e sempre sobra ao menos um administrador ativo.
+create or replace function public.guard_profile()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if (new.role is distinct from old.role or new.active is distinct from old.active) then
+    if auth.uid() is not null and not public.is_admin() then
+      raise exception 'Apenas administradores podem alterar o papel ou o acesso de um usuário';
+    end if;
+    if old.role = 'admin' and old.active and (new.role <> 'admin' or not new.active)
+       and not exists (select 1 from public.profiles where role = 'admin' and active and id <> old.id) then
+      raise exception 'A equipe precisa de ao menos um administrador ativo';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists profiles_guard on public.profiles;
+create trigger profiles_guard before update on public.profiles
+  for each row execute function public.guard_profile();
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -203,9 +255,12 @@ declare t text;
 begin
   foreach t in array array['profiles', 'settings', 'leads', 'proposals', 'tasks', 'activities'] loop
     execute format('drop policy if exists "team_all" on public.%I', t);
-    execute format('create policy "team_all" on public.%I for all to authenticated using (true) with check (true)', t);
+    execute format('create policy "team_all" on public.%I for all to authenticated using (public.is_member()) with check (public.is_member())', t);
   end loop;
 end $$;
+-- Quem ainda aguarda aprovação consegue ler apenas o próprio perfil.
+drop policy if exists "self_read" on public.profiles;
+create policy "self_read" on public.profiles for select to authenticated using (id = auth.uid());
 
 -- -----------------------------------------------------------------------------
 -- Acesso público à proposta (link compartilhável, sem login)
@@ -341,13 +396,211 @@ revoke all on function public.create_public_lead(jsonb) from public;
 grant execute on function public.create_public_lead(jsonb) to anon, authenticated;
 
 -- -----------------------------------------------------------------------------
+-- Gamificação: pontos (XP) por ação e tempo de uso do app
+-- Os pontos são dados pelo próprio banco (gatilhos), e não pelo navegador.
+-- -----------------------------------------------------------------------------
+alter table public.leads add column if not exists created_by uuid references public.profiles (id) on delete set null default auth.uid();
+
+create table if not exists public.xp_events (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  kind text not null,
+  points int not null,
+  ref_id uuid,
+  lead_id uuid,
+  created_at timestamptz not null default now()
+);
+create unique index if not exists xp_events_unique on public.xp_events (user_id, kind, ref_id);
+create index if not exists xp_events_time_idx on public.xp_events (created_at desc);
+create index if not exists xp_events_ref_idx on public.xp_events (ref_id);
+
+create table if not exists public.usage_daily (
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  day date not null,
+  minutes int not null default 0,
+  last_ping timestamptz,
+  primary key (user_id, day)
+);
+
+alter table public.xp_events enable row level security;
+alter table public.usage_daily enable row level security;
+drop policy if exists "team_read" on public.xp_events;
+create policy "team_read" on public.xp_events for select to authenticated using (public.is_member());
+drop policy if exists "team_read" on public.usage_daily;
+create policy "team_read" on public.usage_daily for select to authenticated using (public.is_member());
+
+-- Concede pontos com limites contra abuso (sem duplicar e com teto diário por tipo).
+create or replace function public.award_xp(p_user uuid, p_kind text, p_points int, p_ref uuid, p_lead uuid default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  daily_cap int := case p_kind when 'followup' then 40 when 'tarefa' then 40 when 'proposta' then 20 when 'lead' then 60 else null end;
+begin
+  if p_user is null then return; end if;
+  if daily_cap is not null and (
+    select count(*) from public.xp_events
+    where user_id = p_user and kind = p_kind and created_at >= date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo'
+  ) >= daily_cap then return; end if;
+  -- Follow-up: vale no máximo uma vez a cada 30 minutos por cliente.
+  if p_kind = 'followup' and p_lead is not null and exists (
+    select 1 from public.xp_events where user_id = p_user and kind = 'followup' and lead_id = p_lead and created_at > now() - interval '30 minutes'
+  ) then return; end if;
+  insert into public.xp_events (user_id, kind, points, ref_id, lead_id)
+  values (p_user, p_kind, p_points, p_ref, p_lead)
+  on conflict (user_id, kind, ref_id) do nothing;
+end;
+$$;
+revoke all on function public.award_xp(uuid, text, int, uuid, uuid) from public, anon, authenticated;
+
+create or replace function public.xp_on_lead()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'DELETE' then
+    delete from public.xp_events where ref_id = old.id;
+    return old;
+  elsif tg_op = 'INSERT' then
+    perform public.award_xp(coalesce(auth.uid(), new.created_by), 'lead', 10, new.id, new.id);
+  elsif new.status is distinct from old.status then
+    if new.status = 'ganho' then
+      perform public.award_xp(coalesce(auth.uid(), new.owner_id, new.created_by), 'venda', 100, new.id, new.id);
+    elsif old.status = 'ganho' then
+      delete from public.xp_events where ref_id = new.id and kind = 'venda';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists leads_xp on public.leads;
+create trigger leads_xp after insert or update of status or delete on public.leads
+  for each row execute function public.xp_on_lead();
+
+create or replace function public.xp_on_activity()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'DELETE' then
+    delete from public.xp_events where ref_id = old.id;
+    return old;
+  end if;
+  if new.type in ('ligacao', 'whatsapp', 'visita', 'email') then
+    perform public.award_xp(coalesce(auth.uid(), new.created_by), 'followup', 5, new.id, new.lead_id);
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists activities_xp on public.activities;
+create trigger activities_xp after insert or delete on public.activities
+  for each row execute function public.xp_on_activity();
+
+create or replace function public.xp_on_task()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'DELETE' then
+    delete from public.xp_events where ref_id = old.id;
+    return old;
+  end if;
+  -- Só tarefas ligadas a um cliente contam (follow-up de verdade).
+  if new.done and not old.done and new.lead_id is not null then
+    perform public.award_xp(coalesce(auth.uid(), new.assigned_to, new.created_by), 'tarefa', 5, new.id, new.lead_id);
+  elsif old.done and not new.done then
+    delete from public.xp_events where ref_id = new.id and kind = 'tarefa';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists tasks_xp on public.tasks;
+create trigger tasks_xp after update of done or delete on public.tasks
+  for each row execute function public.xp_on_task();
+
+create or replace function public.xp_on_proposal()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'DELETE' then
+    delete from public.xp_events where ref_id = old.id;
+    return old;
+  elsif tg_op = 'INSERT' then
+    perform public.award_xp(coalesce(auth.uid(), new.created_by), 'proposta', 15, new.id, new.lead_id);
+  else
+    if new.sent_at is not null and old.sent_at is null then
+      perform public.award_xp(coalesce(auth.uid(), new.created_by), 'envio', 10, new.id, new.lead_id);
+    end if;
+    -- Aceite pelo cliente (link público): o ponto vai para quem criou a proposta.
+    if new.status = 'aceita' and old.status is distinct from 'aceita' then
+      perform public.award_xp(new.created_by, 'aceite', 150, new.id, new.lead_id);
+    end if;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists proposals_xp on public.proposals;
+create trigger proposals_xp after insert or update or delete on public.proposals
+  for each row execute function public.xp_on_proposal();
+
+-- Tempo de uso: o app chama a cada minuto enquanto está aberto e em uso.
+create or replace function public.track_usage()
+returns int language plpgsql security definer set search_path = public as $$
+declare
+  today date := (now() at time zone 'America/Sao_Paulo')::date;
+  m int;
+begin
+  if not public.is_member() then return 0; end if;
+  insert into public.usage_daily (user_id, day, minutes, last_ping)
+  values (auth.uid(), today, 1, now())
+  on conflict (user_id, day) do update
+    set minutes = public.usage_daily.minutes + 1, last_ping = now()
+    where public.usage_daily.last_ping is null or public.usage_daily.last_ping < now() - interval '50 seconds'
+  returning minutes into m;
+  return coalesce(m, 0);
+end;
+$$;
+revoke all on function public.track_usage() from public, anon;
+grant execute on function public.track_usage() to authenticated;
+
+-- Ranking da equipe no período. Tempo de uso: 1 XP a cada 10 minutos (até 4 h por dia).
+create or replace function public.leaderboard(p_from timestamptz default '-infinity')
+returns table (
+  user_id uuid, full_name text, email text, role text,
+  xp bigint, total_xp bigint, leads bigint, followups bigint, proposals bigint, sent bigint, sales bigint, minutes bigint, active_days bigint
+)
+language sql stable security definer set search_path = public as $$
+  with usage as (
+    select u.user_id,
+      sum(least(u.minutes, 240) / 10) filter (where u.day >= (p_from at time zone 'America/Sao_Paulo')::date) as xp_p,
+      sum(least(u.minutes, 240) / 10) as xp_all,
+      sum(u.minutes) filter (where u.day >= (p_from at time zone 'America/Sao_Paulo')::date) as minutes,
+      count(*) filter (where u.day >= (p_from at time zone 'America/Sao_Paulo')::date and u.minutes >= 5) as days
+    from public.usage_daily u group by u.user_id
+  ), ev as (
+    select e.user_id,
+      sum(e.points) filter (where e.created_at >= p_from) as xp_p,
+      sum(e.points) as xp_all,
+      count(*) filter (where e.created_at >= p_from and e.kind = 'lead') as leads,
+      count(*) filter (where e.created_at >= p_from and e.kind in ('followup', 'tarefa')) as followups,
+      count(*) filter (where e.created_at >= p_from and e.kind = 'proposta') as proposals,
+      count(*) filter (where e.created_at >= p_from and e.kind = 'envio') as sent,
+      count(*) filter (where e.created_at >= p_from and e.kind in ('venda', 'aceite')) as sales
+    from public.xp_events e group by e.user_id
+  )
+  select p.id, p.full_name, p.email, p.role,
+    coalesce(ev.xp_p, 0) + coalesce(usage.xp_p, 0),
+    coalesce(ev.xp_all, 0) + coalesce(usage.xp_all, 0),
+    coalesce(ev.leads, 0), coalesce(ev.followups, 0), coalesce(ev.proposals, 0), coalesce(ev.sent, 0), coalesce(ev.sales, 0),
+    coalesce(usage.minutes, 0), coalesce(usage.days, 0)
+  from public.profiles p
+  left join ev on ev.user_id = p.id
+  left join usage on usage.user_id = p.id
+  where p.active and public.is_member()
+  order by 5 desc, 6 desc;
+$$;
+revoke all on function public.leaderboard(timestamptz) from public, anon;
+grant execute on function public.leaderboard(timestamptz) to authenticated;
+
+-- -----------------------------------------------------------------------------
 -- Tempo real
 -- -----------------------------------------------------------------------------
 do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings'] loop
+    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles'] loop
       if not exists (
         select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
       ) then
@@ -369,10 +622,10 @@ begin
     drop policy if exists "media_public_read" on storage.objects;
     create policy "media_public_read" on storage.objects for select using (bucket_id = 'media');
     drop policy if exists "media_team_insert" on storage.objects;
-    create policy "media_team_insert" on storage.objects for insert to authenticated with check (bucket_id = 'media');
+    create policy "media_team_insert" on storage.objects for insert to authenticated with check (bucket_id = 'media' and public.is_member());
     drop policy if exists "media_team_update" on storage.objects;
-    create policy "media_team_update" on storage.objects for update to authenticated using (bucket_id = 'media');
+    create policy "media_team_update" on storage.objects for update to authenticated using (bucket_id = 'media' and public.is_member());
     drop policy if exists "media_team_delete" on storage.objects;
-    create policy "media_team_delete" on storage.objects for delete to authenticated using (bucket_id = 'media');
+    create policy "media_team_delete" on storage.objects for delete to authenticated using (bucket_id = 'media' and public.is_member());
   end if;
 end $$;

@@ -13,6 +13,9 @@ export interface Profile {
   email: string | null;
   phone: string | null;
   role: string;
+  /** Acesso liberado por um administrador (quem se cadastra sozinho aguarda aprovação). */
+  active?: boolean;
+  created_at?: string;
 }
 
 export interface Lead {

@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
+import { useReward } from "@/components/app/rewards";
 import { useQuick } from "@/components/app/shell";
 import { Badge, Button, Card, CardHeader, Field, ImageField, Input, MoneyInput, NumberInput, Segmented, Select, Textarea, cx } from "@/components/ui";
 import { PROPOSAL_STATUS, ROOF_TYPES } from "@/lib/constants";
@@ -56,6 +57,7 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
   const router = useRouter();
   const { settings, settingsLoaded, user } = useApp();
   const { openLead } = useQuick();
+  const { reward } = useReward();
 
   const [inputs, setInputs] = useState<ProposalInputs | null>(proposal ? mergeInputs(proposal.inputs) : null);
   const [leadId, setLeadId] = useState<string | null>(proposal?.lead_id ?? initialLeadId ?? null);
@@ -165,6 +167,7 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
       if (lead && lead.estimated_value == null) await sb.from("leads").update({ estimated_value: saved.final_price }).eq("id", lead.id);
       toast.success(`Orçamento #${saved.number} salvo`);
       router.replace(`/propostas/${saved.id}`);
+      reward("proposta", saved.id);
     } else if (!opts.silent) {
       toast.success("Orçamento salvo");
     }
@@ -182,6 +185,7 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
     }
     const url = `${window.location.origin}/p/${saved.public_token}`;
     if (draft) {
+      reward("envio", saved.id);
       const sb = supabase();
       await sb.from("activities").insert({ lead_id: saved.lead_id, type: "proposta", content: `Proposta #${saved.number} enviada`, created_by: user.id });
       if (lead && ["novo", "contato", "visita"].includes(lead.status)) await sb.from("leads").update({ status: "proposta" }).eq("id", lead.id);

@@ -38,6 +38,7 @@ import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
 import { supabase } from "@/lib/supabase/client";
 import { WhatsAppMenu } from "@/components/app/whatsapp-menu";
+import { useReward } from "@/components/app/rewards";
 import type { Activity, Lead, LeadStatus, Proposal, Task } from "@/lib/types";
 
 interface Data {
@@ -60,6 +61,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
   const { user, profiles } = useApp();
   const { openLead, openTask } = useQuick();
   const celebrate = useCelebrate();
+  const { reward } = useReward();
   const [note, setNote] = useState("");
   const [noteType, setNoteType] = useState("nota");
   const [lostReason, setLostReason] = useState("");
@@ -107,15 +109,17 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
     if (status === "ganho") {
       const best = Math.max(0, ...(data?.proposals ?? []).filter((p) => p.status !== "recusada").map((p) => Number(p.final_price)));
       celebrate({ title: "Venda fechada!", name: lead.name, amount: best || lead.estimated_value || undefined });
+      reward("venda", lead.id);
     } else toast.success(`Etapa: ${stageOf(status).label}`);
   };
 
   const addNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!note.trim()) return;
-    const { error } = await supabase().from("activities").insert({ lead_id: lead.id, type: noteType, content: note.trim(), created_by: user.id });
+    const { data: added, error } = await supabase().from("activities").insert({ lead_id: lead.id, type: noteType, content: note.trim(), created_by: user.id }).select("id").single();
     if (error) return toast.error(error.message);
     setNote("");
+    if (noteType !== "nota") reward("followup", added?.id);
   };
 
   const remove = async () => {

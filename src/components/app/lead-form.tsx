@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useReward } from "./rewards";
 import { ROOF_TYPES, SEGMENTS, SOURCES, STAGES, UFS } from "@/lib/constants";
 import { notify } from "@/lib/live";
 import { supabase } from "@/lib/supabase/client";
@@ -41,6 +42,7 @@ export function LeadFormModal({
 }) {
   const { user, profiles, settings } = useApp();
   const router = useRouter();
+  const { reward } = useReward();
   const [form, setForm] = useState<Form>(empty(user.id));
   const [saving, setSaving] = useState(false);
 
@@ -74,6 +76,7 @@ export function LeadFormModal({
       if (error) return toast.error(dbHint(error.message));
       toast.success("Lead cadastrado", { description: "Equipe notificada por e-mail." });
       notify("lead", data.id);
+      reward("lead", data.id);
       onClose();
       if (onCreated) onCreated(data.id);
       else router.push(`/leads/${data.id}`);

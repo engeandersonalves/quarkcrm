@@ -2,8 +2,10 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { CheckSquare, FileText, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
+import { CheckSquare, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
 import { CommandPalette } from "./command";
+import { RewardProvider, useReward } from "./rewards";
+import { levelOf } from "@/lib/gamification";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
@@ -25,7 +27,8 @@ const NAV = [
   { href: "/configuracoes", label: "Ajustes", icon: Settings },
 ];
 const SAVE_NAV = { href: "/propostas?tipo=save", label: "S.A.V.E", icon: PlugZap };
-const DESKTOP_NAV = [...NAV.slice(0, 3), SAVE_NAV, ...NAV.slice(3)];
+const ARENA_NAV = { href: "/ranking", label: "Arena", icon: Trophy };
+const DESKTOP_NAV = [...NAV.slice(0, 3), SAVE_NAV, NAV[3], ARENA_NAV, NAV[4]];
 
 
 interface QuickCtx {
@@ -39,8 +42,12 @@ export function Shell({ user, children }: { user: User; children: ReactNode }) {
   return (
     <AppProvider user={user}>
       <CelebrationProvider>
-        <ShellInner>{children}</ShellInner>
-        <Splash />
+        <AccessGate>
+          <RewardProvider>
+            <ShellInner>{children}</ShellInner>
+            <Splash />
+          </RewardProvider>
+        </AccessGate>
       </CelebrationProvider>
     </AppProvider>
   );
@@ -141,6 +148,7 @@ function ShellInner({ children }: { children: ReactNode }) {
             </button>
           </nav>
 
+          <XpCard />
           <SidebarQuote />
           <div className="relative m-3 flex items-center gap-3 rounded-2xl bg-white/[0.04] p-3">
             <Avatar name={profile?.full_name ?? user.email} />
@@ -160,6 +168,7 @@ function ShellInner({ children }: { children: ReactNode }) {
             <BrandLogo variant="color" className="h-8" />
           </Link>
           <div className="flex items-center gap-1">
+            <XpChip />
             <button onClick={() => setPalette(true)} className="grid h-9 w-9 place-items-center rounded-xl text-ink-600" aria-label="Buscar">
               <Search className="h-[18px] w-[18px]" />
             </button>
@@ -242,6 +251,82 @@ function SidebarQuote() {
     <div className="relative mx-4 mb-2 border-l-2 border-[#9BD373]/60 pl-3">
       <p className="font-serif text-[13px] leading-snug text-ink-300 italic">“{q.text}”</p>
       <p className="mt-1 text-[10px] tracking-[0.18em] text-ink-500 uppercase">{q.author}</p>
+    </div>
+  );
+}
+
+/** Nível, XP e sequência de dias — leva para a Arena. */
+function XpCard() {
+  const { xp, streak } = useReward();
+  if (xp == null) return null;
+  const { level, next, progress, toNext } = levelOf(xp);
+  return (
+    <Link href="/ranking" className="relative mx-3 mb-3 block rounded-2xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-3.5 ring-1 ring-white/[0.08] transition hover:ring-white/20">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-semibold tracking-[0.2em] text-ink-400 uppercase">Nível {level.n}</p>
+        {streak > 0 && (
+          <span className="flex items-center gap-1 text-[11px] font-semibold text-brand-yellow">
+            <Flame className="h-3.5 w-3.5" /> {streak} {streak === 1 ? "dia" : "dias"}
+          </span>
+        )}
+      </div>
+      <p className="text-sun-gradient mt-0.5 font-display text-lg font-bold">{level.title}</p>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div className="h-full rounded-full bg-sun-gradient transition-all duration-700" style={{ width: `${Math.max(4, progress * 100)}%` }} />
+      </div>
+      <p className="tnum mt-1.5 text-[11px] text-ink-400">
+        {xp.toLocaleString("pt-BR")} XP{next ? ` · faltam ${toNext.toLocaleString("pt-BR")} para ${next.title}` : " · topo do mundo"}
+      </p>
+    </Link>
+  );
+}
+
+function XpChip() {
+  const { xp, streak } = useReward();
+  if (xp == null) return null;
+  const { level } = levelOf(xp);
+  return (
+    <Link href="/ranking" className="flex h-8 items-center gap-1.5 rounded-full bg-ink-900 px-2.5 text-[11px] font-bold text-white" aria-label={`Nível ${level.n}: ${level.title}`}>
+      <Trophy className="h-3.5 w-3.5 text-brand-yellow" />
+      <span className="text-sun-gradient">{level.title}</span>
+      {streak > 1 && (
+        <span className="flex items-center text-brand-yellow">
+          <Flame className="h-3 w-3" />
+          {streak}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/** Quem se cadastrou sozinho só entra depois que um administrador liberar o acesso. */
+function AccessGate({ children }: { children: ReactNode }) {
+  const { profile, settings } = useApp();
+  if (profile?.active !== false) return <>{children}</>;
+  return (
+    <div className="relative grid min-h-dvh place-items-center overflow-hidden bg-ink-950 p-6 text-center text-white">
+      <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-sun-500/20 blur-[120px]" />
+      <div className="relative max-w-md">
+        <BrandLogo className="mx-auto h-12" />
+        <div className="mx-auto mt-10 grid h-14 w-14 place-items-center rounded-2xl bg-white/10">
+          <Clock className="h-7 w-7 text-brand-yellow" />
+        </div>
+        <h1 className="mt-5 font-display text-3xl font-semibold">Quase lá, {(profile.full_name ?? "").split(" ")[0] || "vendedor"}!</h1>
+        <p className="mt-3 text-white/70">
+          Seu cadastro foi recebido. Um administrador da {settings.company_name || "equipe"} precisa liberar o seu acesso em Configurações → Equipe. Assim que for liberado, é só
+          atualizar esta página.
+        </p>
+        <p className="mt-8 font-serif text-lg text-white/60 italic">“A sorte é o que acontece quando a preparação encontra a oportunidade.”</p>
+        <button
+          onClick={async () => {
+            await supabase().auth.signOut();
+            window.location.href = "/login";
+          }}
+          className="mt-8 text-sm font-semibold text-brand-lime hover:underline"
+        >
+          Sair
+        </button>
+      </div>
     </div>
   );
 }
