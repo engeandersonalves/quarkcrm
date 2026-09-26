@@ -53,7 +53,7 @@ const SIMULTANEITY = [
   { value: 60, emoji: "🏪", label: "Comércio / empresa" },
 ];
 
-export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposal; initialLeadId?: string | null }) {
+export function ProposalEditor({ proposal, initialLeadId, preset }: { proposal?: Proposal; initialLeadId?: string | null; preset?: Partial<ProposalInputs> }) {
   const router = useRouter();
   const { settings, settingsLoaded, user } = useApp();
   const { openLead } = useQuick();
@@ -75,7 +75,9 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
   // Novo orçamento: parte dos padrões configurados + dados de consumo do lead.
   useEffect(() => {
     if (proposal || inputs || !settingsLoaded) return;
-    setInputs(mergeInputs(settings.defaults));
+    setInputs({ ...mergeInputs(settings.defaults), ...(preset ?? {}) });
+    if (preset) setDirty(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proposal, inputs, settingsLoaded, settings.defaults]);
 
   const leadAppliedFor = useRef<string | null>(proposal?.lead_id ?? null);

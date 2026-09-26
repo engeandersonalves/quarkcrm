@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckSquare, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users } from "lucide-react";
+import { Box, CheckSquare, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { productOf } from "@/lib/constants";
@@ -71,6 +71,7 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
       { id: "p-home", group: "Ir para", label: "Painel", icon: <LayoutDashboard className="h-4 w-4" />, keywords: "painel inicio dashboard", run: go("/") },
       { id: "p-leads", group: "Ir para", label: "Leads", icon: <Users className="h-4 w-4" />, keywords: "leads funil kanban clientes", run: go("/leads") },
       { id: "p-props", group: "Ir para", label: "Propostas", icon: <FileText className="h-4 w-4" />, keywords: "propostas orcamentos", run: go("/propostas") },
+      { id: "p-3d", group: "Ir para", label: "Projeto 3D (telhado, sol e quadro elétrico)", icon: <Box className="h-4 w-4" />, keywords: "projeto 3d telhado sombra sol simulacao quadro eletrico disjuntor inversor", run: go("/projeto-3d") },
       { id: "p-tasks", group: "Ir para", label: "Tarefas", icon: <CheckSquare className="h-4 w-4" />, keywords: "tarefas agenda", run: go("/tarefas") },
       { id: "p-cfg", group: "Ir para", label: "Configurações", icon: <Settings className="h-4 w-4" />, keywords: "configuracoes ajustes empresa kits", run: go("/configuracoes") },
     ];

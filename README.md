@@ -16,6 +16,7 @@ App completo para **orçar, gerar propostas premium e acompanhar vendas** de ene
 | **Alertas por e-mail** | Novo lead, nova tarefa, **cliente abriu a proposta**, **proposta aceita** e resumo diário de tarefas. |
 | **Captura de leads** | Formulário público `/captura` (para site/Instagram/bio), com código para incorporar. |
 | **Tempo real** | Tudo atualiza sozinho em todos os aparelhos (Supabase Realtime). |
+| **Projeto 3D** (`/projeto-3d`) | Estúdio 3D estilo SketchUp: arraste no chão para subir paredes; telhado de **fibrocimento, metálico, cerâmico/colonial, laje ou solo** (1, 2 ou 4 águas, inclinação, beiral, platibanda, rotação). Clique na água para preencher com módulos (retrato/paisagem, afastamentos) e em cada placa para tirar/colocar. Estruturas desenhadas por tipo (ganchos, prisioneiros, mini-trilho, triângulos de laje, mesas de solo 2P/4L) com lista de materiais por fabricante (Solar Group, Romagnole, Pratyc, K2, genérica). **Sol real** por latitude/longitude, data e hora com sombras e trajetória (dia, solstícios); HSP das capitais ou **NASA POWER**; geração por água pela orientação e inclinação reais; **perda por sombra** por traçado de raios com mapa de calor; árvores, caixa d'água e prédios vizinhos. **Quadro elétrico 3D**: inversor na parede, eletroduto aparente com conduletes automáticos (LL/LR/C), quadro aberto com disjuntores, DPS, DR tipo A para carregador de VE, barramentos e cabos nas cores da norma, “raio-X” dos eletrodutos. Dimensiona disjuntor, bitola (capacidade + queda de tensão), PE, eletroduto, DPS, DR, strings e confere tudo (NBR 5410, 16690, 17019, REN 1000). Memorial imprimível e botão **Criar orçamento** com a geração calculada. |
 
 Veja um exemplo de proposta em **`/p/exemplo`**.
 
@@ -71,6 +72,8 @@ npm test                     # testes do motor de cálculo
 
 ```
 src/lib/pricing.ts            motor de cálculo (preço, geração, payback, TIR, financiamento) + testes
+src/lib/solar3d/              Projeto 3D: sol, irradiância no plano, geometria do telhado, estruturas, elétrica + testes
+src/components/solar3d/       cenas three.js (telhado e quadro) e telas do estúdio
 src/components/proposal/      editor do orçamento, checkout e proposta do cliente
 src/app/(app)/                telas internas (painel, leads, propostas, tarefas, configurações)
 src/app/p/[token]/            proposta pública
