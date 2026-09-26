@@ -19,6 +19,23 @@ App completo para **orçar, gerar propostas premium e acompanhar vendas** de ene
 
 Veja um exemplo de proposta em **`/p/exemplo`**.
 
+## 🧪 Quark Lab — simulador de energia solar (`/simulador`)
+
+Laboratório público (não precisa de login nem de banco) para **estudar e pesquisar** sistemas solares: zero grid, baterias, cargas flexíveis, cortes de geração distribuída e apagões.
+
+| Bloco | O que modela |
+|---|---|
+| **Sol e clima** | Posição solar (Cooper/Spencer), céu limpo (Haurwitz), nuvens estocásticas calibradas pela média mensal de 15 cidades brasileiras, Erbs + Liu–Jordan no plano inclinado, temperatura da célula (NOCT). Semente fixa ⇒ resultado reproduzível. |
+| **FV e inversor** | kWp, inclinação, azimute, coef. de temperatura, perdas, degradação, bifacial, curva de eficiência, clipping, consumo em vazio, surto de partida, híbrido com backup (EPS). |
+| **Armazenamento** | LFP, NMC, chumbo-ácido, íon-sódio, fluxo de vanádio, supercapacitor, **bateria gravitacional** (E = m·g·h), **reservatório bombeado** (E = ρ·V·g·h) e **hidrogênio**. Várias unidades com prioridade; ciclos, vida útil e LCOS. |
+| **Cargas** | Perfis residencial/comercial/rural/industrial, equipamentos com horário, **motores** (rendimento, fator de potência, corrente de partida), **bomba d'água** (caixa-d'água como bateria), **carro elétrico** (burro ou inteligente), **boiler com desviador** (bateria térmica) e cargas deslocáveis. |
+| **Rede e eventos** | On-grid, **zero grid**, limite de injeção, off-grid; **corte de injeção (curtailment)**, **desligamento remoto da GD** e **apagões** por horário, dia da semana, mês e probabilidade; gerador a diesel. |
+| **Controle (EMS)** | Autoconsumo, **anti-corte preditivo**, cargas flexíveis primeiro, injetar primeiro, arbitragem na tarifa branca, reserva para apagão, peak shaving. |
+| **Resultados** | Diagrama de fluxo animado, gráficos passo a passo, energia por dia, SOC, temperatura do boiler, desperdício, energia salva durante cortes, autossuficiência, economia (Lei 14.300), CO₂; CSV completo. |
+| **Estudos** | Comparação de cenários/estratégias, varredura paramétrica e **Monte Carlo** do clima (P10/P50/P90). Aba **Método** com todas as equações, hipóteses, limitações e referências. |
+
+O motor fica em `src/lib/sim/` (TypeScript puro, sem dependências) e é coberto por `src/lib/sim/sim.test.ts` (balanço de energia fechado em todos os cenários, produtividade anual plausível, média climática etc.).
+
 ### Fórmula de preço
 
 ```

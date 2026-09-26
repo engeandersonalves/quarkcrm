@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { CheckSquare, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
+import { CheckSquare, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator, FlaskConical } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -148,6 +148,9 @@ function ShellInner({ children }: { children: ReactNode }) {
             <button onClick={() => openTask()} className="flex h-10 items-center gap-3 rounded-xl px-3.5 text-sm text-ink-400 transition hover:bg-white/[0.04] hover:text-white">
               <ListTodo className="h-[18px] w-[18px]" /> Nova tarefa
             </button>
+            <Link href="/simulador" className="flex h-10 items-center gap-3 rounded-xl px-3.5 text-sm text-ink-400 transition hover:bg-white/[0.04] hover:text-white">
+              <FlaskConical className="h-[18px] w-[18px]" /> Quark Lab (simulador)
+            </Link>
           </nav>
 
           <XpCard />
