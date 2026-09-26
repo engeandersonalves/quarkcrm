@@ -12,6 +12,14 @@ npm install
 npm run dev        # abre em http://localhost:3000
 ```
 
+### Arquivo único (sem servidor)
+
+```bash
+npm run build:single
+```
+
+Gera `dist/quark-lab.html`: o simulador inteiro num só arquivo. Abre com dois cliques em qualquer navegador, sem instalar nada (a internet só é usada para as fontes). Dá para mandar por e-mail ou pendrive. O mesmo build gera `dist/artifact.html`, a versão publicada como artifact no Claude.
+
 Outros comandos: `npm test` (testes do motor físico), `npm run typecheck`, `npm run build && npm start` (versão de produção).
 
 ## Publicar (opcional)

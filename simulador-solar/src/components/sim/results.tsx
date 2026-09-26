@@ -226,7 +226,22 @@ export function exportCsv(r: SimResult) {
   download(`${slug(r.scenario.name)}.csv`, "﻿" + lines.join("\n"), "text/csv;charset=utf-8");
 }
 
-export function download(name: string, content: string, type: string) {
+type Downloads = { save: (r: { filename: string; data: string | Blob }) => Promise<unknown> };
+type ClaudeHost = { use: (name: string) => Promise<unknown> };
+
+/**
+ * Salva um arquivo gerado. Dentro do Claude (artifact) a página não pode baixar sozinha:
+ * usa a permissão de download do visualizador. Fora dele, um link de download comum.
+ */
+export async function download(name: string, content: string, type: string) {
+  const host = (globalThis as { claude?: ClaudeHost }).claude;
+  if (host?.use) {
+    const d = (await host.use("downloads").catch(() => null)) as Downloads | null;
+    if (d) {
+      await d.save({ filename: name, data: new Blob([content], { type }) }).catch(() => undefined);
+      return;
+    }
+  }
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

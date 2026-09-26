@@ -43,6 +43,7 @@ export function SolarLab() {
   const [cursor, setCursor] = useState(0);
   const [playing, setPlaying] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // restaura o último cenário e as comparações deste navegador
   useEffect(() => {
@@ -104,8 +105,9 @@ export function SolarLab() {
       if (!s.pv || !s.grid || !s.sim || !Array.isArray(s.storage) || !Array.isArray(s.loads)) throw new Error("formato");
       setScenario(s);
       setPresetId(null);
+      setImportError(null);
     } catch {
-      alert("Arquivo inválido: use um JSON exportado por este simulador.");
+      setImportError("Não consegui abrir esse arquivo. Use um cenário .json exportado por este simulador (botão de disquete).");
     }
   };
 
@@ -125,7 +127,7 @@ export function SolarLab() {
   return (
     <div className="min-h-dvh bg-ink-50">
       {/* ---------------------------------------------------------- topo */}
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-ink-900 text-white">
+      <header className="sticky top-[env(safe-area-inset-top,0px)] z-30 border-b border-white/10 bg-ink-900 text-white">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
           <div className="flex items-center gap-2.5">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-sun-gradient text-ink-950">
@@ -206,6 +208,14 @@ export function SolarLab() {
                   <div className="text-[11px] font-bold tracking-wider text-brand-lime uppercase">Pergunta de pesquisa</div>
                   <div className="mt-1 font-display text-[16px] leading-snug font-semibold">{preset.question}</div>
                   {scenario.description && <div className="mt-1.5 text-[12.5px] text-white/70">{scenario.description}</div>}
+                </div>
+              )}
+              {importError && (
+                <div role="alert" className="flex items-start justify-between gap-3 rounded-2xl bg-rose-50 p-3.5 text-[12.5px] text-rose-900 ring-1 ring-rose-200">
+                  {importError}
+                  <button type="button" onClick={() => setImportError(null)} className="font-semibold underline">
+                    Fechar
+                  </button>
                 </div>
               )}
               <Warnings r={result} />
