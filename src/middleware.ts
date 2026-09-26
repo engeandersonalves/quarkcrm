@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, hasSupabase } from "@/lib/supabase/env";
 
-const PUBLIC_PREFIXES = ["/p/", "/captura", "/simulador", "/api/"];
+const PUBLIC_PREFIXES = ["/p/", "/captura", "/api/"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

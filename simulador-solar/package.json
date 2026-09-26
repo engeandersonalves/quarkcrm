@@ -1,26 +1,21 @@
 {
-  "name": "quarkcrm",
+  "name": "quark-lab-simulador-solar",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/lib/pricing.test.ts src/lib/save.test.ts src/lib/quick-estimate.test.ts src/lib/capture-sims.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/sim/*.test.ts"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.117.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.47.0",
     "next": "^15.5.26",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "recharts": "^3.10.1",
-    "server-only": "^0.0.1",
-    "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
