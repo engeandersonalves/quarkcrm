@@ -7,7 +7,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
 import { CARD_H, CARD_W, QuoteCard } from "@/components/quick-quote/quote-card";
-import { Button, Card, Field, Input, MoneyInput, NumberInput, PageHeader, Segmented, Select, cx } from "@/components/ui";
+import { OfferCard, STORY_H, STORY_W, type Highlight, type OfferData } from "@/components/quick-quote/offer-card";
+import { Button, Card, Field, Input, MoneyInput, NumberInput, PageHeader, Segmented, Select, Textarea, cx } from "@/components/ui";
 import { mergeInputs } from "@/lib/defaults";
 import { formatPhone, whatsappUrl } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
@@ -19,6 +20,29 @@ import type { Lead } from "@/lib/types";
 
 type LeadLite = Pick<Lead, "id" | "name" | "phone" | "city" | "consumption_kwh" | "avg_bill" | "roof_type" | "connection_type">;
 const PREFS_KEY = "quark.quickquote";
+const OFFER_KEY = "quark.quickquote.offer";
+
+type OfferPrefs = Pick<OfferData, "headline1" | "headline2" | "campaign" | "moduleType" | "efficiency" | "moduleWarranty" | "inverterWarranty" | "footer1" | "footer2" | "highlight"> & { included: string };
+const DEFAULT_OFFER: OfferPrefs = {
+  headline1: "Oportunidade",
+  headline2: "Imperdível",
+  campaign: "",
+  moduleType: "bifacial",
+  efficiency: 22.5,
+  moduleWarranty: 12,
+  inverterWarranty: 10,
+  footer1: "Parcelado em até 18x no cartão (mais de um cartão permitido)",
+  footer2: "Financiamento em até 72x sem entrada, 1ª parcela em até 120 dias",
+  highlight: "cartao",
+  included: ["Kit fotovoltaico completo", "Projeto de engenharia e homologação", "Instalação profissional em até 30 dias", "Equipamentos premium com certificação", "Monitoramento remoto pelo app"].join("\n"),
+};
+const HEADLINES = [
+  ["Oportunidade", "Imperdível"],
+  ["Sua energia", "Solar"],
+  ["Adeus", "Conta alta"],
+  ["Economia", "Garantida"],
+  ["Oferta", "Especial"],
+];
 const slug = (s: string) =>
   s
     .toLowerCase()
@@ -36,6 +60,10 @@ export default function QuickQuotePage() {
   const [q, setQ] = useState<QuickQuoteInput>(DEFAULT_QUICK);
   const [brands, setBrands] = useState({ module: "", inverter: "" });
   const [validityDays, setValidityDays] = useState(7);
+  const [template, setTemplate] = useState<"story" | "post">("story");
+  const [offer, setOffer] = useState<OfferPrefs>(DEFAULT_OFFER);
+  const [images, setImages] = useState<{ module: string; inverter: string }>({ module: "", inverter: "" });
+  const setO = (patch: Partial<OfferPrefs>) => setOffer((o) => ({ ...o, ...patch }));
   const [busy, setBusy] = useState<"png" | "pdf" | "share" | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -75,7 +103,15 @@ export default function QuickQuotePage() {
       inverterKw: 0,
     }));
     if (defaults.moduleBrand || defaults.inverterBrand) setBrands({ module: defaults.moduleBrand ?? "", inverter: defaults.inverterBrand ?? "" });
-  }, [settingsLoaded, defaults]);
+    setImages({ module: settings.proposal.moduleImage || "", inverter: settings.proposal.inverterImage || "" });
+    let savedOffer: Partial<OfferPrefs> = {};
+    try {
+      savedOffer = JSON.parse(localStorage.getItem(OFFER_KEY) ?? "{}");
+    } catch {
+      /* navegação privada */
+    }
+    setOffer({ ...DEFAULT_OFFER, moduleWarranty: settings.warranty_modules_years || 12, inverterWarranty: settings.warranty_inverter_years || 10, ...savedOffer });
+  }, [settingsLoaded, defaults]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Dados do lead (vindos da anamnese): nome, cidade, telhado e consumo final.
   useEffect(() => {
@@ -94,14 +130,26 @@ export default function QuickQuotePage() {
     }
   }, [q.priceMode, q.price, q.cashDiscountPct, q.moduleW]);
 
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    try {
+      localStorage.setItem(OFFER_KEY, JSON.stringify(offer));
+    } catch {
+      /* navegação privada */
+    }
+  }, [offer, settingsLoaded]);
+
+  const W = template === "story" ? STORY_W : CARD_W;
+  const H = template === "story" ? STORY_H : CARD_H;
+
   // A prévia encolhe para caber na tela; a exportação usa o tamanho real.
   useEffect(() => {
     const el = boxRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) => setScale(Math.min(1, e.contentRect.width / CARD_W)));
+    const ro = new ResizeObserver(([e]) => setScale(Math.min(1, e.contentRect.width / W)));
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [W]);
 
   const result = useMemo(() => quickQuote(q), [q]);
   const set = (patch: Partial<QuickQuoteInput>) => setQ((x) => ({ ...x, ...patch }));
@@ -125,10 +173,39 @@ export default function QuickQuotePage() {
     number,
   };
 
+  const offerData: OfferData = {
+    client: client.name,
+    city: client.city,
+    headline1: offer.headline1,
+    headline2: offer.headline2,
+    campaign: offer.campaign,
+    moduleW: q.moduleW,
+    moduleBrand: brands.module,
+    moduleType: offer.moduleType,
+    efficiency: offer.efficiency,
+    moduleWarranty: offer.moduleWarranty,
+    inverterBrand: brands.inverter,
+    inverterWarranty: offer.inverterWarranty,
+    moduleImage: images.module || null,
+    inverterImage: images.inverter || null,
+    included: offer.included.split("\n"),
+    footer1: offer.footer1,
+    footer2: offer.footer2,
+    highlight: offer.highlight,
+    financingMonths: q.financingMonths,
+    cardInstallments: q.cardInstallments,
+    validityDays,
+    company: cardData.company,
+    logoUrl: cardData.logoUrl,
+    seller: cardData.seller,
+    sellerPhone: cardData.sellerPhone,
+    number,
+  };
+
   const render = async (kind: "png" | "jpeg") => {
     const { toJpeg, toPng } = await import("html-to-image");
     const node = cardRef.current!;
-    const opts = { pixelRatio: 2, cacheBust: true, width: CARD_W, height: CARD_H, backgroundColor: "#0E0A1C", style: { transform: "none" } };
+    const opts = { pixelRatio: 2, cacheBust: true, width: W, height: H, backgroundColor: "#07060F", style: { transform: "none" } };
     // Primeira passada carrega fontes e imagens (evita imagem incompleta no Safari).
     await toPng(node, opts).catch(() => null);
     return kind === "png" ? toPng(node, opts) : toJpeg(node, { ...opts, quality: 0.92 });
@@ -170,7 +247,7 @@ export default function QuickQuotePage() {
     setBusy("pdf");
     try {
       const jpeg = dataUrlToBytes(await render("jpeg"));
-      const pdf = jpegToPdf(jpeg, CARD_W * 2, CARD_H * 2);
+      const pdf = jpegToPdf(jpeg, W * 2, H * 2);
       const url = URL.createObjectURL(new Blob([pdf.buffer as ArrayBuffer], { type: "application/pdf" }));
       download(url, `${filename}.pdf`);
       setTimeout(() => URL.revokeObjectURL(url), 5000);
@@ -257,6 +334,7 @@ export default function QuickQuotePage() {
                     if (!k) return;
                     set({ moduleW: k.modulePowerW || q.moduleW, modules: k.moduleQty || 0, inverterKw: k.inverterPowerKw * (k.inverterQty || 1) || 0 });
                     setBrands({ module: k.moduleBrand, inverter: k.inverterBrand });
+                    setImages((im) => ({ module: k.moduleImage || im.module, inverter: k.inverterImage || im.inverter }));
                   }}
                 >
                   <option value="">Usar kit salvo…</option>
@@ -353,6 +431,84 @@ export default function QuickQuotePage() {
               </Field>
             </div>
           </Card>
+          {template === "story" && (
+            <Card className="p-4 sm:p-5">
+              <h2 className="mb-3 font-display text-[15px] font-semibold">Arte da oferta</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2 flex flex-wrap gap-1.5">
+                  {HEADLINES.map(([a, b]) => (
+                    <button
+                      key={b}
+                      onClick={() => setO({ headline1: a, headline2: b })}
+                      className={cx(
+                        "rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 transition",
+                        offer.headline2 === b ? "bg-ink-900 text-white ring-ink-900" : "bg-white text-ink-600 ring-ink-200 hover:ring-ink-300",
+                      )}
+                    >
+                      {a} {b}
+                    </button>
+                  ))}
+                </div>
+                <Field label="Título (linha 1)">
+                  <Input value={offer.headline1} onChange={(e) => setO({ headline1: e.target.value })} />
+                </Field>
+                <Field label="Título (destaque)">
+                  <Input value={offer.headline2} onChange={(e) => setO({ headline2: e.target.value })} />
+                </Field>
+                <Field label="Selo da campanha" className="col-span-2" hint="Ex.: Oferta de Natal, Black Friday, Semana do Sol (deixe vazio para não mostrar)">
+                  <Input value={offer.campaign} onChange={(e) => setO({ campaign: e.target.value })} placeholder="Opcional" />
+                </Field>
+                <Field label="Tipo da placa">
+                  <Select value={offer.moduleType} onChange={(e) => setO({ moduleType: e.target.value })}>
+                    {["bifacial", "monocristalina", "N-type", "TOPCon", "half-cell", ""].map((t) => (
+                      <option key={t} value={t}>
+                        {t || "Não mostrar"}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Eficiência da placa">
+                  <NumberInput value={offer.efficiency} onChange={(efficiency) => setO({ efficiency })} suffix="%" digits={2} />
+                </Field>
+                <Field label="Garantia das placas">
+                  <NumberInput value={offer.moduleWarranty} onChange={(v) => setO({ moduleWarranty: Math.round(v) })} suffix="anos" digits={0} />
+                </Field>
+                <Field label="Garantia do inversor">
+                  <NumberInput value={offer.inverterWarranty} onChange={(v) => setO({ inverterWarranty: Math.round(v) })} suffix="anos" digits={0} />
+                </Field>
+                <Field label="Preço em destaque" className="col-span-2">
+                  <Segmented
+                    className="w-full [&>button]:flex-1"
+                    value={offer.highlight}
+                    onChange={(highlight: Highlight) => setO({ highlight })}
+                    options={[
+                      { value: "cartao", label: "Cartão" },
+                      { value: "financiamento", label: "Financiamento" },
+                      { value: "avista", label: "À vista" },
+                    ]}
+                  />
+                </Field>
+                <Field label="O que está incluso (um por linha, até 5)" className="col-span-2">
+                  <Textarea value={offer.included} onChange={(e) => setO({ included: e.target.value })} className="min-h-[120px]" />
+                </Field>
+                <Field label="Faixa 1 (cartão)" className="col-span-2">
+                  <Input value={offer.footer1} onChange={(e) => setO({ footer1: e.target.value })} />
+                </Field>
+                <Field label="Faixa 2 (financiamento)" className="col-span-2">
+                  <Input value={offer.footer2} onChange={(e) => setO({ footer2: e.target.value })} />
+                </Field>
+                <Field label="Foto da placa (URL)" hint="Vazio = ilustração">
+                  <Input value={images.module} onChange={(e) => setImages((im) => ({ ...im, module: e.target.value.trim() }))} placeholder="https://…" />
+                </Field>
+                <Field label="Foto do inversor (URL)" hint="Use PNG sem fundo">
+                  <Input value={images.inverter} onChange={(e) => setImages((im) => ({ ...im, inverter: e.target.value.trim() }))} placeholder="https://…" />
+                </Field>
+              </div>
+              <button onClick={() => setOffer({ ...DEFAULT_OFFER, moduleWarranty: settings.warranty_modules_years || 12, inverterWarranty: settings.warranty_inverter_years || 10 })} className="mt-3 flex items-center gap-1 text-xs font-semibold text-ink-400 hover:text-ink-700">
+                <RotateCcw className="h-3 w-3" /> Restaurar textos padrão
+              </button>
+            </Card>
+          )}
         </div>
 
         {/* Prévia + ações */}
@@ -369,10 +525,25 @@ export default function QuickQuotePage() {
                 {busy === "pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} PDF
               </Button>
             </div>
-            <div ref={boxRef} className="mx-auto w-full max-w-[540px]">
-              <div className="overflow-hidden rounded-[22px] shadow-lift" style={{ height: CARD_H * scale }}>
-                <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: CARD_W }}>
-                  {number ? <QuoteCard ref={cardRef} q={result} d={cardData} /> : <div style={{ width: CARD_W, height: CARD_H }} className="bg-[#0E0A1C]" />}
+            <Segmented
+              className="mb-3 flex w-full [&>button]:flex-1"
+              value={template}
+              onChange={setTemplate}
+              options={[
+                { value: "story", label: "Story · oferta (9:16)" },
+                { value: "post", label: "Post · resumo (4:5)" },
+              ]}
+            />
+            <div ref={boxRef} className={cx("mx-auto w-full", template === "story" ? "max-w-[430px]" : "max-w-[540px]")}>
+              <div className="overflow-hidden rounded-[22px] shadow-lift" style={{ height: H * scale }}>
+                <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: W }}>
+                  {!number ? (
+                    <div style={{ width: W, height: H }} className="bg-[#07060F]" />
+                  ) : template === "story" ? (
+                    <OfferCard ref={cardRef} q={result} d={offerData} />
+                  ) : (
+                    <QuoteCard ref={cardRef} q={result} d={cardData} />
+                  )}
                 </div>
               </div>
             </div>
