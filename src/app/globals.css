@@ -288,3 +288,44 @@
   box-shadow: 0 0.5px 4px rgba(0, 0, 0, 0.12), 0 6px 13px rgba(0, 0, 0, 0.12);
   cursor: pointer;
 }
+
+/* ---------------------------------------------------------- Anamnese (tema escuro) */
+.anam-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f3ea3b, #9bd373 var(--fill, 50%), rgb(255 255 255 / 0.12) var(--fill, 50%));
+  outline: none;
+  cursor: pointer;
+}
+.anam-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #f3ea3b;
+  border: 6px solid #1c1234;
+  box-shadow: 0 0 0 2px #f3ea3b, 0 8px 24px rgb(243 234 59 / 0.45);
+}
+.anam-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #f3ea3b;
+  border: 6px solid #1c1234;
+  box-shadow: 0 0 0 2px #f3ea3b;
+}
+@keyframes anam-flow { to { stroke-dashoffset: -24; } }
+.anam-flow { stroke-dasharray: 6 6; animation: anam-flow 0.9s linear infinite; }
+@keyframes anam-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+.anam-pulse { animation: anam-pulse 0.6s ease-out; }
+@keyframes anam-shine { from { transform: translateX(-120%) skewX(-20deg); } to { transform: translateX(220%) skewX(-20deg); } }
+.anam-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+  animation: anam-shine 2.8s ease-in-out infinite;
+}

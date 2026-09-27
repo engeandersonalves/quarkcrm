@@ -3,6 +3,7 @@
 import { ChevronDown, MessageCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { renderCopy } from "@/lib/cadence";
+import { anamneseUrl } from "./anamnese-link";
 import { stageOf } from "@/lib/constants";
 import { whatsappUrl } from "@/lib/format";
 import { supabase } from "@/lib/supabase/client";
@@ -53,6 +54,15 @@ export function WhatsAppMenu({ lead, proposalUrl }: { lead: Lead; proposalUrl?: 
     ...(!["save", "eletroposto"].includes(lead.segment ?? "solar")
       ? [{ id: "conta", label: "Pedir a conta de luz", text: `${hi} Para eu dimensionar o sistema ideal, você pode me enviar uma foto da sua última conta de luz (frente e verso)?` }]
       : [{ id: "local", label: "Pedir fotos do local", text: `${hi} Para eu orçar o carregador, pode me enviar uma foto do quadro de energia e do local onde o carro fica estacionado?` }]),
+    ...(!["save", "eletroposto"].includes(lead.segment ?? "solar")
+      ? [
+          {
+            id: "anamnese",
+            label: "Enviar diagnóstico (anamnese)",
+            text: `${hi} Preparei um diagnóstico rápido para calcular a sua economia com energia solar ☀️ São 2 minutinhos:\n${anamneseUrl({ seller: user.id, leadId: lead.id, name: lead.name })}`,
+          },
+        ]
+      : []),
     { id: "visita", label: "Agendar visita técnica", text: `${hi} Gostaria de agendar a visita técnica, sem custo. Qual o melhor dia e horário para você?` },
     {
       id: "proposta",

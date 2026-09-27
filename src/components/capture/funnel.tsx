@@ -64,7 +64,7 @@ export interface PublicCompany {
 }
 
 /** Marca a conversão no Pixel da Meta e no Google Analytics, se estiverem configurados. */
-function trackLead(segment: string | null, value: number) {
+export function trackLead(segment: string | null, value: number) {
   const w = window as unknown as { fbq?: (...a: unknown[]) => void; gtag?: (...a: unknown[]) => void };
   try {
     w.fbq?.("track", "Lead", { content_category: segment ?? "solar", value: Math.round(value), currency: "BRL" });

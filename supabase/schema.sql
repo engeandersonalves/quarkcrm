@@ -359,9 +359,42 @@ declare
   new_lead public.leads;
   v_phone text := left(trim(p ->> 'phone'), 30);
   v_email text := lower(left(nullif(trim(p ->> 'email'), ''), 160));
+  v_lead uuid;
+  v_owner uuid;
 begin
   if coalesce(trim(p ->> 'name'), '') = '' or coalesce(v_phone, '') = '' then
     raise exception 'nome e telefone são obrigatórios';
+  end if;
+
+  -- Vendedor que enviou o link (?v=): só vale para um usuário ativo da equipe.
+  begin
+    select id into v_owner from public.profiles where id = nullif(p ->> 'owner', '')::uuid and active;
+  exception when others then
+    v_owner := null;
+  end;
+
+  -- Anamnese enviada para um lead que já existe (?l=): completa o cadastro em vez de duplicar.
+  begin
+    v_lead := nullif(p ->> 'lead_id', '')::uuid;
+  exception when others then
+    v_lead := null;
+  end;
+  if v_lead is not null then
+    update public.leads set
+      email = coalesce(email, v_email),
+      city = coalesce(city, left(nullif(trim(p ->> 'city'), ''), 80)),
+      avg_bill = coalesce(nullif(p ->> 'avg_bill', '')::numeric, avg_bill),
+      consumption_kwh = coalesce(nullif(p ->> 'consumption_kwh', '')::numeric, consumption_kwh),
+      roof_type = coalesce(left(nullif(trim(p ->> 'roof_type'), ''), 60), roof_type),
+      temperature = case when p ->> 'temperature' in ('frio', 'morno', 'quente') then p ->> 'temperature' else temperature end,
+      notes = left(concat_ws(E'\n\n', nullif(notes, ''), nullif(trim(p ->> 'notes'), '')), 6000)
+    where id = v_lead
+    returning * into new_lead;
+    if found then
+      insert into public.activities (lead_id, type, content)
+      values (new_lead.id, 'nota', 'Cliente respondeu a ' || coalesce(nullif(trim(p ->> 'source'), ''), 'pesquisa') || ' pelo link');
+      return to_jsonb(new_lead) || jsonb_build_object('duplicate', false, 'updated', true);
+    end if;
   end if;
 
   -- Envio repetido (duplo clique, recarregar a página): devolve o mesmo lead, sem duplicar.
@@ -373,7 +406,7 @@ begin
     return to_jsonb(new_lead) || jsonb_build_object('duplicate', true);
   end if;
 
-  insert into public.leads (name, phone, email, city, state, address, avg_bill, consumption_kwh, source, notes, segment, roof_type, connection_type, temperature)
+  insert into public.leads (name, phone, email, city, state, address, avg_bill, consumption_kwh, source, notes, segment, roof_type, connection_type, temperature, owner_id)
   values (
     left(trim(p ->> 'name'), 120),
     v_phone,
@@ -384,11 +417,12 @@ begin
     nullif(p ->> 'avg_bill', '')::numeric,
     nullif(p ->> 'consumption_kwh', '')::numeric,
     left(coalesce(nullif(trim(p ->> 'source'), ''), 'Site'), 40),
-    left(nullif(trim(p ->> 'notes'), ''), 1000),
+    left(nullif(trim(p ->> 'notes'), ''), 2000),
     case when p ->> 'segment' in ('solar', 'save', 'ambos', 'eletroposto', 'manutencao', 'gestao') then p ->> 'segment' else 'solar' end,
     left(nullif(trim(p ->> 'roof_type'), ''), 60),
     case when p ->> 'connection_type' in ('mono', 'bi', 'tri') then p ->> 'connection_type' else null end,
-    case when p ->> 'temperature' in ('frio', 'morno', 'quente') then p ->> 'temperature' else 'morno' end
+    case when p ->> 'temperature' in ('frio', 'morno', 'quente') then p ->> 'temperature' else 'morno' end,
+    v_owner
   )
   returning * into new_lead;
 

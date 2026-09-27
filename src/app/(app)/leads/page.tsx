@@ -15,6 +15,7 @@ import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
 import { downloadCsv, today } from "@/lib/csv";
 import { ImportLeadsButton } from "@/components/app/import-leads";
+import { AnamneseLinkButton } from "@/components/app/anamnese-link";
 import { useReward } from "@/components/app/rewards";
 import { Mantra } from "@/components/app/mantra";
 import { supabase } from "@/lib/supabase/client";
@@ -102,6 +103,7 @@ function Leads() {
                 { value: "lista", label: <><List className="h-3.5 w-3.5" /> Lista</> },
               ]}
             />
+            <AnamneseLinkButton />
             <ImportLeadsButton onDone={reload} />
             <Button
               variant="secondary"
