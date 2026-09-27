@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type WebhookEvent = "lead.created" | "proposal.accepted" | "test";
+export type WebhookEvent = "lead.created" | "proposal.accepted" | "document.signed" | "test";
 
 /**
  * Envia um evento para o webhook configurado em Configurações → Integrações

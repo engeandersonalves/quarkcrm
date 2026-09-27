@@ -5,6 +5,7 @@ import {
   Calculator,
   CheckCircle2,
   Eye,
+  FileSignature,
   FileText,
   Flame,
   Loader2,
@@ -192,6 +193,11 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
                 </Button>
               </Link>
             )}
+            <Link href={`/documentos/novo?tipo=procuracao&lead=${lead.id}`}>
+              <Button variant="secondary">
+                <FileSignature className="h-4 w-4" /> Procuração
+              </Button>
+            </Link>
             {CHARGER_SEGMENTS.includes(seg) && (
               <Link href={`/propostas/nova?tipo=save&lead=${lead.id}`}>
                 <Button>
@@ -373,7 +379,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
               {!data.tasks.length ? (
                 <p className="px-3 pb-3 text-sm text-ink-400">Nenhuma tarefa. Agende o próximo contato!</p>
               ) : (
-                data.tasks.map((t) => <TaskRow key={t.id} task={t} showLead={false} />)
+                data.tasks.map((t) => <TaskRow key={t.id} task={t} showLead={false} lead={lead} />)
               )}
             </div>
           </Card>

@@ -40,6 +40,7 @@ export interface Lead {
   lost_reason: string | null;
   notes: string | null;
   owner_id: string | null;
+  created_by?: string | null;
   position: number;
   created_at: string;
   updated_at: string;
@@ -85,7 +86,46 @@ export interface Task {
   assigned_to: string | null;
   created_by: string | null;
   created_at: string;
+  /** Etapa da cadência que criou a tarefa (null = criada à mão). */
+  cadence?: LeadStatus | null;
+  /** Mensagem sugerida (com variáveis {nome}, {vendedor}…). */
+  copy?: string | null;
+  action?: "procuracao" | "aluguel" | "proposta" | null;
+  lead?: (Pick<Lead, "id" | "name"> & Partial<Pick<Lead, "phone" | "email" | "city" | "segment" | "status">>) | null;
+}
+
+export interface DocumentRow {
+  id: string;
+  kind: "procuracao" | "aluguel";
+  title: string;
+  lead_id: string | null;
+  data: Record<string, unknown>;
+  status: "rascunho" | "enviado" | "assinado" | "cancelado";
+  completed_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  signers?: DocumentSigner[];
   lead?: Pick<Lead, "id" | "name"> | null;
+}
+
+export interface DocumentSigner {
+  id: string;
+  document_id: string;
+  role: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  cpf: string | null;
+  position: number;
+  token: string;
+  viewed_at: string | null;
+  signed_at: string | null;
+  signed_name: string | null;
+  signed_cpf: string | null;
+  signature: string | null;
+  ip: string | null;
+  content_hash: string | null;
 }
 
 export interface Activity {

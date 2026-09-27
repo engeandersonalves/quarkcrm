@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { CADENCE_STAGES } from "@/lib/cadence";
 import { PRIORITIES, TASK_TYPES } from "@/lib/constants";
 import { fromLocalInput, toLocalInput } from "@/lib/format";
 import { must, notify, useLive } from "@/lib/live";
@@ -18,7 +19,7 @@ function defaultDue() {
 }
 
 export function TaskFormModal({ open, onClose, task, leadId }: { open: boolean; onClose: () => void; task?: Task | null; leadId?: string | null }) {
-  const { user, profiles } = useApp();
+  const { user, profiles, settings } = useApp();
   const [form, setForm] = useState<Partial<Task>>({});
   const [saving, setSaving] = useState(false);
 
@@ -51,6 +52,8 @@ export function TaskFormModal({ open, onClose, task, leadId }: { open: boolean; 
       due_at: form.due_at,
       lead_id: form.lead_id || null,
       assigned_to: form.assigned_to || null,
+      // Só envia a mensagem quando existe (compatível com bancos sem a coluna "copy").
+      ...(form.copy?.trim() || task?.copy ? { copy: form.copy?.trim() || null } : {}),
     };
     const sb = supabase();
     if (task?.id) {
@@ -135,6 +138,29 @@ export function TaskFormModal({ open, onClose, task, leadId }: { open: boolean; 
             </Select>
           </Field>
         </div>
+        <Field label="Mensagem pronta (opcional)" hint="Aparece na tarefa com botões de enviar no WhatsApp, e-mail ou copiar. Variáveis: {nome}, {vendedor}, {empresa}, {interesse}, {cidade}.">
+          <Select
+            value=""
+            onChange={(e) => {
+              const [stage, id] = e.target.value.split("|");
+              const step = settings.cadence.stages[stage as keyof typeof settings.cadence.stages]?.find((x) => x.id === id);
+              if (!step) return;
+              setForm((f) => ({ ...f, copy: step.copy, type: step.type, title: f.title?.trim() ? f.title : step.title }));
+            }}
+          >
+            <option value="">📚 Usar uma copy da biblioteca…</option>
+            {CADENCE_STAGES.map((st) => (
+              <optgroup key={st.id} label={st.label}>
+                {(settings.cadence.stages[st.id] ?? []).map((step) => (
+                  <option key={step.id} value={`${st.id}|${step.id}`}>
+                    {step.title}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </Select>
+          <Textarea value={form.copy ?? ""} onChange={(e) => set("copy", e.target.value)} placeholder="Olá, {nome}! …" className="mt-2" />
+        </Field>
         <Field label="Detalhes">
           <Textarea value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} />
         </Field>

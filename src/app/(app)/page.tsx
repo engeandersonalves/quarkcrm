@@ -18,12 +18,13 @@ import { relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, fmtNum, pct } from "@/lib/pricing";
 import { supabase } from "@/lib/supabase/client";
-import type { Lead, Proposal, Task } from "@/lib/types";
+import type { DocumentRow, Lead, Proposal, Task } from "@/lib/types";
 
 interface DashData {
   leads: Lead[];
   proposals: Proposal[];
   tasks: Task[];
+  documents: DocumentRow[];
 }
 
 export default function Dashboard() {
@@ -32,7 +33,7 @@ export default function Dashboard() {
   const { data, loading } = useLive<DashData>(
     async () => {
       const sb = supabase();
-      const [leads, proposals, tasks] = await Promise.all([
+      const [leads, proposals, tasks, docs] = await Promise.all([
         sb.from("leads").select("*").order("created_at", { ascending: false }),
         sb
           .from("proposals")
@@ -40,12 +41,19 @@ export default function Dashboard() {
           .select(
             "id,number,lead_id,title,status,power_kwp,monthly_generation,direct_cost,commission_value,tax_value,profit_value,final_price,public_token,valid_until,sent_at,viewed_at,view_count,accepted_at,accepted_by,created_by,created_at,updated_at, lead:leads(id,name,city,phone)",
           ).order("updated_at", { ascending: false }),
-        sb.from("tasks").select("*, lead:leads(id,name)").eq("done", false).order("due_at", { ascending: true, nullsFirst: false }),
+        sb.from("tasks").select("*, lead:leads(id,name,phone,email,city,segment,status)").eq("done", false).order("due_at", { ascending: true, nullsFirst: false }),
+        // Tolerante: funciona mesmo antes de rodar o schema.sql com a tabela de documentos.
+        sb.from("documents").select("id,kind,title,lead_id,status,updated_at,signers:document_signers(name,signed_at)").neq("status", "assinado"),
       ]);
-      return { leads: must(leads) as Lead[], proposals: must(proposals) as Proposal[], tasks: must(tasks) as Task[] };
+      return {
+        leads: must(leads) as Lead[],
+        proposals: must(proposals) as Proposal[],
+        tasks: must(tasks) as Task[],
+        documents: docs.error ? [] : ((docs.data ?? []) as unknown as DocumentRow[]),
+      };
     },
     [],
-    ["leads", "proposals", "tasks"],
+    ["leads", "proposals", "tasks", "documents"],
   );
 
   const m = useMemo(() => (data ? metrics(data) : null), [data]);
@@ -88,7 +96,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {data && <AttentionCard leads={data.leads} proposals={data.proposals} tasks={data.tasks} />}
+      {data && <AttentionCard leads={data.leads} proposals={data.proposals} tasks={data.tasks} documents={data.documents} />}
 
       {settings.app.showTips && <TipCard />}
 

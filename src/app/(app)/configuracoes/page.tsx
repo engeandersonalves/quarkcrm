@@ -20,12 +20,14 @@ import {
   UserRound,
   UsersRound,
   Webhook,
+  Zap,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
 import { CinematicBackdrop } from "@/components/app/cinematic";
 import { IntegrationsTab } from "@/components/app/integrations-tab";
+import { CadenceTab } from "@/components/app/cadence-tab";
 import { TeamTab } from "@/components/app/team-tab";
 import { Button, Card, CardHeader, Field, ImageField, Input, MoneyInput, NumberInput, PageHeader, Segmented, Select, Switch, Textarea, cx } from "@/components/ui";
 import { ROOF_TYPES } from "@/lib/constants";
@@ -36,7 +38,7 @@ import { brl, fmtNum, type AmountMode, type PriceComponent, type ProposalInputs 
 import { DEFAULT_FAQ, DEFAULT_TIMELINE, SECTION_LABELS } from "@/lib/proposal-content";
 import { supabase } from "@/lib/supabase/client";
 
-type Tab = "empresa" | "orcamento" | "kits" | "save" | "proposta" | "app" | "alertas" | "captura" | "integracoes" | "equipe" | "perfil";
+type Tab = "empresa" | "orcamento" | "kits" | "save" | "proposta" | "app" | "alertas" | "cadencias" | "captura" | "integracoes" | "equipe" | "perfil";
 
 const TABS: { id: Tab; label: string; icon: typeof Building2 }[] = [
   { id: "empresa", label: "Empresa", icon: Building2 },
@@ -46,6 +48,7 @@ const TABS: { id: Tab; label: string; icon: typeof Building2 }[] = [
   { id: "proposta", label: "Proposta", icon: FileText },
   { id: "app", label: "App & inspiração", icon: Sparkles },
   { id: "alertas", label: "Alertas", icon: Bell },
+  { id: "cadencias", label: "Cadências", icon: Zap },
   { id: "captura", label: "Captura", icon: Code2 },
   { id: "integracoes", label: "Integrações", icon: Webhook },
   { id: "equipe", label: "Equipe", icon: UsersRound },
@@ -409,6 +412,8 @@ export default function SettingsPage() {
               </div>
             </Card>
           )}
+
+          {tab === "cadencias" && <CadenceTab value={form.cadence} onChange={(v) => set("cadence", v)} />}
 
           {tab === "integracoes" && <IntegrationsTab form={form} onChange={(v) => set("integrations", v)} />}
 

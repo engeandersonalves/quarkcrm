@@ -2,6 +2,8 @@
 
 import { ChevronDown, MessageCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { renderCopy } from "@/lib/cadence";
+import { stageOf } from "@/lib/constants";
 import { whatsappUrl } from "@/lib/format";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead } from "@/lib/types";
@@ -61,6 +63,11 @@ export function WhatsAppMenu({ lead, proposalUrl }: { lead: Lead; proposalUrl?: 
     { id: "livre", label: "Mensagem em branco", text: `Olá, ${first}! Tudo bem?` },
   ];
 
+  // Copys da cadência para a etapa atual do lead.
+  const stageCopies: Template[] = (settings.cadence.stages[lead.status] ?? [])
+    .filter((s) => s.type === "whatsapp" && s.copy.trim())
+    .map((s) => ({ id: `cad-${s.id}`, label: s.title, text: renderCopy(s.copy, { name: lead.name, seller: profile?.full_name, company, segment: lead.segment, city: lead.city }) }));
+
   const send = (t: Template) => {
     setOpen(false);
     window.open(whatsappUrl(lead.phone, t.text), "_blank", "noopener");
@@ -79,7 +86,19 @@ export function WhatsAppMenu({ lead, proposalUrl }: { lead: Lead; proposalUrl?: 
         <MessageCircle className="h-4 w-4" /> WhatsApp <ChevronDown className="h-3.5 w-3.5" />
       </Button>
       {open && (
-        <div className="animate-fade-up absolute top-full left-0 z-30 mt-2 w-72 overflow-hidden rounded-2xl bg-white p-1.5 shadow-lift ring-1 ring-ink-200 sm:right-0 sm:left-auto">
+        <div className="animate-fade-up absolute top-full left-0 z-30 mt-2 max-h-[70vh] w-72 overflow-y-auto rounded-2xl bg-white p-1.5 shadow-lift ring-1 ring-ink-200 sm:right-0 sm:left-auto">
+          {stageCopies.length > 0 && (
+            <>
+              <p className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-sun-700 uppercase">⚡ Cadência · {stageOf(lead.status).label}</p>
+              {stageCopies.map((t) => (
+                <button key={t.id} onClick={() => send(t)} className="block w-full rounded-xl px-3 py-2 text-left hover:bg-ink-50">
+                  <span className="block text-sm font-medium text-ink-900">{t.label}</span>
+                  <span className="line-clamp-1 text-xs text-ink-500">{t.text}</span>
+                </button>
+              ))}
+              <div className="mx-3 my-1 h-px bg-ink-100" />
+            </>
+          )}
           <p className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-ink-400 uppercase">Mensagens prontas</p>
           {templates.map((t) => (
             <button key={t.id} onClick={() => send(t)} className="block w-full rounded-xl px-3 py-2 text-left hover:bg-ink-50">

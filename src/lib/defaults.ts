@@ -1,5 +1,6 @@
 import type { ProposalInputs } from "./pricing.ts";
 import type { SaveInputs } from "./save.ts";
+import { DEFAULT_CADENCE, mergeCadence, type CadencePrefs } from "./cadence.ts";
 
 export interface CompanySettings {
   company_name: string;
@@ -36,6 +37,8 @@ export interface CompanySettings {
   capture: CapturePrefs;
   /** Integrações: webhook (Zapier, Make, n8n, RD Station), Pixel da Meta e Google Analytics. */
   integrations: IntegrationPrefs;
+  /** Cadência de follow-up por etapa do funil (privado). */
+  cadence: CadencePrefs;
 }
 
 export interface IntegrationPrefs {
@@ -229,6 +232,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   },
   capture: DEFAULT_CAPTURE,
   integrations: { webhookUrl: "", metaPixelId: "", gaId: "" },
+  cadence: DEFAULT_CADENCE,
 };
 
 type StoredDefaults = Partial<ProposalInputs> & { kits?: KitPreset[]; app?: Partial<AppPrefs>; save?: Partial<SaveInputs> };
@@ -251,6 +255,7 @@ export function mergeSettings(s: Partial<CompanySettings> | null | undefined): C
     app: { ...DEFAULT_SETTINGS.app, ...(s?.app ?? {}), ...(app ?? {}) },
     capture: { ...DEFAULT_CAPTURE, ...((s?.capture ?? {}) as Partial<CapturePrefs>) },
     integrations: { ...DEFAULT_SETTINGS.integrations, ...((s?.integrations ?? {}) as Partial<IntegrationPrefs>) },
+    cadence: mergeCadence(s?.cadence),
     proposal: {
       ...DEFAULT_SETTINGS.proposal,
       ...proposal,

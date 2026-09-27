@@ -282,7 +282,7 @@ begin
     ),
     'lead', jsonb_build_object('name', l.name, 'city', l.city, 'state', l.state, 'address', l.address),
     'seller', jsonb_build_object('name', pr.full_name, 'email', pr.email, 'phone', pr.phone),
-    'settings', coalesce((select s.data - array['notify_emails', 'defaults'] from public.settings s where s.id = 1), '{}'::jsonb)
+    'settings', coalesce((select s.data - array['notify_emails', 'defaults', 'integrations', 'cadence'] from public.settings s where s.id = 1), '{}'::jsonb)
   )
   into result
   from public.proposals p
@@ -652,13 +652,256 @@ revoke all on function public.leaderboard(timestamptz) from public, anon;
 grant execute on function public.leaderboard(timestamptz) to authenticated;
 
 -- -----------------------------------------------------------------------------
+-- Cadência de follow-up: ao criar o lead ou mudar de etapa, cria as tarefas da etapa
+-- com a mensagem pronta. As tarefas automáticas ainda abertas da etapa anterior saem.
+-- -----------------------------------------------------------------------------
+alter table public.tasks add column if not exists cadence text;
+alter table public.tasks add column if not exists copy text;
+alter table public.tasks add column if not exists action text;
+
+-- Cadência padrão (editável em Configurações → Cadências). Só é gravada se ainda não existir.
+update public.settings
+   set data = data || jsonb_build_object('cadence', $cadence$ {"enabled":true,"materials":[],"stages":{"novo":[{"id":"novo-1","day":0,"hour":null,"type":"whatsapp","priority":"alta","title":"Primeiro contato (responda em até 5 minutos)","copy":"Olá, {nome}! Aqui é {vendedor}, da {empresa} ☀️ Recebi seu interesse em {interesse} e já estou preparando seu estudo. Posso te fazer 3 perguntinhas rápidas para calcular a sua economia?"},{"id":"novo-2","day":1,"hour":10,"type":"ligacao","priority":"alta","title":"Ligar para qualificar o cliente","copy":"Roteiro da ligação:\n1. Quanto vem, em média, a sua conta de luz?\n2. O imóvel é próprio? Qual o tipo de telhado?\n3. Em quanto tempo pensa em instalar?\n4. Mais alguém participa da decisão?\n5. Fechar: \"Vou montar seu estudo. Posso agendar a visita técnica gratuita?\""},{"id":"novo-3","day":2,"hour":15,"type":"whatsapp","priority":"media","title":"Pedir a conta de luz","copy":"{nome}, para eu calcular exatamente quanto você vai economizar, me manda uma foto da sua última conta de luz (frente e verso)? Com ela eu te entrego o projeto certinho, sem chute 📄"},{"id":"novo-4","day":4,"hour":10,"type":"whatsapp","priority":"media","title":"Enviar material gráfico: obras e depoimentos","copy":"{nome}, olha só algumas obras que entregamos aqui na região 👇 Tem cliente que pagava mais de R$ 600 e hoje paga só a taxa mínima. Quer que eu faça essa simulação para você?"},{"id":"novo-5","day":7,"hour":10,"type":"whatsapp","priority":"baixa","title":"Última tentativa (mensagem de despedida)","copy":"{nome}, tentei falar com você algumas vezes e não quero ser inconveniente 🙂 Ainda faz sentido conversarmos sobre {interesse}? Se não for o momento, me avisa que eu te chamo mais para frente."}],"contato":[{"id":"contato-1","day":0,"hour":null,"type":"whatsapp","priority":"alta","title":"Agendar a visita técnica","copy":"{nome}, para deixar o projeto perfeito, nosso técnico faz uma visita rápida (uns 30 minutos), sem custo nenhum. Qual dia e horário ficam melhores para você esta semana?"},{"id":"contato-2","day":1,"hour":10,"type":"email","priority":"media","title":"Enviar apresentação da empresa e garantias","copy":"Assunto: Sua energia solar com a {empresa}\n\nOlá, {nome}!\n\nConforme conversamos, segue nossa apresentação: como funciona o sistema, as garantias dos equipamentos e algumas obras que entregamos em {cidade}.\n\nQualquer dúvida, é só responder este e-mail ou me chamar no WhatsApp.\n\nAbraço,\n{vendedor} — {empresa}"},{"id":"contato-3","day":3,"hour":16,"type":"ligacao","priority":"media","title":"Ligar para tirar dúvidas e confirmar a visita","copy":"Pergunte: \"{nome}, ficou alguma dúvida sobre o material que te enviei?\" Reforce que a visita é gratuita e sem compromisso e já sugira dois horários."}],"visita":[{"id":"visita-1","day":0,"hour":null,"type":"whatsapp","priority":"alta","title":"Confirmar a visita técnica","copy":"Oi, {nome}! Passando para confirmar a nossa visita técnica. Nosso técnico vai avaliar o telhado e o padrão de energia — leva uns 30 minutinhos. Se puder, deixe separada a última conta de luz 😉"},{"id":"visita-2","day":1,"hour":9,"type":"tarefa","priority":"alta","title":"Montar o projeto e a proposta","copy":"Checklist: fotos do telhado, orientação e inclinação, padrão de entrada, distância até o quadro, consumo dos últimos 12 meses. Gere a proposta no app e envie no mesmo dia.","action":"proposta"},{"id":"visita-3","day":1,"hour":17,"type":"whatsapp","priority":"media","title":"Agradecer a visita","copy":"{nome}, obrigado por receber a gente! Já estou finalizando o seu projeto e em breve te mando a proposta com a economia detalhada ☀️"}],"proposta":[{"id":"proposta-1","day":0,"hour":null,"type":"whatsapp","priority":"alta","title":"Apresentar a proposta","copy":"{nome}, sua proposta está pronta! 🎉 Preparei tudo a partir da sua conta de luz: quanto você vai economizar, em quanto tempo o sistema se paga e as formas de pagamento. Consegue 10 minutinhos hoje para eu te explicar por chamada de vídeo?"},{"id":"proposta-2","day":1,"hour":10,"type":"ligacao","priority":"alta","title":"Ligar para explicar a proposta","copy":"Roteiro: 1) Relembre a dor (valor da conta hoje). 2) Mostre a economia em 25 anos. 3) Compare a parcela do financiamento com a conta atual. 4) Pergunte: \"O que falta para seguirmos?\""},{"id":"proposta-3","day":3,"hour":10,"type":"whatsapp","priority":"media","title":"Follow-up: tirar dúvidas do financiamento","copy":"{nome}, conseguiu dar uma olhada na proposta? Uma dúvida comum é o financiamento: a parcela costuma ficar menor que a conta de luz de hoje. Ou seja, você troca a conta pela parcela e, depois de quitado, fica só com a economia 💡 Quer que eu simule em quantas vezes fica melhor para você?"},{"id":"proposta-4","day":5,"hour":10,"type":"whatsapp","priority":"media","title":"Enviar material gráfico: depoimento em vídeo","copy":"{nome}, separei o depoimento de um cliente que estava na mesma situação que você 🎥 Vale a pena assistir! Depois me conta o que achou."},{"id":"proposta-5","day":7,"hour":10,"type":"whatsapp","priority":"alta","title":"Gatilho da validade da proposta","copy":"{nome}, a condição da sua proposta vale só até o fim desta semana — os preços dos equipamentos estão em alta. Quer que eu reserve o seu kit com esse valor?"},{"id":"proposta-6","day":12,"hour":10,"type":"ligacao","priority":"media","title":"Última tentativa antes de arquivar","copy":"Pergunte com sinceridade: \"{nome}, o que te impede de seguir hoje?\" Ouça a objeção (preço, confiança, momento) e ofereça uma saída: nova simulação, outra forma de pagamento ou visita de um cliente atendido."}],"negociacao":[{"id":"negociacao-1","day":0,"hour":null,"type":"ligacao","priority":"alta","title":"Entender a objeção e negociar","copy":"Descubra a objeção real: \"Se resolvermos isso, você fecha hoje?\" Preço → mostre a economia mensal. Confiança → envie obras e avaliações. Momento → mostre quanto ele perde por mês esperando."},{"id":"negociacao-2","day":1,"hour":10,"type":"whatsapp","priority":"alta","title":"Enviar condição especial","copy":"{nome}, conversei com a diretoria e consegui uma condição especial para você fechar esta semana 🙌 Posso te mandar o contrato para assinar pelo celular?"},{"id":"negociacao-3","day":2,"hour":10,"type":"whatsapp","priority":"alta","title":"Enviar contrato e procuração para assinatura digital","copy":"{nome}, segue o link para assinar a procuração que nos permite cuidar de todo o processo com a Equatorial para você. É só abrir e assinar pelo celular, leva 1 minuto ✍️","action":"procuracao"},{"id":"negociacao-4","day":4,"hour":10,"type":"whatsapp","priority":"media","title":"Follow-up de fechamento","copy":"{nome}, conseguiu ver o contrato? Assim que você assinar, eu já reservo o seu kit e agendo a instalação 📅"}],"ganho":[{"id":"ganho-1","day":0,"hour":null,"type":"whatsapp","priority":"alta","title":"Boas-vindas ao cliente","copy":"{nome}, seja muito bem-vindo(a) à {empresa}! 🎉 A partir de agora eu acompanho cada etapa: projeto, aprovação na Equatorial, instalação e ligação do sistema. Qualquer dúvida, é só me chamar."},{"id":"ganho-2","day":0,"hour":null,"type":"tarefa","priority":"alta","title":"Gerar a procuração e enviar para assinatura","copy":"{nome}, para darmos entrada no seu projeto na Equatorial, preciso que você assine a procuração pelo link abaixo. É rapidinho, direto pelo celular ✍️","action":"procuracao"},{"id":"ganho-3","day":1,"hour":10,"type":"tarefa","priority":"media","title":"Enviar kit de boas-vindas (material gráfico e cronograma)","copy":"{nome}, preparei um material para você acompanhar tudo: o cronograma da sua instalação e as próximas etapas. Qualquer dúvida, me chama! 📘"},{"id":"ganho-4","day":15,"hour":10,"type":"whatsapp","priority":"media","title":"Atualizar o cliente sobre a homologação","copy":"Oi, {nome}! Passando para te atualizar: o seu projeto está em análise na Equatorial e está tudo correndo bem. Assim que tivermos a aprovação, eu te aviso para agendarmos a instalação ⚡"},{"id":"ganho-5","day":45,"hour":10,"type":"whatsapp","priority":"media","title":"Pedir avaliação no Google","copy":"{nome}, que alegria ver seu sistema funcionando! ☀️ Você poderia deixar uma avaliação sobre a {empresa} no Google? Leva 30 segundos e ajuda muito o nosso trabalho 🙏"},{"id":"ganho-6","day":60,"hour":10,"type":"whatsapp","priority":"media","title":"Pedir indicações","copy":"{nome}, e aí, já está curtindo a conta de luz menor? ☀️ Se tiver amigos ou familiares que também querem economizar, me passa o contato — quem indica ganha um presente especial da {empresa} 🎁"},{"id":"ganho-7","day":180,"hour":10,"type":"ligacao","priority":"baixa","title":"Oferecer limpeza e manutenção preventiva","copy":"{nome}, seu sistema completa 6 meses! Poeira e fuligem nas placas podem reduzir a geração em até 25%. Posso agendar uma limpeza com inspeção completa?"}],"perdido":[{"id":"perdido-1","day":30,"hour":10,"type":"whatsapp","priority":"baixa","title":"Reativação: novas condições","copy":"Oi, {nome}! Tudo bem? Faz um tempinho que conversamos sobre {interesse}. Saíram novas condições de pagamento este mês — quer que eu atualize a sua simulação, sem compromisso?"},{"id":"perdido-2","day":90,"hour":10,"type":"whatsapp","priority":"baixa","title":"Reativação: aumento da tarifa","copy":"{nome}, a tarifa de energia subiu de novo 📈 Cada mês sem energia solar é dinheiro que não volta. Posso refazer os cálculos com a sua conta mais recente?"}]}} $cadence$::jsonb)
+ where id = 1 and not (data ? 'cadence');
+
+-- Horário da tarefa: dia 0 sem hora = em 10 minutos; domingo passa para segunda.
+create or replace function public.cadence_due(p_day int, p_hour int)
+returns timestamptz language plpgsql stable as $$
+declare
+  tz text := 'America/Maceio';
+  d timestamptz;
+begin
+  if coalesce(p_day, 0) = 0 and p_hour is null then
+    return now() + interval '10 minutes';
+  end if;
+  d := (date_trunc('day', now() at time zone tz) + make_interval(days => greatest(coalesce(p_day, 0), 0), hours => least(greatest(coalesce(p_hour, 9), 0), 23))) at time zone tz;
+  if extract(dow from d at time zone tz) = 0 then
+    d := d + interval '1 day';
+  end if;
+  if d < now() + interval '30 minutes' then
+    d := now() + interval '2 hours';
+  end if;
+  return d;
+end;
+$$;
+
+create or replace function public.apply_cadence()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  cfg jsonb;
+  step jsonb;
+  who uuid;
+begin
+  if tg_op = 'UPDATE' and new.status is not distinct from old.status then
+    return new;
+  end if;
+  select data -> 'cadence' into cfg from public.settings where id = 1;
+  if cfg is null or coalesce(cfg ->> 'enabled', 'true') = 'false' then
+    return new;
+  end if;
+  if tg_op = 'UPDATE' then
+    delete from public.tasks where lead_id = new.id and cadence is not null and not done;
+  end if;
+  who := coalesce(new.owner_id, new.created_by);
+  for step in select * from jsonb_array_elements(coalesce(cfg -> 'stages' -> new.status, '[]'::jsonb)) loop
+    begin
+      insert into public.tasks (title, type, priority, due_at, lead_id, assigned_to, created_by, cadence, copy, action)
+      values (
+        left(coalesce(nullif(trim(step ->> 'title'), ''), 'Follow-up'), 200),
+        coalesce(step ->> 'type', 'tarefa'),
+        coalesce(step ->> 'priority', 'media'),
+        public.cadence_due((step ->> 'day')::int, (step ->> 'hour')::int),
+        new.id, who, who, new.status,
+        nullif(left(step ->> 'copy', 4000), ''),
+        nullif(step ->> 'action', '')
+      );
+    exception when others then
+      raise warning 'cadência: passo ignorado (%)', sqlerrm;
+    end;
+  end loop;
+  return new;
+end;
+$$;
+drop trigger if exists leads_cadence on public.leads;
+create trigger leads_cadence after insert or update of status on public.leads
+  for each row execute function public.apply_cadence();
+
+-- -----------------------------------------------------------------------------
+-- Documentos com assinatura eletrônica (procuração e contrato de aluguel)
+-- -----------------------------------------------------------------------------
+create table if not exists public.documents (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('procuracao', 'aluguel')),
+  title text not null,
+  lead_id uuid references public.leads (id) on delete set null,
+  data jsonb not null default '{}'::jsonb,
+  status text not null default 'rascunho' check (status in ('rascunho', 'enviado', 'assinado', 'cancelado')),
+  completed_at timestamptz,
+  created_by uuid references public.profiles (id) on delete set null default auth.uid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists documents_lead_idx on public.documents (lead_id);
+
+create table if not exists public.document_signers (
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null references public.documents (id) on delete cascade,
+  role text not null,
+  name text not null,
+  email text,
+  phone text,
+  cpf text,
+  position int not null default 0,
+  token text not null unique default encode(gen_random_bytes(16), 'hex'),
+  viewed_at timestamptz,
+  signed_at timestamptz,
+  signed_name text,
+  signed_cpf text,
+  signature text,
+  ip text,
+  user_agent text,
+  content_hash text,
+  created_at timestamptz not null default now(),
+  unique (document_id, role)
+);
+create index if not exists document_signers_doc_idx on public.document_signers (document_id);
+
+alter table public.documents enable row level security;
+alter table public.document_signers enable row level security;
+drop policy if exists "team_all" on public.documents;
+create policy "team_all" on public.documents for all to authenticated using (public.is_member()) with check (public.is_member());
+drop policy if exists "team_all" on public.document_signers;
+create policy "team_all" on public.document_signers for all to authenticated using (public.is_member()) with check (public.is_member());
+
+drop trigger if exists touch_documents on public.documents;
+create trigger touch_documents before update on public.documents for each row execute function public.touch_updated_at();
+
+-- Depois da primeira assinatura, o texto do documento não pode mais mudar.
+create or replace function public.guard_document()
+returns trigger language plpgsql as $$
+begin
+  if new.data is distinct from old.data or new.kind is distinct from old.kind then
+    if exists (select 1 from public.document_signers where document_id = old.id and signed_at is not null) then
+      raise exception 'Documento já assinado: crie uma nova versão para alterar o texto.';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists documents_guard on public.documents;
+create trigger documents_guard before update on public.documents for each row execute function public.guard_document();
+
+-- Uma assinatura registrada é permanente.
+create or replace function public.guard_signer()
+returns trigger language plpgsql as $$
+begin
+  if old.signed_at is not null then
+    raise exception 'Assinatura já registrada não pode ser alterada.';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists document_signers_guard on public.document_signers;
+create trigger document_signers_guard before update on public.document_signers for each row execute function public.guard_signer();
+
+-- Código de verificação do conteúdo assinado.
+create or replace function public.document_hash(p_doc public.documents)
+returns text language sql immutable as $$
+  select encode(sha256(convert_to(p_doc.kind || ':' || p_doc.data::text, 'UTF8')), 'hex');
+$$;
+
+-- Página pública de assinatura: documento, quem assina e o registro das assinaturas.
+create or replace function public.get_public_document(p_token text)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare
+  s public.document_signers;
+  d public.documents;
+begin
+  select * into s from public.document_signers where token = p_token;
+  if s.id is null then
+    return null;
+  end if;
+  select * into d from public.documents where id = s.document_id;
+  if d.status = 'cancelado' then
+    return jsonb_build_object('cancelled', true);
+  end if;
+  return jsonb_build_object(
+    'document', jsonb_build_object('id', d.id, 'kind', d.kind, 'title', d.title, 'data', d.data, 'status', d.status,
+                                   'created_at', d.created_at, 'completed_at', d.completed_at, 'hash', public.document_hash(d)),
+    'signer', jsonb_build_object('role', s.role, 'name', s.name, 'cpf', s.cpf, 'signed_at', s.signed_at, 'signed_name', s.signed_name),
+    'signers', (select coalesce(jsonb_agg(jsonb_build_object(
+                  'role', x.role, 'name', x.name, 'signed_at', x.signed_at, 'signed_name', x.signed_name,
+                  'signed_cpf', x.signed_cpf, 'signature', x.signature, 'ip', x.ip, 'content_hash', x.content_hash
+                ) order by x.position), '[]'::jsonb)
+                from public.document_signers x where x.document_id = d.id),
+    'company', (select jsonb_build_object('company_name', data ->> 'company_name', 'logo_url', data ->> 'logo_url',
+                  'whatsapp', data ->> 'whatsapp', 'phone', data ->> 'phone', 'email', data ->> 'email')
+                from public.settings where id = 1),
+    'seller', (select jsonb_build_object('name', p.full_name, 'email', p.email, 'phone', p.phone) from public.profiles p where p.id = d.created_by)
+  );
+end;
+$$;
+
+create or replace function public.view_public_document(p_token text)
+returns void language sql security definer set search_path = public as $$
+  update public.document_signers set viewed_at = now() where token = p_token and viewed_at is null and signed_at is null;
+$$;
+
+create or replace function public.sign_public_document(p_token text, p_name text, p_cpf text, p_signature text, p_ip text, p_ua text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  s public.document_signers;
+  d public.documents;
+  pending int;
+begin
+  if coalesce(length(trim(p_name)), 0) < 5 or length(regexp_replace(coalesce(p_cpf, ''), '\D', '', 'g')) not in (11, 14)
+     or p_signature not like 'data:image/png;base64,%' or length(p_signature) > 300000 then
+    return jsonb_build_object('ok', false, 'error', 'dados');
+  end if;
+  select * into s from public.document_signers where token = p_token for update;
+  if s.id is null or s.signed_at is not null then
+    return jsonb_build_object('ok', false, 'error', 'assinado');
+  end if;
+  select * into d from public.documents where id = s.document_id;
+  if d.status = 'cancelado' then
+    return jsonb_build_object('ok', false, 'error', 'cancelado');
+  end if;
+
+  update public.document_signers
+     set signed_at = now(), signed_name = left(trim(p_name), 160), signed_cpf = left(regexp_replace(p_cpf, '\D', '', 'g'), 14),
+         signature = p_signature, ip = left(p_ip, 64), user_agent = left(p_ua, 300), content_hash = public.document_hash(d),
+         viewed_at = coalesce(viewed_at, now())
+   where id = s.id;
+
+  select count(*) into pending from public.document_signers where document_id = d.id and signed_at is null;
+  update public.documents
+     set status = case when pending = 0 then 'assinado' else 'enviado' end,
+         completed_at = case when pending = 0 then now() else null end
+   where id = d.id;
+
+  if d.lead_id is not null then
+    insert into public.activities (lead_id, type, content)
+    values (d.lead_id, 'documento', d.title || ': assinado por ' || left(trim(p_name), 160) || case when pending = 0 then ' (todas as assinaturas concluídas)' else '' end);
+  end if;
+  return jsonb_build_object('ok', true, 'completed', pending = 0, 'title', d.title, 'document_id', d.id, 'lead_id', d.lead_id);
+end;
+$$;
+
+revoke all on function public.get_public_document(text) from public;
+revoke all on function public.view_public_document(text) from public;
+revoke all on function public.sign_public_document(text, text, text, text, text, text) from public;
+grant execute on function public.get_public_document(text) to anon, authenticated;
+grant execute on function public.view_public_document(text) to anon, authenticated;
+grant execute on function public.sign_public_document(text, text, text, text, text, text) to anon, authenticated;
+
+-- -----------------------------------------------------------------------------
 -- Tempo real
 -- -----------------------------------------------------------------------------
 do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles'] loop
+    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers'] loop
       if not exists (
         select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
       ) then

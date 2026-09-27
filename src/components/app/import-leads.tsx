@@ -46,6 +46,7 @@ export function ImportLeadsButton({ onDone }: { onDone?: () => void }) {
   const [mapped, setMapped] = useState<string[]>([]);
   const [fileName, setFileName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [cadence, setCadence] = useState(true);
   const input = useRef<HTMLInputElement>(null);
 
   const read = async (file: File) => {
@@ -66,6 +67,8 @@ export function ImportLeadsButton({ onDone }: { onDone?: () => void }) {
     setFileName(file.name);
     setMapped(Object.keys(index));
     setRows(list);
+    // Importação grande: por padrão não enche a agenda com milhares de tarefas.
+    setCadence(list.length <= 30);
   };
 
   const importAll = async () => {
@@ -84,11 +87,18 @@ export function ImportLeadsButton({ onDone }: { onDone?: () => void }) {
     }));
     let ok = 0;
     for (let i = 0; i < payload.length; i += 200) {
-      const { error } = await supabase().from("leads").insert(payload.slice(i, i + 200));
+      const { data: created, error } = await supabase().from("leads").insert(payload.slice(i, i + 200)).select("id");
       if (error) {
         setBusy(false);
         return toast.error(`Parou na linha ${i + 2}: ${error.message}`);
       }
+      if (!cadence && created?.length)
+        await supabase()
+          .from("tasks")
+          .delete()
+          .in("lead_id", created.map((c: { id: string }) => c.id))
+          .not("cadence", "is", null)
+          .eq("done", false);
       ok += Math.min(200, payload.length - i);
     }
     setBusy(false);
@@ -175,6 +185,13 @@ export function ImportLeadsButton({ onDone }: { onDone?: () => void }) {
               </table>
             </div>
             {rows.length > 8 && <p className="mt-1 text-xs text-ink-400">e mais {rows.length - 8}…</p>}
+            <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl bg-ink-50 p-3 text-[13px] text-ink-700">
+              <input type="checkbox" checked={cadence} onChange={(e) => setCadence(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#1C1234]" />
+              <span>
+                <b>Criar a cadência de follow-up</b> para estes leads (tarefas automáticas com mensagens prontas).
+                {rows.length > 30 && " Com muitos leads, a agenda pode ficar cheia."}
+              </span>
+            </label>
           </div>
         )}
       </Modal>
