@@ -99,12 +99,12 @@ export const QuoteCard = forwardRef<HTMLDivElement, { q: QuickQuote; d: QuoteCar
         {/* sistema */}
         <div className="mt-3 grid grid-cols-3 gap-2">
           {[
-            [`${fmtNum(q.kwp, 2)} kWp`, "potência"],
+            [`${fmtNum(q.generation)} kWh`, "geração média mensal"],
             [`${q.modules} placas`, `${d.moduleBrand ? `${d.moduleBrand} ` : ""}${d.moduleW} W`],
             [`${fmtNum(q.inverterKw, q.inverterKw % 1 ? 1 : 0)} kW`, d.inverterBrand ? `inversor ${d.inverterBrand}` : "inversor"],
-            [`${fmtNum(q.generation)} kWh`, "gerados por mês"],
+            [`${fmtNum(q.coverage * 100)}%`, "do consumo atendido"],
             [`${q.areaM2} m²`, "de área"],
-            [q.paybackYears > 0 ? `${fmtNum(q.paybackYears, 1)} anos` : `${fmtNum(q.coverage * 100)}%`, q.paybackYears > 0 ? "de retorno" : "do consumo"],
+            q.paybackYears > 0 ? [`${fmtNum(q.paybackYears, 1)} anos`, "de retorno"] : [`${fmtNum(q.co2Tons25y, 0)} t`, "de CO₂ evitado em 25 anos"],
           ].map(([v, l]) => (
             <div key={l} className="rounded-[14px] bg-white/[0.07] px-3 py-2 ring-1 ring-white/10">
               <p className="text-[15px] leading-tight font-bold tabular-nums">{v}</p>

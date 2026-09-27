@@ -22,6 +22,7 @@ export interface OfferData {
   efficiency: number;
   moduleWarranty: number;
   inverterBrand: string;
+  inverterKw: number;
   inverterWarranty: number;
   moduleImage?: string | null;
   inverterImage?: string | null;
@@ -263,7 +264,7 @@ export const OfferCard = forwardRef<HTMLDivElement, { q: QuickQuote; d: OfferDat
           </>
         )}
         {d.inverterImage ? (
-          <div className="absolute bottom-0 left-4 flex h-[150px] w-[150px] items-center justify-center">
+          <div className="absolute bottom-0 left-2 flex h-[150px] w-[185px] items-center justify-center">
             <ProductPhoto
               src={d.inverterImage}
               shadow="drop-shadow(0 20px 26px rgba(0,0,0,0.7))"
@@ -274,23 +275,23 @@ export const OfferCard = forwardRef<HTMLDivElement, { q: QuickQuote; d: OfferDat
           <InverterArt id="inv" brand={d.inverterBrand || "Inversor"} className="absolute bottom-0 left-8 h-[150px] w-auto" style={{ filter: "drop-shadow(0 20px 26px rgba(0,0,0,0.7))" }} />
         )}
         <div className="absolute bottom-[164px] left-3 z-10 rounded-[14px] bg-[#0D0B1A]/85 px-2.5 py-1.5 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.7)] ring-1 ring-[#9BD373]/40">
-          <p className="text-[17px] leading-none font-extrabold" style={{ fontFamily: SORA }}>
-            {d.inverterWarranty} anos
+          <p className="text-[8.5px] font-bold tracking-[0.14em] text-[#C7E36B] uppercase">Inversor</p>
+          <p className="text-[15px] leading-tight font-extrabold" style={{ fontFamily: SORA }}>
+            {[d.inverterBrand.trim(), d.inverterKw > 0 ? `${fmtNum(d.inverterKw, d.inverterKw % 1 ? 1 : 0)} kW` : ""].filter(Boolean).join(" · ") || "On-grid"}
           </p>
-          <p className="text-[9px] text-white/70">garantia do inversor</p>
+          <p className="text-[9px] text-white/70">{d.inverterWarranty} anos de garantia</p>
         </div>
       </div>
 
       <div className="absolute top-[270px] right-6 grid w-[200px] gap-2">
-        <Badge icon={I.bolt} value={`${d.moduleW}W`} label={[d.moduleType, d.moduleBrand].filter(Boolean).join(" · ") || "por placa"} />
+        <Badge icon={I.bolt} value={`${d.moduleW}W`} label={[d.moduleBrand.trim() && `placa ${d.moduleBrand.trim()}`, d.moduleType].filter(Boolean).join(" · ") || "por placa"} />
         {d.efficiency > 0 && <Badge icon={I.chart} value={`${fmtNum(d.efficiency, 2)}%`} label="de eficiência" />}
         <Badge icon={I.shield} value={`${d.moduleWarranty} anos`} label="de garantia das placas" />
         <div className="rounded-[16px] bg-white/[0.07] px-3 py-2 ring-1 ring-white/15 backdrop-blur-md">
-          <p className="text-[10px] text-white/60">Seu sistema</p>
-          <p className="text-[15px] leading-tight font-extrabold" style={{ fontFamily: SORA }}>
-            {fmtNum(q.kwp, 2)} kWp · {q.modules} placas
+          <p className="text-[10px] text-white/60">Geração média mensal</p>
+          <p className="text-[22px] leading-tight font-extrabold" style={{ fontFamily: SORA }}>
+            {fmtNum(q.generation)} <span className="text-[13px] font-bold text-[#C7E36B]">kWh/mês</span>
           </p>
-          <p className="text-[10.5px] font-semibold text-[#C7E36B]">gera ≈ {fmtNum(q.generation)} kWh/mês</p>
         </div>
       </div>
 

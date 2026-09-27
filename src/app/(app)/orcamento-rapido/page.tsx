@@ -16,7 +16,7 @@ import { dataUrlToBytes, jpegToPdf } from "@/lib/pdf-image";
 import { brl, fmtNum } from "@/lib/pricing";
 import { DEFAULT_QUICK, inverterFor, modulesFor, quickQuote, type QuickQuoteInput } from "@/lib/quick-quote";
 import { supabase } from "@/lib/supabase/client";
-import { FIXED_INVERTER_IMAGE, FIXED_MODULE_IMAGE, inverterImageOf, moduleImageOf, productImg } from "@/lib/product-images";
+import { FIXED_INVERTER_BRAND, FIXED_INVERTER_IMAGE, FIXED_MODULE_IMAGE, inverterImageOf, moduleImageOf, productImg } from "@/lib/product-images";
 import type { Lead } from "@/lib/types";
 
 type LeadLite = Pick<Lead, "id" | "name" | "phone" | "city" | "consumption_kwh" | "avg_bill" | "roof_type" | "connection_type">;
@@ -185,7 +185,8 @@ export default function QuickQuotePage() {
     moduleType: offer.moduleType,
     efficiency: offer.efficiency,
     moduleWarranty: offer.moduleWarranty,
-    inverterBrand: brands.inverter,
+    inverterBrand: brands.inverter || (FIXED_INVERTER_IMAGE ? FIXED_INVERTER_BRAND : ""),
+    inverterKw: result.inverterKw,
     inverterWarranty: offer.inverterWarranty,
     moduleImage: productImg(moduleImageOf(images.module)) || null,
     inverterImage: productImg(inverterImageOf(images.inverter)) || null,
@@ -360,16 +361,16 @@ export default function QuickQuotePage() {
               <Field label="Inversor" hint={q.inverterKw ? <button className="font-semibold text-sun-700" onClick={() => set({ inverterKw: 0 })}>automático ({fmtNum(inverterFor(result.kwp), 1)} kW)</button> : "automático"}>
                 <NumberInput value={result.inverterKw} onChange={(v) => set({ inverterKw: v })} suffix="kW" digits={1} />
               </Field>
-              <Field label="Potência">
+              <Field label="Geração média mensal">
                 <div className="flex h-11 items-center rounded-xl bg-ink-50 px-3.5 text-sm font-semibold tabular-nums ring-1 ring-ink-200 sm:h-10">
-                  {fmtNum(result.kwp, 2)} kWp · {fmtNum(result.generation)} kWh/mês
+                  {fmtNum(result.generation)} kWh/mês
                 </div>
               </Field>
               <Field label="Marca da placa">
-                <Input value={brands.module} onChange={(e) => setBrands((b) => ({ ...b, module: e.target.value }))} placeholder="Opcional" />
+                <Input value={brands.module} onChange={(e) => setBrands((b) => ({ ...b, module: e.target.value }))} placeholder="Ex.: JA Solar" />
               </Field>
               <Field label="Marca do inversor">
-                <Input value={brands.inverter} onChange={(e) => setBrands((b) => ({ ...b, inverter: e.target.value }))} placeholder="Opcional" />
+                <Input value={brands.inverter} onChange={(e) => setBrands((b) => ({ ...b, inverter: e.target.value }))} placeholder={FIXED_INVERTER_IMAGE ? FIXED_INVERTER_BRAND : "Opcional"} />
               </Field>
             </div>
           </Card>
