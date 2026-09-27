@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, FileSignature, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
+import { BarChart3, CheckSquare, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -30,7 +30,8 @@ const SAVE_NAV = { href: "/propostas?tipo=save", label: "S.A.V.E", icon: PlugZap
 const ARENA_NAV = { href: "/ranking", label: "Arena", icon: Trophy };
 const REPORTS_NAV = { href: "/relatorios", label: "Relatórios", icon: BarChart3 };
 const DOCS_NAV = { href: "/documentos", label: "Documentos", icon: FileSignature };
-const DESKTOP_NAV = [...NAV.slice(0, 3), SAVE_NAV, NAV[3], DOCS_NAV, REPORTS_NAV, ARENA_NAV, NAV[4]];
+const MARKETING_NAV = { href: "/marketing", label: "Marketing", icon: Megaphone };
+const DESKTOP_NAV = [...NAV.slice(0, 3), SAVE_NAV, NAV[3], DOCS_NAV, MARKETING_NAV, REPORTS_NAV, ARENA_NAV, NAV[4]];
 
 
 interface QuickCtx {
@@ -214,6 +215,7 @@ function ShellInner({ children }: { children: ReactNode }) {
               <FabItem icon={<Zap className="h-5 w-5" />} title="Orçamento rápido" text="Imagem pronta para o WhatsApp" onClick={() => router.push("/orcamento-rapido")} />
               <FabItem icon={<UserPlus className="h-5 w-5" />} title="Novo lead" text="Cadastrar um cliente" onClick={() => openLead()} />
               <FabItem icon={<ListTodo className="h-5 w-5" />} title="Nova tarefa" text="Agendar um follow-up" onClick={() => openTask()} />
+              <FabItem icon={<Megaphone className="h-5 w-5" />} title="Marketing" text="Artes para Instagram e status" onClick={() => router.push("/marketing")} />
               <FabItem icon={<FileSignature className="h-5 w-5" />} title="Procuração ou contrato" text="Documentos com assinatura digital" onClick={() => router.push("/documentos")} />
               <FabItem icon={<Settings className="h-5 w-5" />} title="Configurações" text="Empresa, padrões e alertas" onClick={() => router.push("/configuracoes")} />
             </div>

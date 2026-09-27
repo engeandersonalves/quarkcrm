@@ -114,6 +114,17 @@ function InverterArt({ id, brand, className, style }: { id: string; brand: strin
   );
 }
 
+/** Selo dourado "Equipamento premium" (com o nome da campanha, se houver). */
+function Seal({ campaign, className }: { campaign: string; className?: string }) {
+  const c = campaign.trim().slice(0, 22);
+  return (
+    <div className={`rounded-[12px] bg-gradient-to-br from-[#F6DE83] via-[#E4B83A] to-[#C98A1E] px-2.5 py-1 text-center text-[#2A1A05] shadow-[0_10px_22px_-6px_rgba(230,180,60,0.75)] ring-1 ring-[#FFF3C4]/70 ${className ?? ""}`}>
+      {c && <p className="text-[7px] leading-tight font-extrabold tracking-[0.12em] whitespace-nowrap uppercase opacity-80">{c}</p>}
+      <p className="text-[9px] leading-tight font-black tracking-[0.05em] whitespace-nowrap uppercase">★ Equipamento premium</p>
+    </div>
+  );
+}
+
 function Badge({ icon, value, label, className }: { icon: ReactNode; value: string; label: string; className?: string }) {
   return (
     <div className={`flex items-center gap-2 rounded-[16px] bg-gradient-to-r from-[#9BD373] to-[#E4E75A] py-1.5 pr-3.5 pl-1.5 text-[#0B0918] shadow-[0_10px_30px_-10px_rgba(155,211,115,0.7)] ${className ?? ""}`}>
@@ -247,34 +258,36 @@ export const OfferCard = forwardRef<HTMLDivElement, { q: QuickQuote; d: OfferDat
       </div>
 
       {/* ---------- produtos ---------- */}
-      <div className="absolute top-[262px] left-0 h-[272px] w-[330px]">
-        <div className="absolute bottom-3 left-10 h-10 w-[270px] rounded-[50%] bg-[#9BD373]/25 blur-2xl" />
+      <div className="absolute top-[248px] left-0 h-[296px] w-[336px]">
+        <div className="absolute bottom-2 left-8 h-12 w-[290px] rounded-[50%] bg-[#9BD373]/25 blur-2xl" />
         {d.moduleImage ? (
-          <div className="absolute top-0 right-2 left-[70px] flex h-[232px] items-center justify-center">
+          <div className="absolute top-0 right-0 left-[58px] flex h-[262px] items-center justify-center">
             <ProductPhoto
               src={d.moduleImage}
-              shadow="drop-shadow(0 20px 30px rgba(0,0,0,0.6))"
-              fallback={<PanelArt id="p1f" className="h-[215px] w-auto" style={{ filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.55))" }} />}
+              shadow="drop-shadow(0 22px 32px rgba(0,0,0,0.6))"
+              fallback={<PanelArt id="p1f" className="h-[245px] w-auto" style={{ filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.55))" }} />}
             />
           </div>
         ) : (
           <>
-            <PanelArt id="p1" className="absolute top-0 left-[92px] h-[215px] w-auto" style={{ filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.55))" }} />
-            <PanelArt id="p2" className="absolute top-[16px] left-[178px] h-[215px] w-auto" style={{ filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.6))" }} />
+            <PanelArt id="p1" className="absolute top-0 left-[86px] h-[245px] w-auto" style={{ filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.55))" }} />
+            <PanelArt id="p2" className="absolute top-[18px] left-[182px] h-[245px] w-auto" style={{ filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.6))" }} />
           </>
         )}
+        <Seal campaign={d.campaign} className="absolute top-2 left-[104px] z-20 -rotate-[4deg]" />
         {d.inverterImage ? (
-          <div className="absolute bottom-0 left-2 flex h-[150px] w-[185px] items-center justify-center">
+          <div className="absolute bottom-0 left-0 z-10 flex h-[176px] w-[220px] items-center justify-center">
             <ProductPhoto
               src={d.inverterImage}
-              shadow="drop-shadow(0 20px 26px rgba(0,0,0,0.7))"
-              fallback={<InverterArt id="invf" brand={d.inverterBrand || "Inversor"} className="h-[150px] w-auto" />}
+              shadow="drop-shadow(0 22px 28px rgba(0,0,0,0.7))"
+              fallback={<InverterArt id="invf" brand={d.inverterBrand || "Inversor"} className="h-[172px] w-auto" />}
             />
           </div>
         ) : (
-          <InverterArt id="inv" brand={d.inverterBrand || "Inversor"} className="absolute bottom-0 left-8 h-[150px] w-auto" style={{ filter: "drop-shadow(0 20px 26px rgba(0,0,0,0.7))" }} />
+          <InverterArt id="inv" brand={d.inverterBrand || "Inversor"} className="absolute bottom-0 left-6 z-10 h-[172px] w-auto" style={{ filter: "drop-shadow(0 20px 26px rgba(0,0,0,0.7))" }} />
         )}
-        <div className="absolute bottom-[164px] left-3 z-10 rounded-[14px] bg-[#0D0B1A]/85 px-2.5 py-1.5 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.7)] ring-1 ring-[#9BD373]/40">
+        <Seal campaign={d.campaign} className="absolute bottom-[8px] left-[128px] z-20 rotate-[3deg]" />
+        <div className="absolute bottom-[184px] left-3 z-20 rounded-[14px] bg-[#0D0B1A]/85 px-2.5 py-1.5 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.7)] ring-1 ring-[#9BD373]/40">
           <p className="text-[8.5px] font-bold tracking-[0.14em] text-[#C7E36B] uppercase">Inversor</p>
           <p className="text-[15px] leading-tight font-extrabold" style={{ fontFamily: SORA }}>
             {[d.inverterBrand.trim(), d.inverterKw > 0 ? `${fmtNum(d.inverterKw, d.inverterKw % 1 ? 1 : 0)} kW` : ""].filter(Boolean).join(" · ") || "On-grid"}

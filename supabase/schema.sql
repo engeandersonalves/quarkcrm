@@ -929,13 +929,34 @@ grant execute on function public.view_public_document(text) to anon, authenticat
 grant execute on function public.sign_public_document(text, text, text, text, text, text) to anon, authenticated;
 
 -- -----------------------------------------------------------------------------
+-- Marketing: artes prontas (Claude Design, Canva…) para baixar e postar
+-- -----------------------------------------------------------------------------
+create table if not exists public.marketing_assets (
+  id uuid primary key default gen_random_uuid(),
+  title text not null default '',
+  url text not null,
+  path text,
+  kind text not null default 'image' check (kind in ('image', 'video')),
+  width int,
+  height int,
+  caption text,
+  campaign text,
+  created_by uuid references public.profiles (id) on delete set null default auth.uid(),
+  created_at timestamptz not null default now()
+);
+create index if not exists marketing_assets_created_idx on public.marketing_assets (created_at desc);
+alter table public.marketing_assets enable row level security;
+drop policy if exists "team_all" on public.marketing_assets;
+create policy "team_all" on public.marketing_assets for all to authenticated using (public.is_member()) with check (public.is_member());
+
+-- -----------------------------------------------------------------------------
 -- Tempo real
 -- -----------------------------------------------------------------------------
 do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers'] loop
+    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers', 'marketing_assets'] loop
       if not exists (
         select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
       ) then
