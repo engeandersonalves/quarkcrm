@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowDown, ArrowUp, BatteryCharging, Cable, Camera, CheckCircle2, CircleSlash, Cpu, Focus, Plus, ScanEye, ShieldCheck, Trash2, XCircle, Zap } from "lucide-react";
+import { PanelTop, AlertTriangle, ArrowDown, ArrowUp, BatteryCharging, Cable, Camera, CheckCircle2, CircleSlash, Cpu, Focus, Plus, ScanEye, ShieldCheck, Trash2, XCircle, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cx } from "../ui";
 import { BoardScene, WIRE, type BoardItem, type BoardSelection } from "./board-scene";
@@ -52,6 +52,7 @@ export function ElectricalStudio({
   const scene = useRef<BoardScene | null>(null);
   const [selection, setSelection] = useState<BoardSelection>(null);
   const [xray, setXray] = useState(false);
+  const [cover, setCover] = useState(false);
   const e = project.electrical;
   const cb = useRef({ update, setSelection });
   cb.current = { update, setSelection };
@@ -76,9 +77,9 @@ export function ElectricalStudio({
   }, []);
 
   useEffect(() => {
-    scene.current?.update(project, elec, selection, xray);
+    scene.current?.update(project, elec, selection, xray, cover);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elec, selection, xray]);
+  }, [elec, selection, xray, cover]);
 
   const setE = (patch: Partial<Electrical>) => update((p) => ({ ...p, electrical: { ...p.electrical, ...patch } }));
   const setGrid = (patch: Partial<Electrical["grid"]>) =>
@@ -141,6 +142,9 @@ export function ElectricalStudio({
           <div className="my-1 h-px bg-white/30" />
           <ToolButton title="Raio-X: ver os cabos dentro dos eletrodutos" active={xray} onClick={() => setXray((v) => !v)}>
             <ScanEye className="h-[18px] w-[18px]" />
+          </ToolButton>
+          <ToolButton title="Espelho (tampa interna) — esconder/mostrar a fiação" active={cover} onClick={() => setCover((v) => !v)}>
+            <PanelTop className="h-[18px] w-[18px]" />
           </ToolButton>
           <ToolButton title="Salvar imagem" onClick={() => scene.current && onSnapshot(scene.current.snapshot())}>
             <Camera className="h-[18px] w-[18px]" />
@@ -461,6 +465,13 @@ export function ElectricalStudio({
             <div className="grid grid-cols-2 gap-2">
               <F label="Tamanho" hint={`Sugerido: ${elec.boardSuggestion} módulos`}>
                 <Sel value={e.board.modules} onChange={(v) => setBoard({ modules: v })} options={BOARD_SIZES.map((b) => ({ value: b.modules, label: `${b.modules} módulos (${b.rows}×${b.perRow})` }))} />
+              </F>
+              <F label="Marca dos dispositivos" hint="Aparece impressa nos disjuntores, DR e DPS">
+                <Sel
+                  value={e.board.brand}
+                  onChange={(v) => setBoard({ brand: v })}
+                  options={["steck", "schneider", "siemens", "abb", "weg", "soprano", "tramontina", "genérico"].map((b) => ({ value: b, label: b[0].toUpperCase() + b.slice(1) }))}
+                />
               </F>
               <F label="Instalação">
                 <Sel

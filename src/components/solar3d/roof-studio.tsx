@@ -24,6 +24,10 @@ import {
   Trash2,
   TreePine,
   Zap,
+  Plane,
+  ScanLine,
+  ImagePlus,
+  Scaling,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -35,6 +39,7 @@ import type { Obstacle, RoofShape, RoofType } from "@/lib/solar3d/geometry";
 import { CITIES, MONTHS, cardinal, fetchNasaPower, nearestCity } from "@/lib/solar3d/irradiance";
 import { MODULE_PRESETS, newArray, newBuilding, uid, type Project, type ProjectReport } from "@/lib/solar3d/project";
 import { ROOF_TYPES, STRUCTURE_BRANDS, brandById } from "@/lib/solar3d/structures";
+import { downscaleImage, fitRectangle, groundWidth, hfovFrom35, parseDroneMeta, type DroneMeta } from "@/lib/solar3d/drone";
 import { fmtHour, guessTimezone, localToUtc, sunPath, sunPosition, sunriseSunset } from "@/lib/solar3d/sun";
 
 export type Update = (fn: (p: Project) => Project, opts?: { geometry?: boolean; history?: boolean }) => void;
@@ -73,6 +78,9 @@ export function RoofStudio({
   const [heatmap, setHeatmap] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [measure, setMeasure] = useState<number | null>(null);
+  const [tracePoints, setTracePoints] = useState(0);
+  const [droneMeta, setDroneMeta] = useState<DroneMeta | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [shadeBusy, setShadeBusy] = useState<number | null>(null);
   const [nasaBusy, setNasaBusy] = useState(false);
   const cbRef = useRef({ update, setSelection, tool, drawRoof, obstacleKind, project });
@@ -127,6 +135,35 @@ export function RoofStudio({
         cbRef.current.setSelection({ kind: "obstacle", id: o.id });
       },
       onMeasure: (d) => setMeasure(d),
+      onTracePoint: (n) => setTracePoints(n),
+      onTrace: (pts) => {
+        // cantos do telhado (com beiral) → paredes = contorno − beiral
+        const { drawRoof: t, update: up, project: p } = cbRef.current;
+        const f = fitRectangle(pts);
+        const oh = t === "laje" || t === "solo" ? 0 : 0.5;
+        if (f.length < 1 || f.width < 1) return toast.error("Contorno pequeno demais — clique os 4 cantos do telhado.");
+        const b = newBuilding({
+          name: `Telhado da foto ${p.buildings.length + 1}`,
+          roofType: t,
+          x: Number(f.x.toFixed(2)),
+          z: Number(f.z.toFixed(2)),
+          length: Number(Math.max(1, f.length - 2 * oh).toFixed(2)),
+          width: Number(Math.max(1, f.width - 2 * oh).toFixed(2)),
+          rotation: Number(f.rotation.toFixed(1)),
+          height: t === "solo" ? 0 : 3,
+        });
+        up((q) => ({ ...q, buildings: [...q.buildings, b] }), { geometry: true });
+        cbRef.current.setSelection({ kind: "building", id: b.id });
+        toast.success(`Edificação criada: ${n1(b.length, 2)} × ${n1(b.width, 2)} m. Ajuste altura e inclinação ao lado.`);
+        setTool("select");
+      },
+      onCalibrate: (d) => {
+        const real = Number((prompt(`Distância medida na foto: ${d.toFixed(2).replace(".", ",")} m.\nQual a distância REAL entre os dois pontos (m)?`) ?? "").replace(",", "."));
+        if (!(real > 0)) return;
+        cbRef.current.update((q) => (q.backdrop ? { ...q, backdrop: { ...q.backdrop, widthM: Number(((q.backdrop.widthM * real) / d).toFixed(3)), source: `${q.backdrop.source} · calibrada` } } : q));
+        toast.success("Escala da foto calibrada.");
+        setTool("select");
+      },
     });
     scene.current = s;
     s.frameAll();
@@ -142,9 +179,11 @@ export function RoofStudio({
   useEffect(() => {
     scene.current?.setTool(tool);
     if (tool !== "measure") setMeasure(null);
+    setTracePoints(0);
   }, [tool]);
 
   useEffect(() => {
+    scene.current?.setBackdrop(project.backdrop);
     scene.current?.update(project, report, selection, heatmap);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report, selection, heatmap]);
@@ -217,12 +256,50 @@ export function RoofStudio({
         e.preventDefault();
         remove(selection);
       }
-      const map: Record<string, RoofTool> = { v: "select", r: "draw", p: "panels", o: "obstacle", m: "measure" };
+      const map: Record<string, RoofTool> = { v: "select", r: "draw", p: "panels", o: "obstacle", m: "measure", f: "trace" };
       if (!e.ctrlKey && !e.metaKey && map[e.key.toLowerCase()]) setTool(map[e.key.toLowerCase()]);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+
+  useEffect(() => {
+    scene.current?.setBackdrop(project.backdrop);
+  }, [project.backdrop]);
+
+  /** Foto de drone: lê GPS/altura/lente/rumo, reduz a imagem e coloca no chão em escala. */
+  const loadPhoto = async (file: File) => {
+    try {
+      const meta = parseDroneMeta(await file.arrayBuffer());
+      const img = await downscaleImage(file);
+      setDroneMeta(meta);
+      const isDji = /dji/i.test(meta.make ?? "");
+      const f35 = meta.focal35 ?? (isDji ? 24 : null);
+      let widthM = 40;
+      let source = "Escala estimada — calibre com uma medida conhecida";
+      if (meta.relAltitude && meta.relAltitude > 2 && f35) {
+        widthM = groundWidth(meta.relAltitude, hfovFrom35(f35));
+        source = `Escala pelo voo: ${n1(meta.relAltitude)} m de altura, lente ${f35} mm eq.`;
+      }
+      update(
+        (p) => ({
+          ...p,
+          backdrop: { image: img.dataUrl, pxW: img.width, pxH: img.height, widthM: Number(widthM.toFixed(2)), rotation: Number((meta.yaw ?? 0).toFixed(1)), x: 0, z: 0, opacity: 1, source },
+          ...(meta.lat !== null && meta.lon !== null
+            ? { site: { ...p.site, lat: Number(meta.lat.toFixed(6)), lon: Number(meta.lon.toFixed(6)), tz: guessTimezone(meta.lat, meta.lon), name: `Foto do drone (${meta.lat.toFixed(5)}, ${meta.lon.toFixed(5)})`, hsp: nearestCity(meta.lat, meta.lon).hsp, monthlyGhi: null, hspSource: `Estimativa (${nearestCity(meta.lat, meta.lon).name}) — busque na NASA` } }
+            : {}),
+        }),
+        { geometry: meta.lat !== null },
+      );
+      if (meta.gimbalPitch !== null && meta.gimbalPitch > -80) toast.warning(`A câmera estava a ${n1(meta.gimbalPitch, 0)}° — para medir, use foto de cima (−90°).`);
+      toast.success(meta.lat !== null ? "Foto posicionada com GPS, escala e norte do drone. Agora contorne o telhado." : "Foto carregada. Calibre a escala e alinhe o norte, depois contorne o telhado.");
+      setTimeout(() => scene.current?.view("top"), 50);
+      setTool("trace");
+    } catch {
+      toast.error("Não consegui abrir essa imagem.");
+    }
+  };
+  const setBd = (patch: Partial<NonNullable<Project["backdrop"]>>) => update((p) => (p.backdrop ? { ...p, backdrop: { ...p.backdrop, ...patch } } : p));
 
   const remove = (sel: NonNullable<Selection>) => {
     if (sel.kind === "building") update((p) => ({ ...p, buildings: p.buildings.filter((b) => b.id !== sel.id), arrays: p.arrays.filter((a) => !a.planeId.startsWith(`${sel.id}:`)) }), { geometry: true });
@@ -299,6 +376,9 @@ export function RoofStudio({
           <ToolButton title="Obstáculo — árvore, caixa d'água, prédio vizinho (O)" active={tool === "obstacle"} onClick={() => setTool("obstacle")}>
             <TreePine className="h-[18px] w-[18px]" />
           </ToolButton>
+          <ToolButton title="Foto de drone — enviar e contornar o telhado (F)" active={tool === "trace" || tool === "calibrate"} onClick={() => (project.backdrop ? setTool("trace") : fileRef.current?.click())}>
+            <Plane className="h-[18px] w-[18px]" />
+          </ToolButton>
           <ToolButton title="Medir distância (M)" active={tool === "measure"} onClick={() => setTool("measure")}>
             <Ruler className="h-[18px] w-[18px]" />
           </ToolButton>
@@ -353,6 +433,19 @@ export function RoofStudio({
             </select>
           </ToolHint>
         )}
+        {tool === "trace" && (
+          <ToolHint>
+            <span className="font-semibold">Contornar telhado:</span> clique os 4 cantos na foto — os 2 primeiros ao longo do beiral mais comprido ({tracePoints}/4). Tipo:
+            <select value={drawRoof} onChange={(e) => setDrawRoof(e.target.value as RoofType)} className="ml-1 rounded-md bg-white/15 px-1.5 py-0.5 text-white">
+              {ROOF_ORDER.map((r) => (
+                <option key={r} value={r} className="text-ink-900">
+                  {ROOF_TYPES[r].label}
+                </option>
+              ))}
+            </select>
+          </ToolHint>
+        )}
+        {tool === "calibrate" && <ToolHint>Calibrar escala: clique em dois pontos da foto cuja distância real você sabe (ex.: um muro de 10 m) ({tracePoints}/2).</ToolHint>}
         {tool === "measure" && <ToolHint>{measure === null ? "Clique no ponto inicial e depois no final." : `Distância: ${n1(measure, 2)} m — clique para medir de novo.`}</ToolHint>}
         {tool === "select" && selection && (selection.kind === "building" || selection.kind === "obstacle") && <ToolHint>Arraste o item selecionado para mover · Delete remove</ToolHint>}
 
@@ -481,6 +574,74 @@ export function RoofStudio({
           </Section>
 
           {selectionPanel()}
+
+          <Section title="Foto de drone / satélite" icon={<Plane className="h-4 w-4" />} defaultOpen={!project.backdrop && project.arrays.length === 0}>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) loadPhoto(f);
+                e.target.value = "";
+              }}
+            />
+            <button onClick={() => fileRef.current?.click()} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-ink-900 text-sm font-semibold text-white hover:bg-ink-800">
+              <ImagePlus className="h-4 w-4" /> {project.backdrop ? "Trocar foto" : "Enviar foto do drone"}
+            </button>
+            {!project.backdrop && (
+              <p className="text-[12px] leading-snug text-ink-500">
+                Voe acima do telhado com a câmera apontada <b>para baixo (−90°)</b> e envie a foto original (JPG do drone). O app lê o GPS, a altura e a lente para colocar a foto no chão em
+                escala real e orientada ao norte. Depois é só clicar os 4 cantos do telhado para criar o 3D. Serve também print do Google Earth (aí calibre a escala).
+              </p>
+            )}
+            {project.backdrop && (
+              <>
+                {droneMeta && (
+                  <div className="grid grid-cols-2 gap-1.5 text-[11.5px] text-ink-600">
+                    <span>GPS: <b className="text-ink-900">{droneMeta.lat !== null ? `${droneMeta.lat.toFixed(5)}, ${droneMeta.lon!.toFixed(5)}` : "sem GPS"}</b></span>
+                    <span>Altura: <b className="text-ink-900">{droneMeta.relAltitude !== null ? `${n1(droneMeta.relAltitude)} m` : "—"}</b></span>
+                    <span>Câmera: <b className="text-ink-900">{droneMeta.gimbalPitch !== null ? `${n1(droneMeta.gimbalPitch, 0)}°` : "—"}</b></span>
+                    <span>Rumo: <b className="text-ink-900">{droneMeta.yaw !== null ? `${n1(droneMeta.yaw, 0)}°` : "—"}</b></span>
+                    {droneMeta.model && <span className="col-span-2">Drone: <b className="text-ink-900">{[droneMeta.make, droneMeta.model].filter(Boolean).join(" ")}</b></span>}
+                  </div>
+                )}
+                <p className="text-[11.5px] text-ink-500">{project.backdrop.source}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => setTool("trace")} className={cx("flex h-9 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold", tool === "trace" ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100")}>
+                    <ScanLine className="h-3.5 w-3.5" /> Contornar telhado
+                  </button>
+                  <button onClick={() => setTool("calibrate")} className={cx("flex h-9 items-center justify-center gap-1.5 rounded-lg text-xs font-semibold", tool === "calibrate" ? "bg-rose-500 text-white" : "bg-ink-100 text-ink-700 hover:bg-ink-200")}>
+                    <Scaling className="h-3.5 w-3.5" /> Calibrar escala
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <F label="Largura real da foto">
+                    <Num value={project.backdrop.widthM} onChange={(v) => setBd({ widthM: v })} suffix="m" min={2} max={2000} step={0.5} />
+                  </F>
+                  <F label="Opacidade">
+                    <Sel value={project.backdrop.opacity} onChange={(v) => setBd({ opacity: v })} options={[1, 0.8, 0.6, 0.4].map((o) => ({ value: o, label: `${Math.round(o * 100)}%` }))} />
+                  </F>
+                </div>
+                <F label={`Norte da foto: topo aponta para ${cardinal(project.backdrop.rotation)} ${n1(project.backdrop.rotation, 0)}°`} hint="Vem do rumo gravado pelo drone; ajuste se a foto não tiver essa informação.">
+                  <input type="range" min={0} max={359.5} step={0.5} value={project.backdrop.rotation} onChange={(e) => setBd({ rotation: Number(e.target.value) })} className="w-full accent-sun-600" />
+                </F>
+                <div className="grid grid-cols-2 gap-2">
+                  <F label="Deslocar X (leste)">
+                    <Num value={project.backdrop.x} onChange={(v) => setBd({ x: v })} suffix="m" step={0.5} />
+                  </F>
+                  <F label="Deslocar Z (sul)">
+                    <Num value={project.backdrop.z} onChange={(v) => setBd({ z: v })} suffix="m" step={0.5} />
+                  </F>
+                </div>
+                <p className="text-[11.5px] text-ink-500">Uma foto só mostra a planta: a altura das paredes e a inclinação do telhado você confirma na edificação criada (ou com o medidor na obra).</p>
+                <button onClick={() => update((p) => ({ ...p, backdrop: null }))} className="flex h-8 items-center gap-1.5 rounded-lg bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100">
+                  <Trash2 className="h-3.5 w-3.5" /> Remover foto
+                </button>
+              </>
+            )}
+          </Section>
 
           <Section title="Localização e irradiação" icon={<MapPin className="h-4 w-4" />} defaultOpen={false}>
             <F label="Cidade de referência">

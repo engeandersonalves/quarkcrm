@@ -41,6 +41,12 @@ conta       = máx(energia + fio B, taxa mínima 30/50/100 kWh) + iluminação p
 
 A economia de 25 anos aplica o escalonamento do fio B ano a ano, o reajuste da tarifa e a perda de eficiência das placas.
 
+### Projeto 3D no navegador local (sem instalar nada)
+
+- **Arquivo único:** baixe [`local/projeto-3d.html`](local/projeto-3d.html) e abra com dois cliques (Chrome, Edge ou Firefox). Funciona sem internet e salva os projetos no próprio navegador; use **Exportar** para guardar o `.json`. Para gerar de novo depois de mudar o código: `npm run build:local`.
+- **Pelo servidor local:** `npm run dev` e abra `http://localhost:3000/estudio` — não precisa de login nem de Supabase.
+- **Foto de drone:** envie a foto original tirada de cima (câmera a −90°). O app lê GPS, altura, lente e rumo (EXIF/XMP DJI), põe a foto no chão em escala real e orientada ao norte. Clique os 4 cantos do telhado para criar a edificação. Sem metadados (ex.: print do Google Earth), use **Calibrar escala** com uma medida conhecida.
+
 ## Instalação (≈ 15 minutos, tudo com plano gratuito)
 
 ### 1. Banco de dados — Supabase

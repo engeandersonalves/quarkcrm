@@ -23,7 +23,8 @@ const ROOF_TO_PROPOSAL: Record<string, string> = {
   solo: "Solo",
 };
 
-export function Studio() {
+/** `standalone`: versão sem CRM (navegador local) — esconde o atalho para o orçamento. */
+export function Studio({ standalone = false }: { standalone?: boolean } = {}) {
   const router = useRouter();
   const [project, setProject] = useState<Project>(() => loadProject() ?? defaultProject());
   const [tab, setTab] = useState<Tab>("telhado");
@@ -196,9 +197,11 @@ export function Studio() {
           <IconBtn title="Exportar projeto (.json)" onClick={exportJson}>
             <Download className="h-4 w-4" />
           </IconBtn>
-          <button onClick={toProposal} className="flex h-9 items-center gap-1.5 rounded-xl bg-sun-gradient px-3 text-sm font-semibold text-ink-950 shadow-glow hover:brightness-105">
-            <Calculator className="h-4 w-4" /> Criar orçamento
-          </button>
+          {!standalone && (
+            <button onClick={toProposal} className="flex h-9 items-center gap-1.5 rounded-xl bg-sun-gradient px-3 text-sm font-semibold text-ink-950 shadow-glow hover:brightness-105">
+              <Calculator className="h-4 w-4" /> Criar orçamento
+            </button>
+          )}
         </div>
       </div>
 

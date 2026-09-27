@@ -5,6 +5,13 @@ import type { Device, Project } from "@/lib/solar3d/project";
 import { boardBox, evBox, inverterBox, stringBoxNeeded, WALL_HEIGHT, type Box2, type ElectricalReport } from "@/lib/solar3d/board";
 import { boardSize, fmt, type Route } from "@/lib/solar3d/electrical";
 import { beam, cableTube, clearGroup, disposeObject, keep, label, polyTube, textTexture, wallTexture } from "./three-utils";
+import { BODY_H, MOD, NOSE, NOSE_H, SHOULDER, TERM_Y, Z0, ZT, blankPlate, cableRadius, combBusbar, deviceModel, dinRail, terminalBar, wire, type DeviceModel } from "./board-parts";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+
+/** Seção do alimentador do quadro a partir do disjuntor geral (B1, cobre). */
+function feederSection(a: number) {
+  return a <= 32 ? 6 : a <= 40 ? 10 : a <= 63 ? 16 : a <= 80 ? 25 : a <= 100 ? 35 : 50;
+}
 
 export type BoardItem = "inverter" | "board" | "ev";
 export type BoardSelection = { kind: "item"; id: BoardItem } | { kind: "device"; id: string } | null;
@@ -14,7 +21,6 @@ export interface BoardCallbacks {
   onMoveItem: (id: BoardItem, x: number, y: number) => void;
 }
 
-const MOD = 0.018; // largura de um módulo DIN (m)
 const snap = (v: number) => Math.round(v / 0.05) * 0.05;
 
 const MAT = keep({
@@ -86,7 +92,11 @@ export class BoardScene {
     this.controls.maxAzimuthAngle = Math.PI * 0.45;
 
     this.scene.background = new THREE.Color("#e9eef3");
-    this.scene.add(new THREE.HemisphereLight("#ffffff", "#8a8173", 1.3));
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.scene.environmentIntensity = 0.55;
+    pmrem.dispose();
+    this.scene.add(new THREE.HemisphereLight("#ffffff", "#8a8173", 0.8));
     const key = new THREE.DirectionalLight("#fff8ee", 1.6);
     key.position.set(3, 6, 6);
     key.castShadow = true;
@@ -175,7 +185,7 @@ export class BoardScene {
 
   private framed = false;
 
-  update(p: Project, r: ElectricalReport, sel: BoardSelection, xray: boolean) {
+  update(p: Project, r: ElectricalReport, sel: BoardSelection, xray: boolean, cover = false) {
     this.project = p;
     this.selection = sel;
     clearGroup(this.root);
@@ -187,7 +197,7 @@ export class BoardScene {
     const bb = boardBox(p);
     const inv = this.buildInverter(ib, `${e.inverter.brand}`, `${fmt(e.inverter.powerKw)} kW`, e.inverter.model);
     this.addItem("inverter", inv, ib);
-    const board = this.buildBoard(p, r, bb, xray);
+    const board = this.buildBoard(p, r, bb, cover);
     this.addItem("board", board, bb);
     if (e.ev.enabled) {
       const eb = evBox(p);
@@ -324,166 +334,315 @@ export class BoardScene {
     return g;
   }
 
-  /** Posição (no quadro, coordenadas locais) de cada dispositivo nos trilhos DIN. */
-  private layoutDevices(devices: Device[], perRow: number, bw: number, bh: number, rows: number) {
-    const out: { d: Device; x: number; y: number; row: number }[] = [];
-    let row = 0;
-    let col = 0;
-    const railY = (r: number) => bh / 2 - 0.1 - r * 0.2;
-    for (const d of devices) {
-      if (col + d.poles > perRow) {
-        row++;
-        col = 0;
-      }
-      if (row >= rows) break;
-      const left = -bw / 2 + 0.08;
-      out.push({ d, x: left + (col + d.poles / 2) * MOD, y: railY(row), row });
-      col += d.poles;
-    }
-    return out;
-  }
-
-  private buildBoard(p: Project, r: ElectricalReport, b: Box2, _xray: boolean) {
+  private buildBoard(p: Project, r: ElectricalReport, b: Box2, cover: boolean) {
     const g = new THREE.Group();
     const size = boardSize(p.electrical.board.modules);
-    const t = 0.012;
-    const shell = p.electrical.board.kind === "embutir" ? MAT.white : MAT.white;
-    const back = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, t), MAT.gray);
+    const brand = p.electrical.board.brand || "steck";
+    const nPh = p.electrical.grid.system === "mono" ? 1 : p.electrical.grid.system === "bi" ? 2 : 3;
+    const t = 0.0012; // chapa
+    const shell = new THREE.MeshStandardMaterial({ color: "#f3f3f0", roughness: 0.4, metalness: 0.15 });
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(b.w - 0.02, b.h - 0.02, 0.002), new THREE.MeshStandardMaterial({ color: "#c9ccce", metalness: 0.6, roughness: 0.45 }));
+    plate.position.z = 0.012;
+    plate.receiveShadow = true;
+    const back = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, t), shell);
     back.position.z = t / 2;
-    g.add(back);
+    g.add(back, plate);
     for (const [w, h, x, y] of [
-      [b.w, t, 0, b.h / 2 - t / 2],
-      [b.w, t, 0, -b.h / 2 + t / 2],
-      [t, b.h, -b.w / 2 + t / 2, 0],
-      [t, b.h, b.w / 2 - t / 2, 0],
+      [b.w, t * 2, 0, b.h / 2 - t],
+      [b.w, t * 2, 0, -b.h / 2 + t],
+      [t * 2, b.h, -b.w / 2 + t, 0],
+      [t * 2, b.h, b.w / 2 - t, 0],
     ] as const) {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, b.d), shell);
       m.position.set(x, y, b.d / 2);
       m.castShadow = true;
+      m.receiveShadow = true;
+      g.add(m);
+    }
+    // aba frontal (moldura) onde a porta fecha
+    for (const [w, h, x, y] of [
+      [b.w, 0.012, 0, b.h / 2 - 0.006],
+      [b.w, 0.012, 0, -b.h / 2 + 0.006],
+      [0.012, b.h, -b.w / 2 + 0.006, 0],
+      [0.012, b.h, b.w / 2 - 0.006, 0],
+    ] as const) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.002), shell);
+      m.position.set(x, y, b.d - 0.001);
       g.add(m);
     }
     // porta aberta (dobradiça à esquerda)
     const hinge = new THREE.Group();
     hinge.position.set(-b.w / 2, 0, b.d);
-    hinge.rotation.y = -1.9;
-    const door = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, 0.01), [MAT.white, MAT.white, MAT.white, MAT.white, MAT.white, new THREE.MeshStandardMaterial({ map: textTexture([{ text: "QUADRO DE DISTRIBUIÇÃO", size: 16 }, { text: "⚠ Geração própria — FV", size: 16, color: "#b45309" }, { text: `${size.modules} módulos DIN`, size: 14, color: "#64748b" }], "#fafafa", 256, 256) })]);
-    door.position.set(b.w / 2, 0, 0.005);
-    hinge.add(door);
+    hinge.rotation.y = -1.95;
+    const doorFace = new THREE.MeshStandardMaterial({ map: textTexture([{ text: brand.toUpperCase(), size: 22, color: "#d24a1c" }, { text: "⚡ PERIGO — ELETRICIDADE", size: 15, color: "#b45309" }, { text: "Geração própria (FV) — desligue também o inversor", size: 11, color: "#475569" }], "#f3f3f0", 320, 320), roughness: 0.4 });
+    const door = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, 0.012), [shell, shell, shell, shell, doorFace, shell]);
+    door.position.set(b.w / 2, 0, 0.006);
+    door.castShadow = true;
+    const lock = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.006, 16), new THREE.MeshStandardMaterial({ color: "#555a60", metalness: 0.8, roughness: 0.3 }));
+    lock.rotation.x = Math.PI / 2;
+    lock.position.set(b.w - 0.025, 0, 0.014);
+    hinge.add(door, lock);
     g.add(hinge);
-    // espelho (tampa interna) com recortes simulados pelas faixas
-    const placed = this.layoutDevices(r.devices, size.perRow, b.w, b.h, size.rows);
+
+    // trilhos e dispositivos
+    const railLen = size.perRow * MOD + 0.03;
+    const left = -(size.perRow * MOD) / 2;
+    const railY = (row: number) => b.h / 2 - 0.13 - row * 0.2;
     for (let row = 0; row < size.rows; row++) {
-      const y = b.h / 2 - 0.1 - row * 0.2;
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(size.perRow * MOD + 0.02, 0.035, 0.008), MAT.din);
-      rail.position.set(-b.w / 2 + 0.08 + (size.perRow * MOD) / 2, y, 0.02);
+      const rail = dinRail(railLen);
+      rail.position.y = railY(row);
       g.add(rail);
     }
-    const devZ = 0.03;
-    for (const { d, x, y } of placed) {
-      const w = d.poles * MOD - 0.0006;
-      const h = 0.085;
-      const depth = 0.065;
-      const lines =
-        d.kind === "reserva"
-          ? [{ text: "", size: 10 }]
-          : d.kind === "dps"
-            ? [{ text: "DPS", size: 20 }, { text: `${d.uc}V`, size: 15 }, { text: `${d.current}kA`, size: 15 }]
-            : d.kind === "dr"
-              ? [{ text: "DR", size: 22 }, { text: `${d.current}A`, size: 17 }, { text: `${d.sens}mA`, size: 15 }, { text: `tipo ${d.drType}`, size: 15 }]
-              : [{ text: d.kind === "geral" ? "GERAL" : d.label.slice(0, 10), size: 13, color: "#334155" }, { text: `${d.curve}${d.current}`, size: 26 }, { text: `${d.breakingKa}kA`, size: 13, color: "#64748b" }];
-      const bg = d.kind === "reserva" ? "#e5e7eb" : d.kind === "dps" ? "#dbe4ee" : "#fbfbfb";
-      const faceMat = new THREE.MeshStandardMaterial({ map: textTexture(lines, bg, 64 * d.poles, 200), roughness: 0.4 });
-      const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, depth), [MAT.white, MAT.white, MAT.white, MAT.white, faceMat, MAT.white]);
-      body.position.set(x, y, devZ + depth / 2);
-      body.userData.deviceId = d.id;
-      body.userData.item = "board";
-      body.castShadow = true;
-      g.add(body);
-      if (d.kind === "disjuntor" || d.kind === "geral" || d.kind === "dr") {
-        const lever = new THREE.Mesh(new THREE.BoxGeometry(w * 0.7, 0.012, 0.02), MAT.lever);
-        lever.position.set(x, y + 0.012, devZ + depth + 0.01);
-        lever.userData.deviceId = d.id;
-        g.add(lever);
+    type Placed = { d: Device; row: number; x: number; y: number; model?: DeviceModel };
+    const placed: Placed[] = [];
+    let row = 0;
+    let col = 0;
+    for (const d of r.devices) {
+      if (col + d.poles > size.perRow) {
+        row++;
+        col = 0;
       }
-      if (d.kind === "dr") {
-        const btn = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.01, 0.006), MAT.test);
-        btn.position.set(x + w * 0.3, y - 0.028, devZ + depth + 0.003);
-        g.add(btn);
-      }
-      if (d.kind === "dps") {
-        const win = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.008, 0.004), MAT.led);
-        win.position.set(x, y + 0.03, devZ + depth + 0.002);
-        g.add(win);
-      }
-      if (this.selection?.kind === "device" && this.selection.id === d.id) {
-        const s = new THREE.Mesh(new THREE.BoxGeometry(w + 0.006, h + 0.006, depth + 0.006), MAT.sel);
-        s.position.copy(body.position);
-        g.add(s);
-      }
+      if (row >= size.rows) break;
+      const x = left + (col + d.poles / 2) * MOD;
+      const y = railY(row);
+      const pd: Placed = { d, row, x, y };
+      if (d.kind !== "reserva") {
+        pd.model = deviceModel(d, x, y, brand);
+        g.add(pd.model.group);
+        if (this.selection?.kind === "device" && this.selection.id === d.id) {
+          const s = new THREE.Mesh(new THREE.BoxGeometry(d.poles * MOD + 0.006, BODY_H + 0.008, 0.075), MAT.sel);
+          s.position.set(x, y, Z0 + 0.036);
+          g.add(s);
+        }
+      } else if (cover) g.add(blankPlate(d.poles, x, y));
+      placed.push(pd);
+      col += d.poles;
     }
-    // barramentos de neutro e terra
+
+    // barramentos de neutro e terra (embaixo)
     const barY = -b.h / 2 + 0.05;
-    const nbar = new THREE.Mesh(new THREE.BoxGeometry(b.w * 0.32, 0.018, 0.02), MAT.nbar);
-    nbar.position.set(-b.w * 0.2, barY, 0.03);
-    const tbar = new THREE.Mesh(new THREE.BoxGeometry(b.w * 0.32, 0.018, 0.02), MAT.tbar);
-    tbar.position.set(b.w * 0.2, barY, 0.03);
-    g.add(nbar, tbar);
+    const holes = Math.max(6, 3 + placed.length);
+    const nBar = terminalBar("N", -b.w * 0.2, barY, holes);
+    const tBar = terminalBar("PE", b.w * 0.2, barY, holes);
+    g.add(nBar.group, tBar.group);
     const nl = label("N", "s3d-tag");
-    nl.position.set(-b.w * 0.2 - b.w * 0.18, barY, 0.04);
+    nl.position.set(-b.w * 0.2 - nBar.length / 2 - 0.02, barY, 0.04);
     const tl = label("PE", "s3d-tag");
-    tl.position.set(b.w * 0.2 + b.w * 0.18, barY, 0.04);
+    tl.position.set(b.w * 0.2 + tBar.length / 2 + 0.02, barY, 0.04);
     g.add(nl, tl);
+    let nHole = 0;
+    let tHole = 0;
+    const nextN = () => nBar.holes[Math.min(nBar.holes.length - 1, nHole++)];
+    const nextT = () => tBar.holes[Math.min(tBar.holes.length - 1, tHole++)];
 
-    // pente de fases por fileira (sobre os disjuntores, exceto DPS/reserva)
-    const rows = new Map<number, typeof placed>();
-    for (const pd of placed) rows.set(pd.row, [...(rows.get(pd.row) ?? []), pd]);
-    for (const list of rows.values()) {
-      const feed = list.filter((x) => x.d.kind === "disjuntor" || x.d.kind === "geral" || x.d.kind === "dr");
-      if (feed.length < 2) continue;
-      const x0 = feed[0].x - (feed[0].d.poles * MOD) / 2;
-      const x1 = feed[feed.length - 1].x + (feed[feed.length - 1].d.poles * MOD) / 2;
-      const comb = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.008, 0.012), MAT.copper);
-      comb.position.set((x0 + x1) / 2, feed[0].y + 0.05, devZ + 0.05);
-      g.add(comb);
-    }
+    // canaletas: cada cabo ganha uma “pista” para não se sobrepor
+    const lanes = { L: 0, R: 0, top: new Map<number, number>(), bot: new Map<number, number>() };
+    const laneX = (side: number) => {
+      const k = side < 0 ? lanes.L++ : lanes.R++;
+      return side * (b.w / 2 - 0.022 - Math.min(k, 9) * 0.0065);
+    };
+    const gutterBelow = (row: number) => {
+      const k = lanes.bot.get(row) ?? 0;
+      lanes.bot.set(row, k + 1);
+      return railY(row) - TERM_Y - 0.022 - Math.min(k, 6) * 0.0055;
+    };
+    const gutterAbove = (row: number) => {
+      const k = lanes.top.get(row) ?? 0;
+      lanes.top.set(row, k + 1);
+      return railY(row) + TERM_Y + 0.03 + Math.min(k, 6) * 0.0055;
+    };
+    const Z = ZT;
+    const V = (x: number, y: number, z = Z) => new THREE.Vector3(x, y, z);
+    const intoBar = (h: THREE.Vector3) => [V(h.x, barY + 0.03), V(h.x, barY + 0.03, h.z), h];
 
-    // fiação: entrada → geral; saídas dos circuitos até os eletrodutos; neutros e terras nos barramentos
-    const z = devZ + 0.03;
-    const geral = placed.find((x) => x.d.kind === "geral");
-    if (geral) {
-      for (let i = 0; i < Math.min(3, geral.d.poles); i++) {
-        const x = geral.x + (i - (geral.d.poles - 1) / 2) * MOD;
-        g.add(cableTube([new THREE.Vector3(x * 0.3, b.h / 2 + 0.02, 0.05), new THREE.Vector3(x, b.h / 2 - 0.03, z + 0.02), new THREE.Vector3(x, geral.y + 0.045, z)], 0.0032, PHASES[i]));
-      }
-      g.add(cableTube([new THREE.Vector3(-0.02, b.h / 2 + 0.02, 0.05), new THREE.Vector3(-b.w * 0.42, 0, z), new THREE.Vector3(-b.w * 0.33, barY + 0.012, z)], 0.0032, WIRE.N));
-      g.add(cableTube([new THREE.Vector3(0.02, b.h / 2 + 0.02, 0.05), new THREE.Vector3(b.w * 0.42, 0, z), new THREE.Vector3(b.w * 0.33, barY + 0.012, z)], 0.0032, WIRE.PE));
-    }
-    for (const pd of placed.filter((x) => x.d.kind === "dps")) {
-      g.add(cableTube([new THREE.Vector3(pd.x, pd.y - 0.045, z), new THREE.Vector3(pd.x, pd.y - 0.08, z), new THREE.Vector3(b.w * 0.1 + (pd.x + b.w / 2) * 0.05, barY + 0.012, z)], 0.0025, WIRE.PE));
-    }
-    const entryFor = (route: Route | null | undefined, atEnd: boolean) => {
+    // saídas (entrada do eletroduto na chapa do quadro)
+    const exitOf = (route: Route | null | undefined, atEnd: boolean) => {
       if (!route) return null;
       const pt = atEnd ? route.points[route.points.length - 1] : route.points[0];
-      return new THREE.Vector3(pt.x - b.x, pt.y - b.y, 0.05);
+      return V(pt.x - b.x, pt.y - b.y);
     };
-    const circuits: { id: string; entry: THREE.Vector3 | null; poles: number; neutral: boolean; section: number }[] = [
-      { id: "inversor", entry: entryFor(r.inverterRoute, true), poles: r.inverter.sizing.poles, neutral: r.inverter.sizing.neutral, section: r.inverter.sizing.section },
-      { id: "ve", entry: entryFor(r.evRoute, false), poles: r.ev?.sizing.poles ?? 0, neutral: !!r.ev?.sizing.neutral, section: r.ev?.sizing.section ?? 0 },
-      ...r.extra.map((c) => ({ id: c.id, entry: new THREE.Vector3(0, b.h / 2 + 0.02, 0.05), poles: c.sizing.poles, neutral: c.sizing.neutral, section: c.sizing.section })),
+    const bushing = (e: THREE.Vector3) => {
+      const onSide = Math.abs(Math.abs(e.x) - b.w / 2) < 0.01;
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.011, 0.0035, 10, 24), new THREE.MeshStandardMaterial({ color: "#3f3f46", roughness: 0.5 }));
+      ring.position.copy(e).setZ(Z);
+      ring.rotation.set(onSide ? 0 : Math.PI / 2, onSide ? Math.PI / 2 : 0, 0);
+      g.add(ring);
+    };
+    /** Da posição atual até a saída: pista lateral → altura da saída → bucha. */
+    const toExit = (from: THREE.Vector3[], exit: THREE.Vector3, spread: number) => {
+      const last = from[from.length - 1];
+      const side = Math.sign(exit.x) || 1;
+      const lx = laneX(side);
+      const pts = [...from, V(lx, last.y)];
+      const onSide = Math.abs(Math.abs(exit.x) - b.w / 2) < 0.01;
+      if (onSide) pts.push(V(lx, exit.y + spread), V(exit.x + side * 0.03, exit.y + spread));
+      else {
+        const s = Math.sign(exit.y);
+        const yIn = exit.y - s * 0.028;
+        pts.push(V(lx, yIn - s * Math.abs(spread) * 0.3), V(exit.x + spread, yIn - s * Math.abs(spread) * 0.3), V(exit.x + spread, exit.y + s * 0.04));
+      }
+      return pts;
+    };
+
+    // alimentação vinda do padrão (entra por cima, no centro)
+    const main = placed.find((x) => x.d.kind === "geral");
+    const feedSec = feederSection(p.electrical.grid.mainBreaker);
+    const feedIn = V(0, b.h / 2 + 0.05);
+    bushing(V(0, b.h / 2));
+    if (main?.model) {
+      for (let i = 0; i < Math.min(nPh, main.d.poles); i++) {
+        const y0 = gutterAbove(main.row);
+        g.add(wire([feedIn.clone().setX(-0.012 + i * 0.012), V(-0.012 + i * 0.012, y0), V(main.model.poleX[i], y0), main.model.top(i)], feedSec, PHASES[i], { end: true }));
+      }
+    }
+    {
+      const h = nextN();
+      g.add(wire([V(0.024, b.h / 2 + 0.05), V(0.024, b.h / 2 - 0.035), V(laneX(-1), b.h / 2 - 0.035), V(-b.w / 2 + 0.03, barY + 0.03), V(h.x, barY + 0.03), V(h.x, barY + 0.03, h.z), h], feedSec, WIRE.N, { end: true }));
+      const e = nextT();
+      g.add(wire([V(0.036, b.h / 2 + 0.05), V(0.036, b.h / 2 - 0.045), V(laneX(1), b.h / 2 - 0.045), V(b.w / 2 - 0.03, barY + 0.03), V(e.x, barY + 0.03), V(e.x, barY + 0.03, e.z), e], Math.min(16, feedSec), "PE", { end: true }));
+    }
+
+    // pente de fases por fileira: alimenta tudo que não é geral, DPS de neutro ou disjuntor depois de DR
+    const drCircuits = new Set(placed.filter((x) => x.d.kind === "dr" && x.d.circuitId).map((x) => x.d.circuitId));
+    const neutralPoleOf = (pd: Placed) => {
+      if (pd.d.kind !== "dr") return -1;
+      const c = pd.d.circuitId === "ve" ? r.ev : pd.d.circuitId === "inversor" ? r.inverter : r.extra.find((e) => e.id === pd.d.circuitId);
+      return c?.sizing.neutral ? pd.d.poles - 1 : -1;
+    };
+    const phaseOfPole = new Map<string, number>(); // `${deviceId}:${pole}` → fase
+    let pin = 0;
+    for (let rw = 0; rw < size.rows; rw++) {
+      const pins: { x: number }[] = [];
+      for (const pd of placed.filter((x) => x.row === rw && x.model)) {
+        const { d } = pd;
+        const fed = d.kind !== "geral" && !(d.kind === "dps" && d.label.includes("N")) && !(d.kind === "disjuntor" && d.circuitId && drCircuits.has(d.circuitId));
+        if (!fed) continue;
+        const np = neutralPoleOf(pd);
+        for (let i = 0; i < d.poles; i++) {
+          if (i === np) continue;
+          pins.push({ x: pd.model!.poleX[i] });
+          phaseOfPole.set(`${d.id}:${i}`, pin++ % nPh);
+        }
+      }
+      if (!pins.length) continue;
+      const comb = combBusbar(pins, railY(rw));
+      g.add(comb.group);
+      // pontes do geral até o borne do pente (contornando o geral pela esquerda)
+      if (main?.model) {
+        for (let i = 0; i < Math.min(nPh, main.d.poles); i++) {
+          const s = main.model.bottom(i);
+          const yb = gutterBelow(main.row);
+          const xl = left - 0.012 - i * 0.007;
+          const ya = railY(rw) + TERM_Y + 0.045 + i * 0.006;
+          g.add(wire([s, V(s.x, yb), V(xl, yb), V(xl, ya), V(comb.feed.x + (i - 1) * 0.002, ya), comb.feed.clone().setX(comb.feed.x + (i - 1) * 0.002)], feedSec, PHASES[i], { start: true }));
+        }
+      }
+    }
+
+    // DPS: fase → pente; N → barra de neutro; todos → barra de terra
+    for (const pd of placed.filter((x) => x.d.kind === "dps" && x.model)) {
+      const m = pd.model!;
+      if (pd.d.label.includes("N")) {
+        const h = nextN();
+        const ya = gutterAbove(pd.row);
+        g.add(wire([h, V(h.x, barY + 0.03, h.z), V(h.x, barY + 0.03), V(laneX(-1), barY + 0.03), V(-b.w / 2 + 0.03, ya), V(m.poleX[0], ya), m.top(0)], 4, WIRE.N, { start: true, end: true }));
+      }
+      const e = nextT();
+      const yb = gutterBelow(pd.row);
+      g.add(wire([m.bottom(0), V(m.poleX[0], yb), V(e.x, yb), ...intoBar(e)], 4, "PE", { start: true, end: true }));
+    }
+
+    // circuitos: saída dos disjuntores (e do DR) até o eletroduto, com neutro e terra
+    const circuits: { id: string; exit: THREE.Vector3 | null; section: number; pe: number; neutral: boolean }[] = [
+      { id: "inversor", exit: exitOf(r.inverterRoute, true), section: r.inverter.sizing.section, pe: r.inverter.sizing.pe, neutral: r.inverter.sizing.neutral },
+      ...(r.ev ? [{ id: "ve", exit: exitOf(r.evRoute, false), section: r.ev.sizing.section, pe: r.ev.sizing.pe, neutral: r.ev.sizing.neutral }] : []),
+      ...r.extra.map((c, i) => ({ id: c.id, exit: V(b.w * 0.3 - i * 0.03, b.h / 2), section: c.sizing.section, pe: c.sizing.pe, neutral: c.sizing.neutral })),
     ];
     for (const c of circuits) {
-      if (!c.entry) continue;
-      const br = placed.find((x) => x.d.kind === "disjuntor" && x.d.circuitId === c.id);
+      if (!c.exit) continue;
+      bushing(c.exit);
+      const br = placed.find((x) => x.d.kind === "disjuntor" && x.d.circuitId === c.id && x.model);
       if (!br) continue;
-      const rad = Math.min(0.006, 0.0022 + Math.sqrt(c.section) * 0.0011);
-      for (let i = 0; i < Math.min(c.poles, br.d.poles); i++) {
-        const x = br.x + (i - (br.d.poles - 1) / 2) * MOD;
-        const channelY = br.y - 0.075 - i * 0.008;
-        g.add(cableTube([new THREE.Vector3(x, br.y - 0.045, z), new THREE.Vector3(x, channelY, z), new THREE.Vector3((x + c.entry.x) / 2, channelY - 0.02, z), c.entry.clone().add(new THREE.Vector3(i * 0.008, 0, 0))], rad, PHASES[i]));
+      const dr = placed.find((x) => x.d.kind === "dr" && x.d.circuitId === c.id && x.model);
+      const m = br.model!;
+      let spread = -0.012;
+      const step = cableRadius(c.section) * 2 + 0.0015;
+      // DR → disjuntor: pontes curtas por fora (como no quadro real)
+      if (dr) {
+        const dm = dr.model!;
+        const np = neutralPoleOf(dr);
+        let k = 0;
+        for (let i = 0; i < dr.d.poles; i++) {
+          if (i === np) continue;
+          if (k >= br.d.poles) break;
+          const s = dm.bottom(i);
+          const tIn = m.top(k);
+          const yb = s.y - 0.02 - k * 0.004;
+          const ya = tIn.y + 0.035 + k * 0.004;
+          const zf = NOSE + 0.012 + k * 0.006;
+          const ph = phaseOfPole.get(`${dr.d.id}:${i}`) ?? k;
+          if (!cover) g.add(wire([s, V(s.x, yb), V(s.x, yb, zf), V(s.x, ya, zf), V(tIn.x, ya, zf), V(tIn.x, ya), tIn], c.section, PHASES[ph % 3], { start: true, end: true })); // com espelho ficam escondidas
+          phaseOfPole.set(`${br.d.id}:${k}`, ph);
+          k++;
+        }
+        if (np >= 0) {
+          const h = nextN();
+          const ya = gutterAbove(dr.row);
+          g.add(wire([h, V(h.x, barY + 0.03, h.z), V(h.x, barY + 0.03), V(laneX(-1), barY + 0.03), V(-b.w / 2 + 0.03, ya), V(dm.poleX[np], ya), dm.top(np)], c.section, WIRE.N, { start: true, end: true }));
+          const s = dm.bottom(np);
+          g.add(wire(toExit([s, V(s.x, gutterBelow(dr.row))], c.exit, spread), c.section, WIRE.N, { start: true }));
+          spread += step;
+        }
       }
-      if (c.neutral) g.add(cableTube([new THREE.Vector3(-b.w * 0.28 + Math.random() * 0.05, barY + 0.012, z), new THREE.Vector3(-b.w * 0.1, barY + 0.06, z), c.entry.clone().add(new THREE.Vector3(-0.008, 0, 0))], rad, WIRE.N));
-      g.add(cableTube([new THREE.Vector3(b.w * 0.25 + Math.random() * 0.05, barY + 0.012, z), new THREE.Vector3(b.w * 0.1, barY + 0.07, z), c.entry.clone().add(new THREE.Vector3(-0.016, 0, 0))], rad, WIRE.PE));
+      for (let i = 0; i < br.d.poles; i++) {
+        const s = m.bottom(i);
+        const ph = phaseOfPole.get(`${br.d.id}:${i}`) ?? i;
+        g.add(wire(toExit([s, V(s.x, gutterBelow(br.row))], c.exit, spread), c.section, PHASES[ph % 3], { start: true }));
+        spread += step;
+      }
+      if (c.neutral && !(dr && neutralPoleOf(dr) >= 0)) {
+        const h = nextN();
+        g.add(wire(toExit([h, V(h.x, barY + 0.03, h.z), V(h.x, barY + 0.022)], c.exit, spread), c.section, WIRE.N, { start: true }));
+        spread += step;
+      }
+      const e = nextT();
+      g.add(wire(toExit([e, V(e.x, barY + 0.03, e.z), V(e.x, barY + 0.018)], c.exit, spread), c.pe, "PE", { start: true }));
     }
+
+    // espelho (tampa interna) com recortes para os dispositivos
+    if (cover) {
+      const s = new THREE.Shape();
+      const cw = b.w - 0.03;
+      const ch = b.h - 0.03;
+      s.moveTo(-cw / 2, -ch / 2);
+      s.lineTo(cw / 2, -ch / 2);
+      s.lineTo(cw / 2, ch / 2);
+      s.lineTo(-cw / 2, ch / 2);
+      s.closePath();
+      for (let rw = 0; rw < size.rows; rw++) {
+        const y = railY(rw);
+        const hole = new THREE.Path();
+        hole.moveTo(left - 0.002, y - NOSE_H / 2 - 0.001);
+        hole.lineTo(-left + 0.002, y - NOSE_H / 2 - 0.001);
+        hole.lineTo(-left + 0.002, y + NOSE_H / 2 + 0.001);
+        hole.lineTo(left - 0.002, y + NOSE_H / 2 + 0.001);
+        hole.closePath();
+        s.holes.push(hole);
+      }
+      const cov = new THREE.Mesh(new THREE.ExtrudeGeometry(s, { depth: 0.002, bevelEnabled: false }), new THREE.MeshStandardMaterial({ color: "#f5f5f2", roughness: 0.45 }));
+      cov.position.z = SHOULDER + 0.006;
+      cov.castShadow = true;
+      g.add(cov);
+      // porta-etiquetas com o nome de cada circuito
+      for (const pd of placed) {
+        if (pd.d.kind === "reserva") continue;
+        const tex = textTexture([{ text: pd.d.label.slice(0, 14), size: 13, color: "#111" }], "#fffef5", 32 * pd.d.poles * 4, 40);
+        const lab = new THREE.Mesh(new THREE.PlaneGeometry(pd.d.poles * MOD - 0.001, 0.009), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }));
+        lab.position.set(pd.x, pd.y + NOSE_H / 2 + 0.009, SHOULDER + 0.0085);
+        g.add(lab);
+      }
+    }
+
     const l = label(`Quadro ${size.modules} módulos · ${r.modulesUsed} ocupados`, "s3d-label");
     l.position.set(0, b.h / 2 + 0.07, b.d);
     g.add(l);

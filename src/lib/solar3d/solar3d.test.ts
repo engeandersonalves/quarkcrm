@@ -149,3 +149,76 @@ test("relatório elétrico padrão fecha sem erros graves", () => {
   const errors = r.checks.filter((c) => c.level === "error");
   assert.deepEqual(errors.map((e) => e.text), []);
 });
+
+import { fitRectangle, groundWidth, hfovFrom35, parseDroneMeta } from "./drone.ts";
+import { toWorld } from "./geometry.ts";
+
+/** JPEG mínimo com EXIF (Make, GPS em ref. S/W, focal 35 mm) e XMP do DJI. */
+function fakeDroneJpeg() {
+  const bytes: number[] = [];
+  const u16 = (v: number) => bytes.push((v >> 8) & 255, v & 255);
+  const u32 = (v: number) => bytes.push((v >>> 24) & 255, (v >> 16) & 255, (v >> 8) & 255, v & 255);
+  // TIFF big-endian
+  const tiff: number[] = [];
+  const t16 = (v: number) => tiff.push((v >> 8) & 255, v & 255);
+  const t32 = (v: number) => tiff.push((v >>> 24) & 255, (v >> 16) & 255, (v >> 8) & 255, v & 255);
+  const entry = (tag: number, type: number, count: number, value: number) => (t16(tag), t16(type), t32(count), t32(value));
+  tiff.push(0x4d, 0x4d);
+  t16(42);
+  t32(8);
+  // IFD0 em 8: 3 entradas
+  const ifd0 = 8;
+  const exifIfd = ifd0 + 2 + 3 * 12 + 4; // 50
+  const gpsIfd = exifIfd + 2 + 12 + 4; // 68
+  const gpsData = gpsIfd + 2 + 4 * 12 + 4; // 122
+  t16(3);
+  entry(0x010f, 2, 4, 0x444a4900); // "DJI\0" cabe na própria entrada
+  entry(0x8769, 4, 1, exifIfd);
+  entry(0x8825, 4, 1, gpsIfd);
+  t32(0);
+  t16(1);
+  entry(0xa405, 3, 1, 24 << 16);
+  t32(0);
+  t16(4);
+  entry(1, 2, 2, 0x53000000); // "S"
+  entry(2, 5, 3, gpsData);
+  entry(3, 2, 2, 0x57000000); // "W"
+  entry(4, 5, 3, gpsData + 24);
+  t32(0);
+  for (const [n, d] of [[23, 1], [30, 1], [0, 1], [46, 1], [36, 1], [0, 1]]) (t32(n), t32(d));
+  const xmp = Buffer.from('http://ns.adobe.com/xap/1.0/\0<x:xmpmeta drone-dji:RelativeAltitude="+50.00" drone-dji:GimbalPitchDegree="-90.0" drone-dji:GimbalYawDegree="+30.5"/>');
+  u16(0xffd8);
+  u16(0xffe1);
+  u16(2 + 6 + tiff.length);
+  bytes.push(...Buffer.from("Exif\0\0"), ...tiff);
+  u16(0xffe1);
+  u16(2 + xmp.length);
+  bytes.push(...xmp);
+  u16(0xffda);
+  u32(0);
+  return new Uint8Array(bytes).buffer;
+}
+
+test("foto de drone: GPS, altura, lente e rumo", () => {
+  const m = parseDroneMeta(fakeDroneJpeg());
+  assert.ok(Math.abs(m.lat! - -23.5) < 1e-9, `lat ${m.lat}`);
+  assert.ok(Math.abs(m.lon! - -46.6) < 1e-9, `lon ${m.lon}`);
+  assert.equal(m.focal35, 24);
+  assert.equal(m.relAltitude, 50);
+  assert.equal(m.gimbalPitch, -90);
+  assert.equal(m.yaw, 30.5);
+  assert.equal(m.make, "DJI");
+  // 24 mm eq. ≈ 73,7° → a 50 m cobre ≈ 75 m
+  assert.ok(Math.abs(hfovFrom35(24) - 73.74) < 0.05);
+  assert.ok(Math.abs(groundWidth(50, hfovFrom35(24)) - 75) < 0.1);
+  assert.deepEqual(parseDroneMeta(new ArrayBuffer(10)).lat, null);
+});
+
+test("contorno de 4 cantos vira edificação com medida e rotação certas", () => {
+  const b = newBuilding({ x: 3, z: -2, length: 12, width: 7, rotation: 32 });
+  const corners = [[-6, 3.5], [6, 3.5], [6, -3.5], [-6, -3.5]].map(([x, z]) => toWorld(b, { x, y: 0, z }));
+  const f = fitRectangle(corners);
+  assert.ok(Math.abs(f.length - 12) < 1e-9 && Math.abs(f.width - 7) < 1e-9);
+  assert.ok(Math.abs(f.rotation - 32) < 1e-9, `rot ${f.rotation}`);
+  assert.ok(Math.abs(f.x - 3) < 1e-9 && Math.abs(f.z + 2) < 1e-9);
+});

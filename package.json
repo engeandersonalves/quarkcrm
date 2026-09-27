@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/lib/pricing.test.ts src/lib/save.test.ts src/lib/quick-estimate.test.ts src/lib/capture-sims.test.ts src/lib/solar3d/solar3d.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/pricing.test.ts src/lib/save.test.ts src/lib/quick-estimate.test.ts src/lib/capture-sims.test.ts src/lib/solar3d/solar3d.test.ts",
+    "build:local": "node scripts/build-local.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -30,6 +31,7 @@
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "esbuild": "^0.25.12",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3"
   }

@@ -45,7 +45,7 @@ export function inverterBox(p: Project): Box2 {
 
 export function boardBox(p: Project): Box2 {
   const s = boardSize(p.electrical.board.modules);
-  return { x: p.electrical.board.x, y: p.electrical.board.y, w: s.perRow * 0.018 + 0.16, h: s.rows * 0.2 + 0.16, d: 0.11 };
+  return { x: p.electrical.board.x, y: p.electrical.board.y, w: s.perRow * 0.018 + 0.18, h: s.rows * 0.2 + 0.24, d: 0.11 };
 }
 
 export function evBox(p: Project): Box2 {

@@ -7,7 +7,7 @@ import { daySamples, cardinal } from "@/lib/solar3d/irradiance";
 import type { Vec3 } from "@/lib/solar3d/sun";
 import { beam, clearGroup, keep, disposeObject, grassTexture, label, moduleTexture, orientedBox, roofTexture, wallTexture } from "./three-utils";
 
-export type RoofTool = "select" | "draw" | "panels" | "obstacle" | "measure";
+export type RoofTool = "select" | "draw" | "panels" | "obstacle" | "measure" | "trace" | "calibrate";
 export type Selection = { kind: "building" | "obstacle" | "array"; id: string } | null;
 
 export interface RoofCallbacks {
@@ -19,6 +19,9 @@ export interface RoofCallbacks {
   onPanelToggle: (arrayId: string, key: string) => void;
   onPlaceObstacle: (p: Vec3) => void;
   onMeasure: (d: number | null) => void;
+  onTrace: (pts: { x: number; z: number }[]) => void;
+  onCalibrate: (distance: number) => void;
+  onTracePoint?: (n: number) => void;
 }
 
 const snap = (v: number, s = 0.1) => Math.round(v / s) * s;
@@ -64,6 +67,9 @@ export class RoofScene {
   private drag: null | { kind: "building" | "obstacle" | "draw"; id?: string; start: THREE.Vector3; orig?: { x: number; z: number }; moved: boolean } = null;
   private down: { x: number; y: number } | null = null;
   private measureA: THREE.Vector3 | null = null;
+  private tracePts: THREE.Vector3[] = [];
+  private backdropGroup = new THREE.Group();
+  private backdropKey = "";
   private extent = 20;
   private center = new THREE.Vector3();
   private sunVec = new THREE.Vector3(0.3, 0.8, -0.4);
@@ -122,7 +128,7 @@ export class RoofScene {
     grid.position.y = 0.005;
     this.scene.add(grid);
 
-    this.scene.add(this.world, this.overlay, this.sunGroup, this.measureGroup, this.preview, this.compass);
+    this.scene.add(this.world, this.overlay, this.sunGroup, this.measureGroup, this.preview, this.compass, this.backdropGroup);
     this.buildCompass();
 
     this.resizeObs = new ResizeObserver(() => this.resize());
@@ -160,8 +166,9 @@ export class RoofScene {
   setTool(t: RoofTool) {
     this.tool = t;
     this.measureA = null;
+    this.tracePts = [];
     clearGroup(this.measureGroup);
-    this.renderer.domElement.style.cursor = t === "draw" || t === "measure" || t === "obstacle" ? "crosshair" : t === "panels" ? "cell" : "default";
+    this.renderer.domElement.style.cursor = t === "draw" || t === "measure" || t === "obstacle" || t === "trace" || t === "calibrate" ? "crosshair" : t === "panels" ? "cell" : "default";
     this.refreshOverlay();
   }
 
@@ -185,6 +192,33 @@ export class RoofScene {
     else if (kind === "north") this.camera.position.set(c.x, r * 0.5, c.z - r);
     else if (kind === "south") this.camera.position.set(c.x, r * 0.5, c.z + r);
     else this.frameAll();
+  }
+
+  /** Foto aérea no chão, em escala real e orientada pelo rumo da câmera. */
+  setBackdrop(b: Project["backdrop"]) {
+    const key = b ? `${b.image.length}:${b.image.slice(-64)}:${b.widthM}:${b.rotation}:${b.x}:${b.z}:${b.opacity}` : "";
+    if (key === this.backdropKey) return;
+    this.backdropKey = key;
+    clearGroup(this.backdropGroup);
+    if (!b) return;
+    const tex = new THREE.TextureLoader().load(b.image);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    const h = (b.widthM * b.pxH) / b.pxW;
+    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 1, transparent: b.opacity < 1, opacity: b.opacity, depthWrite: b.opacity >= 1 });
+    const photo = new THREE.Mesh(new THREE.PlaneGeometry(b.widthM, h), mat);
+    photo.rotation.x = -Math.PI / 2;
+    photo.receiveShadow = true;
+    const holder = new THREE.Group();
+    holder.position.set(b.x, 0.008, b.z);
+    holder.rotation.y = (-b.rotation * Math.PI) / 180;
+    holder.add(photo);
+    // moldura e seta do topo da foto
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(b.widthM, h)), new THREE.LineBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.7 }));
+    edges.rotation.x = -Math.PI / 2;
+    edges.position.y = 0.002;
+    holder.add(edges);
+    this.backdropGroup.add(holder);
   }
 
   /* ---------------------------------------------------------------- sol */
@@ -799,6 +833,40 @@ export class RoofScene {
     const { hit, ground } = this.pick(e);
     const obj = hit?.object;
     const u = obj?.userData ?? {};
+    if (this.tool === "trace" || this.tool === "calibrate") {
+      if (!ground) return;
+      const need = this.tool === "trace" ? 4 : 2;
+      if (this.tracePts.length >= need) {
+        this.tracePts = [];
+        clearGroup(this.measureGroup);
+      }
+      const p = ground.clone().setY(0.06);
+      this.tracePts.push(p);
+      const color = this.tool === "trace" ? "#f59e0b" : "#e11d48";
+      const dot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 10), new THREE.MeshBasicMaterial({ color, depthTest: false }));
+      dot.position.copy(p);
+      dot.renderOrder = 10;
+      const n = label(String(this.tracePts.length), "s3d-dim");
+      n.position.copy(p).setY(0.6);
+      this.measureGroup.add(dot, n);
+      if (this.tracePts.length > 1) {
+        const a = this.tracePts[this.tracePts.length - 2];
+        const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, p]), new THREE.LineBasicMaterial({ color, depthTest: false }));
+        line.renderOrder = 10;
+        const d = label(`${a.distanceTo(p).toFixed(2).replace(".", ",")} m`, "s3d-dim");
+        d.position.copy(a).add(p).multiplyScalar(0.5);
+        this.measureGroup.add(line, d);
+      }
+      this.cb.onTracePoint?.(this.tracePts.length);
+      if (this.tracePts.length === need) {
+        if (this.tool === "trace") {
+          const close = new THREE.Line(new THREE.BufferGeometry().setFromPoints([p, this.tracePts[0]]), new THREE.LineBasicMaterial({ color, depthTest: false }));
+          this.measureGroup.add(close);
+          this.cb.onTrace(this.tracePts.map((q) => ({ x: q.x, z: q.z })));
+        } else this.cb.onCalibrate(this.tracePts[0].distanceTo(this.tracePts[1]));
+      }
+      return;
+    }
     if (this.tool === "measure") {
       const p = hit ? hit.point.clone() : ground;
       if (!p) return;

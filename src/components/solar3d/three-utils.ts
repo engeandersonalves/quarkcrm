@@ -38,7 +38,7 @@ export function clearGroup(g: THREE.Group) {
 
 const texCache = new Map<string, THREE.Texture>();
 
-function canvasTexture(key: string, w: number, h: number, draw: (c: CanvasRenderingContext2D, w: number, h: number) => void, repeat = true) {
+export function canvasTexture(key: string, w: number, h: number, draw: (c: CanvasRenderingContext2D, w: number, h: number) => void, repeat = true) {
   const cached = texCache.get(key);
   if (cached) return cached;
   const cv = document.createElement("canvas");

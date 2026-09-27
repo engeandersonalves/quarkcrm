@@ -57,7 +57,7 @@ export interface ExtraCircuit {
 export interface Electrical {
   grid: Grid;
   inverter: InverterSpec & { x: number; y: number };
-  board: { modules: number; x: number; y: number; kind: "sobrepor" | "embutir" };
+  board: { modules: number; x: number; y: number; kind: "sobrepor" | "embutir"; brand: string };
   ev: EvCharger;
   routeY: number; // altura do trecho horizontal do eletroduto
   method: "B1" | "C";
@@ -67,6 +67,19 @@ export interface Electrical {
   extra: ExtraCircuit[];
   devices: Device[];
   autoDevices: boolean;
+}
+
+/** Foto aérea (drone/satélite) usada como base no chão da cena. */
+export interface Backdrop {
+  image: string; // dataURL (JPEG reduzido)
+  pxW: number;
+  pxH: number;
+  widthM: number; // largura real coberta pelo lado maior da foto
+  rotation: number; // rumo do topo da foto (graus a partir do norte, horário)
+  x: number;
+  z: number;
+  opacity: number;
+  source: string;
 }
 
 export interface Project {
@@ -83,6 +96,7 @@ export interface Project {
   obstacles: Obstacle[];
   electrical: Electrical;
   shading: Record<string, { monthly: number[]; perPanel: Record<string, number> }>; // por array
+  backdrop: Backdrop | null;
 }
 
 export const MODULE_PRESETS: ModuleSpec[] = [
@@ -154,7 +168,7 @@ export function defaultElectrical(): Electrical {
       x: -1.4,
       y: 1.5,
     },
-    board: { modules: 18, x: 1.6, y: 1.5, kind: "sobrepor" },
+    board: { modules: 18, x: 1.6, y: 1.5, kind: "sobrepor", brand: "steck" },
     ev: { enabled: true, brand: "Wallbox", current: 32, connection: "ff", rdcdd: true, x: 3.6, y: 1.3 },
     routeY: 0.9,
     method: "B1",
@@ -185,6 +199,7 @@ export function defaultProject(): Project {
     obstacles: [],
     electrical: defaultElectrical(),
     shading: {},
+    backdrop: null,
   };
 }
 
@@ -340,5 +355,6 @@ export function normalizeProject(raw: unknown): Project | null {
       ev: { ...base.electrical.ev, ...(r.electrical?.ev ?? {}) },
     },
     shading: r.shading ?? {},
+    backdrop: r.backdrop ?? null,
   };
 }
