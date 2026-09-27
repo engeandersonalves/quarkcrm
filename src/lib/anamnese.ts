@@ -8,7 +8,7 @@ import { quickEstimate, type QuickEstimate } from "./quick-estimate.ts";
 
 export type InputMode = "kwh" | "bill";
 export type Fit = "atende" | "aumentar";
-export type Properties = "1" | "2" | "3+";
+export type Properties = "1" | "2+";
 export type Payment = "financiamento" | "cartao" | "avista" | "pensar";
 export type Timeline = "agora" | "1-3" | "3-6" | "naosei";
 
@@ -37,8 +37,7 @@ export const TIMELINES: { id: Timeline; label: string; sub: string }[] = [
 
 export const PROPERTIES: { id: Properties; label: string; sub: string }[] = [
   { id: "1", label: "Só este imóvel", sub: "A energia fica onde for gerada" },
-  { id: "2", label: "2 imóveis", sub: "Gera em um e abate a conta do outro" },
-  { id: "3+", label: "3 ou mais", sub: "Casa, comércio, casa de praia…" },
+  { id: "2+", label: "Mais de um imóvel", sub: "Quero transferir créditos para outra conta" },
 ];
 
 export interface Answers {
@@ -50,7 +49,6 @@ export interface Answers {
   extraKwh: number;
   roof: string | null;
   properties: Properties | null;
-  otherKwh: number;
   payment: Payment | null;
   timeline: Timeline | null;
 }
@@ -63,7 +61,6 @@ export const EMPTY_ANSWERS: Answers = {
   extraKwh: 0,
   roof: null,
   properties: null,
-  otherKwh: 0,
   payment: null,
   timeline: null,
 };
@@ -98,10 +95,9 @@ export function increaseKwh(a: Pick<Answers, "fit" | "increases" | "extraKwh">) 
   return INCREASES.filter((i) => a.increases.includes(i.id)).reduce((s, i) => s + i.kwh, 0) + Math.max(0, a.extraKwh);
 }
 
-/** Consumo que o sistema vai atender: atual + aumento previsto + outros imóveis. */
+/** Consumo que o sistema vai atender: atual + aumento previsto (os outros imóveis o consultor confirma). */
 export function plannedKwh(a: Answers, r: Rates = {}) {
-  const others = a.properties && a.properties !== "1" ? Math.max(0, a.otherKwh) : 0;
-  return currentKwh(a, r) + increaseKwh(a) + others;
+  return currentKwh(a, r) + increaseKwh(a);
 }
 
 export interface Plan {
@@ -155,7 +151,7 @@ export function anamneseNotes(a: Answers, plan: Plan, extra: { referral?: string
     `• Consumo atual: ${plan.kwhNow} kWh/mês (conta ≈ ${brl0(plan.billNow)})`,
     `• Atende hoje? ${a.fit === "aumentar" ? `Quer aumentar: ${inc.join(", ") || "sim"} (+${increaseKwh(a)} kWh)` : "Sim, atende"}`,
     `• Telhado: ${a.roof ?? "—"}`,
-    `• Imóveis: ${label(PROPERTIES, a.properties)}${a.properties && a.properties !== "1" ? ` · outros imóveis: ${a.otherKwh} kWh/mês (transferir energia)` : ""}`,
+    `• Imóveis: ${label(PROPERTIES, a.properties)}${a.properties === "2+" ? " → pedir o consumo das outras contas para o rateio" : ""}`,
     `• Pagamento: ${label(PAYMENTS, a.payment)}`,
     `• Prazo: ${label(TIMELINES, a.timeline)}`,
     `• Dimensionar para: ${plan.kwhPlanned} kWh/mês → ${plan.estimate.kwp.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} kWp (${plan.estimate.modules} placas, ~${plan.estimate.areaM2} m²)`,

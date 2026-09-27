@@ -193,6 +193,13 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
                 </Button>
               </Link>
             )}
+            {!["save", "eletroposto"].includes(seg) && (
+              <Link href={`/orcamento-rapido?lead=${lead.id}`}>
+                <Button variant="secondary">
+                  <Zap className="h-4 w-4" /> Orçamento rápido
+                </Button>
+              </Link>
+            )}
             <Link href={`/documentos/novo?tipo=procuracao&lead=${lead.id}`}>
               <Button variant="secondary">
                 <FileSignature className="h-4 w-4" /> Procuração

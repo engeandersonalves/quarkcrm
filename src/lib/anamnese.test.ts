@@ -10,11 +10,11 @@ test("converte conta em kWh e kWh em conta", () => {
   assert.equal(currentKwh({ mode: "kwh", value: 380.4 }, R), 380);
 });
 
-test("consumo planejado soma aumento e outros imóveis", () => {
-  const a: Answers = { ...EMPTY_ANSWERS, mode: "kwh", value: 400, fit: "aumentar", increases: ["ar", "carro"], extraKwh: 50, properties: "2", otherKwh: 300 };
-  assert.equal(plannedKwh(a, R), 400 + 150 + 250 + 50 + 300);
-  // Se atende, o aumento não entra; com 1 imóvel, os outros não entram.
-  assert.equal(plannedKwh({ ...a, fit: "atende", properties: "1" }, R), 400);
+test("consumo planejado soma o aumento previsto", () => {
+  const a: Answers = { ...EMPTY_ANSWERS, mode: "kwh", value: 400, fit: "aumentar", increases: ["ar", "carro"], extraKwh: 50, properties: "2+" };
+  assert.equal(plannedKwh(a, R), 400 + 150 + 250 + 50);
+  // Se atende, o aumento não entra.
+  assert.equal(plannedKwh({ ...a, fit: "atende" }, R), 400);
 });
 
 test("plano: sistema maior quando o cliente quer aumentar", () => {
@@ -34,12 +34,12 @@ test("temperatura do lead", () => {
 });
 
 test("resumo para o CRM", () => {
-  const a: Answers = { ...EMPTY_ANSWERS, mode: "bill", value: 525, fit: "aumentar", increases: ["ar"], roof: "Telhado cerâmico", properties: "2", otherKwh: 200, payment: "financiamento", timeline: "agora" };
+  const a: Answers = { ...EMPTY_ANSWERS, mode: "bill", value: 525, fit: "aumentar", increases: ["ar"], roof: "Telhado cerâmico", properties: "2+", payment: "financiamento", timeline: "agora" };
   const notes = anamneseNotes(a, buildPlan(a, R), { referral: "João" });
   assert.match(notes, /Consumo atual: 500 kWh/);
   assert.match(notes, /Ar-condicionado/);
   assert.match(notes, /Telhado cerâmico/);
-  assert.match(notes, /transferir energia/);
+  assert.match(notes, /Mais de um imóvel/);
   assert.match(notes, /Financiamento/);
   assert.match(notes, /O mais rápido possível/);
   assert.match(notes, /Indicação: João/);

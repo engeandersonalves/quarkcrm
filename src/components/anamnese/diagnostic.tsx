@@ -59,8 +59,9 @@ import type { RoofKey } from "@/lib/defaults";
 import { whatsappUrl } from "@/lib/format";
 import { brl, fmtNum } from "@/lib/pricing";
 
-type Step = "intro" | "consumo" | "atende" | "telhado" | "imoveis" | "pagamento" | "prazo" | "contato" | "resultado";
-const QUESTIONS: Step[] = ["consumo", "atende", "telhado", "imoveis", "pagamento", "prazo", "contato"];
+type Step = "intro" | "consumo" | "atende" | "telhado" | "imoveis" | "pagamento" | "prazo" | "nome" | "telefone" | "email" | "resultado";
+const QUESTIONS: Step[] = ["consumo", "atende", "telhado", "imoveis", "pagamento", "prazo", "nome", "telefone", "email"];
+const CONTACT_STEPS: Step[] = ["nome", "telefone", "email"];
 
 const ROOFS: { key: RoofKey | "naosei"; value: string; label: string; insight: string }[] = [
   { key: "ceramic", value: "Telhado cerâmico", label: "Cerâmico", insight: "Usamos ganchos próprios para telha cerâmica e trocamos, sem custo, qualquer telha que quebrar na instalação." },
@@ -188,7 +189,7 @@ export function Diagnostic({ company }: { company: PublicCompany }) {
   const [step, setStep] = useState<Step>("intro");
   const [dir, setDir] = useState<"push" | "pop">("push");
   const [a, setA] = useState<Answers>(EMPTY_ANSWERS);
-  const [contact, setContact] = useState({ name: firstName, phone: "", email: "", city: "", referral: "", website: "" });
+  const [contact, setContact] = useState({ name: firstName, phone: "", email: "", website: "" });
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const startedAt = useRef(Date.now());
@@ -203,33 +204,36 @@ export function Diagnostic({ company }: { company: PublicCompany }) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const idx = QUESTIONS.indexOf(step);
-  const next = () => go(idx >= 0 && idx < QUESTIONS.length - 1 ? QUESTIONS[idx + 1] : "contato");
+  const next = () => go(idx >= 0 && idx < QUESTIONS.length - 1 ? QUESTIONS[idx + 1] : "email");
   const back = () => go(idx > 0 ? QUESTIONS[idx - 1] : "intro", "pop");
 
   const canNext =
     (step === "consumo" && a.value > 0) ||
     (step === "atende" && (a.fit === "atende" || (a.fit === "aumentar" && increaseKwh(a) > 0))) ||
     (step === "telhado" && !!a.roof) ||
-    (step === "imoveis" && !!a.properties && (a.properties === "1" || a.otherKwh > 0)) ||
+    (step === "imoveis" && !!a.properties) ||
     (step === "pagamento" && !!a.payment) ||
-    (step === "prazo" && !!a.timeline);
+    (step === "prazo" && !!a.timeline) ||
+    (step === "nome" && contact.name.trim().length >= 2) ||
+    (step === "telefone" && contact.phone.replace(/\D/g, "").length >= 10);
 
   const phoneOk = contact.phone.replace(/\D/g, "").length >= 10;
-  const canSend = contact.name.trim().length >= 2 && phoneOk;
+  const emailOk = !contact.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim());
+  const canSend = contact.name.trim().length >= 2 && phoneOk && emailOk;
 
-  const submit = async () => {
-    if (!canSend || sending) return;
+  const submit = async (skipEmail = false) => {
+    if (skipEmail) setContact((c) => ({ ...c, email: "" }));
+    if (!(skipEmail ? contact.name.trim().length >= 2 && phoneOk : canSend) || sending) return;
     setSending(true);
     setError("");
-    const notes = anamneseNotes(a, plan, { referral: contact.referral });
+    const notes = anamneseNotes(a, plan);
     const res = await fetch("/api/public/lead", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: contact.name.trim(),
         phone: contact.phone,
-        email: contact.email.trim(),
-        city: contact.city.trim(),
+        email: skipEmail ? "" : contact.email.trim(),
         state: "AL",
         avg_bill: plan.billPlanned,
         consumption_kwh: plan.kwhPlanned,
@@ -255,7 +259,7 @@ export function Diagnostic({ company }: { company: PublicCompany }) {
 
   const monthly = useCountUp(plan.estimate.monthlySavings);
   const total25 = useCountUp(plan.estimate.savings25y);
-  const showHud = idx >= 1 && step !== "contato";
+  const showHud = idx >= 1 && !CONTACT_STEPS.includes(step);
   const progress = step === "intro" ? 0 : step === "resultado" ? 1 : (idx + 1) / (QUESTIONS.length + 1);
 
   return (
@@ -286,7 +290,7 @@ export function Diagnostic({ company }: { company: PublicCompany }) {
             )}
           </div>
           <span className="flex items-center gap-1 text-[11px] font-semibold text-white/50">
-            <Lock className="h-3 w-3 text-[#9BD373]" /> {step === "intro" ? "Grátis" : step === "resultado" ? "Pronto" : `${idx + 1}/${QUESTIONS.length}`}
+            <Lock className="h-3 w-3 text-[#9BD373]" /> {step === "intro" ? "Grátis" : step === "resultado" ? "Pronto" : CONTACT_STEPS.includes(step) ? "Quase lá" : `${idx + 1}/6`}
           </span>
         </div>
 
@@ -451,38 +455,27 @@ export function Diagnostic({ company }: { company: PublicCompany }) {
           {step === "imoveis" && (
             <section>
               <Kicker n={4}>Seus imóveis</Kicker>
-              <H>A energia vai abastecer um imóvel ou mais?</H>
-              <Sub>Você pode gerar num lugar e usar os créditos para abater a conta de outro imóvel seu.</Sub>
+              <H>A energia é para um imóvel ou mais?</H>
               <div className="mt-6 grid gap-3">
                 {PROPERTIES.map((p) => (
                   <Option
                     key={p.id}
                     selected={a.properties === p.id}
-                    onClick={() => set({ properties: p.id, otherKwh: p.id === "1" ? 0 : a.otherKwh || (p.id === "2" ? 250 : 500) })}
+                    onClick={() => set({ properties: p.id })}
                     icon={p.id === "1" ? <Sun className="h-5 w-5" /> : <Building2 className="h-5 w-5" />}
                     title={p.label}
                     sub={p.sub}
                   />
                 ))}
               </div>
-              {a.properties && a.properties !== "1" && (
-                <div className="ios-rise mt-5">
-                  <Glass className="p-4">
-                    <TransferArt />
-                    <p className="mt-3 text-[13px] font-semibold text-white/70">Consumo somado dos outros imóveis</p>
-                    <div className="mt-2 flex items-center justify-between gap-3">
-                      <Stepper value={a.otherKwh} step={50} min={50} max={20000} suffix="kWh/mês" onChange={(otherKwh) => set({ otherKwh })} big />
-                    </div>
-                  </Glass>
-                  <Insight icon={<Zap className="h-5 w-5" />} tone="yellow" title="Autoconsumo remoto: uma usina, várias contas no zero.">
-                    Os créditos vão para os imóveis do mesmo titular (CPF ou CNPJ) atendidos pela mesma distribuidora. Nós cuidamos de todo o cadastro do rateio com a
-                    Equatorial.
-                  </Insight>
-                </div>
+              {a.properties === "2+" && (
+                <Insight icon={<Zap className="h-5 w-5" />} tone="yellow" title="Uma usina, várias contas no zero.">
+                  Os créditos abatem as contas dos seus outros imóveis na Equatorial. O consultor confirma o consumo deles com você.
+                </Insight>
               )}
               {a.properties === "1" && (
                 <Insight icon={<Sun className="h-5 w-5" />} title="Simples e direto.">
-                  E se um dia você tiver outro imóvel, dá para transferir os créditos para ele sem mudar nada no sistema.
+                  E se um dia tiver outro imóvel, dá para transferir os créditos para ele.
                 </Insight>
               )}
             </section>
@@ -554,42 +547,60 @@ export function Diagnostic({ company }: { company: PublicCompany }) {
             </section>
           )}
 
-          {step === "contato" && (
+          {step === "nome" && (
             <section>
-              <Kicker n={7}>Quase lá</Kicker>
-              <H>{contact.name.trim() ? `${contact.name.trim().split(" ")[0]}, seu diagnóstico está pronto!` : "Seu diagnóstico está pronto!"}</H>
-              <Sub>Informe seu contato para ver o resultado completo. Um consultor da {brand} confirma os números com você, sem compromisso.</Sub>
-              {/* Prévia borrada do resultado: curiosidade que converte */}
-              <Glass className="relative mt-5 overflow-hidden p-4">
-                <div className="pointer-events-none grid grid-cols-3 gap-2 blur-[6px] select-none" aria-hidden>
-                  {[brl(plan.estimate.monthlySavings, 0), `${fmtNum(plan.estimate.kwp, 1)} kWp`, brl(plan.estimate.savings25y, 0)].map((v, i) => (
-                    <div key={i} className="rounded-xl bg-white/10 p-3 text-center">
-                      <p className="ios-rounded text-lg font-bold">{v}</p>
-                      <p className="text-[10px] text-white/60">■■■■■</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="absolute inset-0 grid place-items-center">
-                  <span className="flex items-center gap-1.5 rounded-full bg-[#0E0A1C]/80 px-3 py-1.5 text-[12px] font-semibold ring-1 ring-white/15">
-                    <Lock className="h-3.5 w-3.5 text-[#F3EA3B]" /> Liberado após o envio
-                  </span>
-                </div>
-              </Glass>
-              <div className="mt-5 grid gap-3">
-                <Field label="Seu nome" value={contact.name} onChange={(name) => setContact((c) => ({ ...c, name }))} autoComplete="name" />
-                <Field label="WhatsApp" value={contact.phone} onChange={(phone) => setContact((c) => ({ ...c, phone }))} autoComplete="tel" inputMode="tel" placeholder="(82) 9 9999-9999" />
-                <Field label="E-mail (receba o estudo)" value={contact.email} onChange={(email) => setContact((c) => ({ ...c, email }))} autoComplete="email" inputMode="email" optional />
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Cidade" value={contact.city} onChange={(city) => setContact((c) => ({ ...c, city }))} autoComplete="address-level2" optional />
-                  <Field label="Quem indicou?" value={contact.referral} onChange={(referral) => setContact((c) => ({ ...c, referral }))} optional />
-                </div>
-                {/* Campo invisível contra robôs */}
-                <input tabIndex={-1} autoComplete="off" value={contact.website} onChange={(e) => setContact((c) => ({ ...c, website: e.target.value }))} className="absolute -left-[9999px] h-0 w-0 opacity-0" aria-hidden />
-              </div>
-              {error && <p className="mt-3 rounded-xl bg-[#FF6B8B]/15 px-3 py-2 text-sm text-[#FFB3C3]">{error}</p>}
-              <p className="mt-4 flex items-start gap-2 text-[12px] text-white/45">
-                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9BD373]" /> Seus dados ficam protegidos (LGPD) e são usados só para o seu atendimento. Nada de spam.
+              <Kicker n="✓">Respostas completas</Kicker>
+              <H>Seu diagnóstico está pronto! Como podemos te chamar?</H>
+              <BigInput
+                value={contact.name}
+                onChange={(name) => setContact((c) => ({ ...c, name }))}
+                onEnter={() => canNext && next()}
+                placeholder="Seu nome"
+                autoComplete="name"
+                autoCapitalize="words"
+              />
+              <Teaser plan={plan} />
+            </section>
+          )}
+
+          {step === "telefone" && (
+            <section>
+              <Kicker n="✓">Contato</Kicker>
+              <H>{`Prazer, ${contact.name.trim().split(" ")[0] || "tudo bem"}! Qual o seu WhatsApp?`}</H>
+              <Sub>É por lá que o consultor confirma os números com você. Sem ligações chatas.</Sub>
+              <BigInput
+                value={contact.phone}
+                onChange={(phone) => setContact((c) => ({ ...c, phone: maskPhone(phone) }))}
+                onEnter={() => canNext && next()}
+                placeholder="(82) 9 9999-9999"
+                autoComplete="tel"
+                inputMode="tel"
+                type="tel"
+              />
+              <p className="mt-4 flex items-start gap-2 text-[12.5px] text-white/45">
+                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9BD373]" /> Seus dados ficam protegidos (LGPD) e são usados só para o seu atendimento.
               </p>
+            </section>
+          )}
+
+          {step === "email" && (
+            <section>
+              <Kicker n="✓">Último passo</Kicker>
+              <H>Quer receber o estudo completo por e-mail?</H>
+              <Sub>Opcional. Você vê o diagnóstico na próxima tela de qualquer jeito.</Sub>
+              <BigInput
+                value={contact.email}
+                onChange={(email) => setContact((c) => ({ ...c, email: email.trim() }))}
+                onEnter={() => submit()}
+                placeholder="seu@email.com"
+                autoComplete="email"
+                inputMode="email"
+                type="email"
+              />
+              {!emailOk && <p className="mt-2 text-[13px] text-[#FFB3C3]">Confira o e-mail — ou deixe em branco.</p>}
+              {/* Campo invisível contra robôs */}
+              <input tabIndex={-1} autoComplete="off" value={contact.website} onChange={(e) => setContact((c) => ({ ...c, website: e.target.value }))} className="absolute -left-[9999px] h-0 w-0 opacity-0" aria-hidden />
+              {error && <p className="mt-3 rounded-xl bg-[#FF6B8B]/15 px-3 py-2 text-sm text-[#FFB3C3]">{error}</p>}
             </section>
           )}
 
@@ -601,15 +612,22 @@ export function Diagnostic({ company }: { company: PublicCompany }) {
       {step !== "intro" && step !== "resultado" && (
         <div className="fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-[#0E0A1C] via-[#0E0A1C]/95 to-transparent px-4 pt-8 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto max-w-xl">
-            {step === "contato" ? (
+            {step === "email" ? (
+              <div className="grid gap-2">
               <button
-                onClick={submit}
+                onClick={() => submit()}
                 disabled={!canSend || sending}
                 className="flex h-[58px] w-full items-center justify-center gap-2 rounded-[20px] bg-[#F3EA3B] text-[17px] font-bold text-[#1C1234] shadow-[0_18px_40px_-14px_rgba(243,234,59,0.8)] transition active:scale-[0.98] disabled:opacity-40"
               >
                 {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                 {sending ? "Gerando seu diagnóstico…" : "Ver meu diagnóstico"}
               </button>
+              {!contact.email.trim() ? null : (
+                <button onClick={() => submit(true)} disabled={sending} className="h-10 text-[14px] font-semibold text-white/55">
+                  Pular e ver sem e-mail
+                </button>
+              )}
+              </div>
             ) : (
               <button
                 onClick={next}
@@ -626,6 +644,54 @@ export function Diagnostic({ company }: { company: PublicCompany }) {
   );
 }
 
+function maskPhone(v: string) {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 3)} ${d.slice(3, 7)}-${d.slice(7)}`;
+}
+
+/** Campo grande, uma informação por tela. */
+function BigInput({ onChange, onEnter, ...rest }: { value: string; onChange: (v: string) => void; onEnter: () => void } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value">) {
+  return (
+    <input
+      {...rest}
+      autoFocus
+      enterKeyHint="next"
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onEnter();
+        }
+      }}
+      className="mt-7 h-[68px] w-full rounded-[22px] bg-white/[0.07] px-5 text-[22px] font-semibold text-white ring-1 ring-white/10 outline-none placeholder:font-medium placeholder:text-white/25 focus:ring-2 focus:ring-[#F3EA3B]"
+    />
+  );
+}
+
+/** Prévia borrada do resultado: curiosidade que converte. */
+function Teaser({ plan }: { plan: ReturnType<typeof buildPlan> }) {
+  return (
+    <Glass className="relative mt-6 overflow-hidden p-4">
+      <div className="pointer-events-none grid grid-cols-3 gap-2 blur-[6px] select-none" aria-hidden>
+        {[brl(plan.estimate.monthlySavings, 0), `${fmtNum(plan.estimate.kwp, 1)} kWp`, brl(plan.estimate.savings25y, 0)].map((v, i) => (
+          <div key={i} className="rounded-xl bg-white/10 p-3 text-center">
+            <p className="ios-rounded text-lg font-bold">{v}</p>
+            <p className="text-[10px] text-white/60">■■■■■</p>
+          </div>
+        ))}
+      </div>
+      <div className="absolute inset-0 grid place-items-center">
+        <span className="flex items-center gap-1.5 rounded-full bg-[#0E0A1C]/80 px-3 py-1.5 text-[12px] font-semibold ring-1 ring-white/15">
+          <Lock className="h-3.5 w-3.5 text-[#F3EA3B]" /> Liberado em 2 passos
+        </span>
+      </div>
+    </Glass>
+  );
+}
+
 function payText(id: Payment, company: PublicCompany) {
   const list = company.capture?.payments ?? [];
   const find = (re: RegExp) => list.find((p) => re.test(p.title));
@@ -637,7 +703,7 @@ function payText(id: Payment, company: PublicCompany) {
 
 /* ------------------------------------------------------------ pedaços */
 
-function Kicker({ n, children }: { n: number; children: ReactNode }) {
+function Kicker({ n, children }: { n: ReactNode; children: ReactNode }) {
   return (
     <p className="flex items-center gap-2 text-[12px] font-bold tracking-[0.16em] text-[#9BD373] uppercase">
       <span className="grid h-5 w-5 place-items-center rounded-full bg-[#9BD373] text-[11px] text-[#1C1234]">{n}</span>
@@ -739,41 +805,6 @@ function ValuePicker({ mode, value, onChange }: { mode: "bill" | "kwh"; value: n
         ))}
       </div>
     </Glass>
-  );
-}
-
-/** Duas casas trocando energia: a usina gera numa e abate a conta da outra. */
-function TransferArt() {
-  return (
-    <svg viewBox="0 0 320 124" className="w-full" aria-hidden>
-      <defs>
-        <linearGradient id="tf" x1="0" x2="1">
-          <stop offset="0" stopColor="#F3EA3B" />
-          <stop offset="1" stopColor="#9BD373" />
-        </linearGradient>
-      </defs>
-      {/* casa 1 com placas */}
-      <g transform="translate(18 30)">
-        <polygon points="0,34 40,6 80,34" fill="#2A1F4D" />
-        <polygon points="10,30 40,9 70,30" fill="#23385C" stroke="#8FA6D1" strokeWidth="1" />
-        <line x1="25" y1="19" x2="55" y2="19" stroke="#8FA6D1" strokeWidth="0.8" />
-        <rect x="8" y="34" width="64" height="40" rx="3" fill="#3A2C66" />
-        <rect x="32" y="50" width="16" height="24" rx="2" fill="#1C1234" />
-        <circle cx="40" cy="-10" r="9" fill="#F3EA3B" />
-      </g>
-      {/* fluxo */}
-      <path d="M110 70 C 150 30, 170 30, 210 70" stroke="url(#tf)" strokeWidth="3" fill="none" className="anam-flow" strokeLinecap="round" />
-      <text x="160" y="28" textAnchor="middle" fill="#9BD373" fontSize="11" fontWeight="700">créditos de energia</text>
-      {/* casa 2 */}
-      <g transform="translate(222 30)">
-        <polygon points="0,34 40,6 80,34" fill="#2A1F4D" />
-        <rect x="8" y="34" width="64" height="40" rx="3" fill="#3A2C66" />
-        <rect x="18" y="44" width="14" height="12" rx="2" fill="#F3EA3B" opacity="0.8" />
-        <rect x="48" y="44" width="14" height="12" rx="2" fill="#F3EA3B" opacity="0.8" />
-        <text x="40" y="90" textAnchor="middle" fill="#fff" opacity="0.6" fontSize="10">conta abatida</text>
-      </g>
-      <text x="58" y="120" textAnchor="middle" fill="#fff" opacity="0.6" fontSize="10">gera aqui</text>
-    </svg>
   );
 }
 

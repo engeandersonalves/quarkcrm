@@ -8,12 +8,13 @@
     "start": "next start",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/lib/pricing.test.ts src/lib/save.test.ts src/lib/quick-estimate.test.ts src/lib/capture-sims.test.ts src/lib/analytics.test.ts src/lib/csv.test.ts src/lib/documents.test.ts src/lib/anamnese.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/pricing.test.ts src/lib/save.test.ts src/lib/quick-estimate.test.ts src/lib/capture-sims.test.ts src/lib/analytics.test.ts src/lib/csv.test.ts src/lib/documents.test.ts src/lib/anamnese.test.ts src/lib/quick-quote.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.1",
     "clsx": "^2.1.1",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^1.47.0",
     "next": "^15.5.26",
     "react": "^19.3.0",

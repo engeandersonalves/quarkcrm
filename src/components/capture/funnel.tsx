@@ -77,7 +77,6 @@ export function trackLead(segment: string | null, value: number) {
 type StepId = "interesse" | "conta" | "telhado" | "carro" | "negocio" | "operacao" | "usina" | "servicos" | "resultado" | "pronto";
 type Urgency = "quente" | "morno" | "frio";
 
-const PURPLE = "#1C1234";
 const G = {
   sun: "linear-gradient(145deg,#FFD84D 0%,#F3A33B 100%)",
   plug: "linear-gradient(145deg,#7CC4FF 0%,#2F7BF6 100%)",
@@ -290,31 +289,31 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
   );
 
   return (
-    <div className={cx("relative min-h-dvh overflow-x-hidden text-[#1C1234]", embed ? "bg-transparent" : "bg-[#F2F2F7]")}>
+    <div className={cx("notranslate ios-font relative min-h-dvh overflow-x-hidden text-white", embed ? "bg-transparent" : "bg-[#0E0A1C]")}>
       {!embed && (
         <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
-          <div className="ios-float absolute -top-32 -left-24 h-80 w-80 rounded-full bg-[#9BD373]/35 blur-[90px]" />
-          <div className="ios-float absolute top-1/3 -right-28 h-96 w-96 rounded-full bg-[#B38CFF]/25 blur-[100px] [animation-delay:-3s]" />
-          <div className="ios-float absolute -bottom-40 left-1/4 h-80 w-80 rounded-full bg-[#F3EA3B]/25 blur-[100px] [animation-delay:-5s]" />
+          <div className="ios-float absolute -top-32 -left-24 h-80 w-80 rounded-full bg-[#5B34D6]/40 blur-[110px]" />
+          <div className="ios-float absolute top-1/3 -right-28 h-96 w-96 rounded-full bg-[#9BD373]/20 blur-[110px] [animation-delay:-3s]" />
+          <div className="ios-float absolute -bottom-40 left-1/4 h-80 w-80 rounded-full bg-[#F3EA3B]/15 blur-[110px] [animation-delay:-5s]" />
         </div>
       )}
 
       <div className="relative mx-auto flex min-h-dvh w-full max-w-[440px] flex-col">
-        <nav className="sticky top-0 z-20 border-b border-black/[0.06] bg-white/60 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-2xl backdrop-saturate-150">
+        <nav className="sticky top-0 z-20 border-b border-white/5 bg-[#0E0A1C]/70 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-2xl backdrop-saturate-150">
           <div className="grid h-11 grid-cols-[1fr_auto_1fr] items-center">
             <div>
               {showBack && (
-                <button onClick={back} className="ios-press -ml-1 flex items-center text-[17px] text-[#5B34D6]">
+                <button onClick={back} className="ios-press -ml-1 flex items-center text-[17px] text-[#9BD373]">
                   <ChevronLeft className="h-6 w-6" strokeWidth={2.4} /> Voltar
                 </button>
               )}
             </div>
-            <img src="/brand/logo-h-color.png" alt={brand} className="h-7 w-auto" />
+            <img src="/brand/logo-h-white.png" alt={brand} className="h-7 w-auto" />
             <div className="flex justify-end gap-1.5">
               {segment &&
                 step !== "pronto" &&
                 flow.slice(0, -1).map((s, i) => (
-                  <span key={s} className={cx("h-1.5 rounded-full transition-all duration-300", i < idx ? "w-1.5 bg-[#1C1234]" : i === idx ? "w-4 bg-[#1C1234]" : "w-1.5 bg-black/15")} />
+                  <span key={s} className={cx("h-1.5 rounded-full transition-all duration-300", i < idx ? "w-1.5 bg-[#9BD373]" : i === idx ? "w-4 bg-[#F3EA3B]" : "w-1.5 bg-white/20")} />
                 ))}
             </div>
           </div>
@@ -341,7 +340,7 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
                   {brl(bill, 0)}
                   {bill >= 5000 && <span className="text-4xl">+</span>}
                 </BigNumber>
-                <p className="mt-2 text-[15px] text-black/45">por mês</p>
+                <p className="mt-2 text-[15px] text-white/55">por mês</p>
                 <SliderRow value={bill} min={150} max={5000} step={10} bump={50} onChange={setBill} label="Valor da conta de luz" />
               </Glass>
               <Primary onClick={next}>Continuar</Primary>
@@ -377,7 +376,7 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
               <LargeTitle kicker={questions > 1 ? `Pergunta ${idx} de ${questions}` : "Última pergunta"} title="Quanto você roda?" sub="Por mês, somando todos os trajetos." />
               <Glass className="mt-6 px-5 pt-8 pb-7 text-center">
                 <BigNumber>{fmtNum(km)} km</BigNumber>
-                <p className="mt-2 text-[15px] text-black/45">por mês</p>
+                <p className="mt-2 text-[15px] text-white/55">por mês</p>
                 <SliderRow value={km} min={300} max={6000} step={50} bump={100} onChange={setKm} label="Quilômetros por mês" />
               </Glass>
               <SectionHeader className="mt-7">Seu carro a gasolina faz</SectionHeader>
@@ -432,9 +431,9 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
               />
               <Glass className="mt-6 px-5 pt-7 pb-7 text-center">
                 <BigNumber>{station.sessions}</BigNumber>
-                <p className="mt-2 text-[15px] text-black/45">recargas por dia</p>
+                <p className="mt-2 text-[15px] text-white/55">recargas por dia</p>
                 <SliderRow value={sessions} min={1} max={stationCapacity(power)} step={1} bump={1} onChange={setSessions} label="Recargas por dia" />
-                <p className="mt-4 text-[13px] text-black/40">
+                <p className="mt-4 text-[13px] text-white/50">
                   Capacidade de até {stationCapacity(power)} recargas/dia com {power} kW · cerca de {Math.round((30 / (power * 0.85)) * 60)} min por recarga
                 </p>
               </Glass>
@@ -447,7 +446,7 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
               <LargeTitle kicker={questions > 1 ? `Pergunta ${idx} de ${questions}` : "Última pergunta"} title="Sua usina solar" sub="Tamanho aproximado e última limpeza." />
               <Glass className="mt-6 px-5 pt-8 pb-7 text-center">
                 <BigNumber>{fmtNum(kwp)} kWp</BigNumber>
-                <p className="mt-2 text-[15px] text-black/45">≈ {Math.max(1, Math.round((kwp * 1000) / 600))} placas</p>
+                <p className="mt-2 text-[15px] text-white/55">≈ {Math.max(1, Math.round((kwp * 1000) / 600))} placas</p>
                 <SliderRow value={kwp} min={2} max={300} step={1} bump={1} onChange={setKwp} label="Potência da usina" />
               </Glass>
               <SectionHeader className="mt-7">Última limpeza</SectionHeader>
@@ -528,7 +527,7 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
                 <Primary type="submit" disabled={sending}>
                   {sending ? "Enviando…" : "Quero receber gratuitamente"}
                 </Primary>
-                <p className="mt-3 flex items-center justify-center gap-1.5 text-[13px] text-black/40">
+                <p className="mt-3 flex items-center justify-center gap-1.5 text-[13px] text-white/50">
                   <Lock className="h-3.5 w-3.5" /> Seus dados ficam protegidos com a {brand}.
                 </p>
               </form>
@@ -544,8 +543,8 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
                   </svg>
                 </span>
                 <h1 className="mt-5 text-[30px] font-bold tracking-[-0.02em]">Tudo certo{form.name ? `, ${form.name.trim().split(/\s+/)[0]}` : ""}!</h1>
-                <p className="mt-1.5 text-[16px] text-black/50">
-                  Enviamos tudo para <span className="text-black/80">{form.email}</span>
+                <p className="mt-1.5 text-[16px] text-white/60">
+                  Enviamos tudo para <span className="text-white/90">{form.email}</span>
                 </p>
               </div>
               {result}
@@ -564,7 +563,7 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
         </main>
 
         {!embed && (
-          <footer className="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[12px] text-black/35">
+          <footer className="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[12px] text-white/45">
             {brand}
             {company.city ? ` · ${company.city}` : ""}
             {company.instagram ? ` · @${String(company.instagram).replace(/^@/, "")}` : ""}
@@ -600,7 +599,7 @@ function EvResult({ ev }: { ev: ReturnType<typeof evCompare> }) {
     <>
       <Hero badge="Economia com carro elétrico" value={ev.savingMonth} sub="por mês trocando a gasolina pela tomada" />
       <Glass className="ios-rise mt-4 p-5">
-        <p className="mb-4 text-[13px] font-medium tracking-wide text-black/45 uppercase">Custo para rodar {fmtNum(ev.km)} km/mês</p>
+        <p className="mb-4 text-[13px] font-medium tracking-wide text-white/55 uppercase">Custo para rodar {fmtNum(ev.km)} km/mês</p>
         <Compare
           rows={[
             { label: "Carro a gasolina", value: ev.gasMonth, color: "linear-gradient(90deg,#FF9F6B,#F0642E)", icon: <Fuel className="h-4 w-4" /> },
@@ -627,8 +626,8 @@ function StationResult({ s }: { s: ReturnType<typeof stationSim> }) {
     <>
       <Hero badge="Potencial do seu eletroposto" value={total} sub="por mês entre recarga e vendas no seu negócio" />
       <Glass className="ios-rise mt-4 p-5">
-        <p className="text-[13px] font-medium tracking-wide text-black/45 uppercase">De onde vem o dinheiro</p>
-        <div className="mt-3 flex h-4 overflow-hidden rounded-full bg-black/5">
+        <p className="text-[13px] font-medium tracking-wide text-white/55 uppercase">De onde vem o dinheiro</p>
+        <div className="mt-3 flex h-4 overflow-hidden rounded-full bg-white/[0.06]">
           <div className="h-full bg-gradient-to-r from-[#8FE3B0] to-[#1FA36A]" style={{ width: `${netPct}%` }} />
           <div className="h-full bg-gradient-to-r from-[#B38CFF] to-[#5B34D6]" style={{ width: `${100 - netPct}%` }} />
         </div>
@@ -639,25 +638,25 @@ function StationResult({ s }: { s: ReturnType<typeof stationSim> }) {
       </Glass>
       <Glass className="ios-rise mt-3 p-5">
         <div className="flex items-baseline justify-between">
-          <p className="text-[13px] font-medium tracking-wide text-black/45 uppercase">Retorno do investimento</p>
+          <p className="text-[13px] font-medium tracking-wide text-white/55 uppercase">Retorno do investimento</p>
           <p className="ios-rounded text-[22px] font-bold">{s.paybackMonths ? `${fmtNum(s.paybackMonths)} meses` : "—"}</p>
         </div>
-        <div className="relative mt-4 h-2 rounded-full bg-black/5">
+        <div className="relative mt-4 h-2 rounded-full bg-white/[0.06]">
           <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#F3EA3B] to-[#34C759]" style={{ width: `${paybackPct}%` }} />
           <span className="absolute -top-1.5 grid h-5 w-5 -translate-x-1/2 place-items-center rounded-full bg-white shadow ring-2 ring-[#34C759]" style={{ left: `${paybackPct}%` }}>
             <Check className="h-3 w-3 text-[#34C759]" strokeWidth={3} />
           </span>
         </div>
-        <div className="mt-2 flex justify-between text-[12px] text-black/40">
+        <div className="mt-2 flex justify-between text-[12px] text-white/50">
           <span>Hoje</span>
           <span>5 anos</span>
         </div>
-        <p className="mt-3 text-[14px] text-black/55">
+        <p className="mt-3 text-[14px] text-white/65">
           Só com recargas: {brl(s.net * 12, 0)} por ano. Investimento de referência: {brl(s.invest, 0)} ({s.power} kW, equipamento e instalação).
         </p>
       </Glass>
       <Tip icon={<Sun className="h-4 w-4" />}>Com energia solar alimentando o eletroposto, o custo da energia despenca e a margem por recarga dispara.</Tip>
-      <p className="mt-3 px-2 text-[11px] leading-relaxed text-black/35">
+      <p className="mt-3 px-2 text-[11px] leading-relaxed text-white/45">
         Estimativa com recarga média de 30 kWh, venda a R$ 2,19/kWh, energia a R$ 0,95/kWh e 10% de taxas. O estudo de viabilidade considera o seu local.
       </p>
     </>
@@ -747,9 +746,9 @@ function ManageResult({ selected }: { selected: string[] }) {
 function LargeTitle({ kicker, title, sub }: { kicker: string; title: string; sub?: string }) {
   return (
     <header className="px-1">
-      <p className="text-[13px] font-semibold tracking-wide text-[#5B34D6] uppercase">{kicker}</p>
+      <p className="text-[13px] font-semibold tracking-wide text-[#9BD373] uppercase">{kicker}</p>
       <h1 className="mt-1 text-[34px] leading-[1.1] font-bold tracking-[-0.022em]">{title}</h1>
-      {sub && <p className="mt-2 text-[17px] leading-snug text-black/50">{sub}</p>}
+      {sub && <p className="mt-2 text-[17px] leading-snug text-white/60">{sub}</p>}
     </header>
   );
 }
@@ -759,7 +758,7 @@ function BigNumber({ children }: { children: ReactNode }) {
 }
 
 function Glass({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx("rounded-[24px] bg-white/70 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_10px_40px_-12px_rgba(28,18,52,0.18)] ring-1 ring-black/[0.04] backdrop-blur-2xl", className)}>{children}</div>;
+  return <div className={cx("rounded-[24px] bg-white/[0.06] ring-1 ring-white/10 backdrop-blur-2xl", className)}>{children}</div>;
 }
 
 function Group({ children, className }: { children: ReactNode; className?: string }) {
@@ -767,7 +766,7 @@ function Group({ children, className }: { children: ReactNode; className?: strin
 }
 
 function SectionHeader({ children, className }: { children: ReactNode; className?: string }) {
-  return <p className={cx("px-4 text-[13px] font-medium tracking-wide text-black/45 uppercase", className)}>{children}</p>;
+  return <p className={cx("px-4 text-[13px] font-medium tracking-wide text-white/55 uppercase", className)}>{children}</p>;
 }
 
 function AppIcon({ bg, children, size = 30 }: { bg: string; children: ReactNode; size?: number }) {
@@ -780,21 +779,21 @@ function AppIcon({ bg, children, size = 30 }: { bg: string; children: ReactNode;
 
 function Row({ icon, bg, title, sub, onClick, last, selected, noChevron }: { icon: ReactNode; bg: string; title: string; sub?: string; onClick: () => void; last?: boolean; selected?: boolean; noChevron?: boolean }) {
   return (
-    <button onClick={onClick} className="flex w-full items-center gap-3 pl-4 text-left transition-colors active:bg-black/[0.05]">
+    <button onClick={onClick} className="flex w-full items-center gap-3 pl-4 text-left transition-colors active:bg-white/[0.06]">
       <AppIcon bg={bg}>{icon}</AppIcon>
-      <span className={cx("flex min-w-0 flex-1 items-center gap-2 py-3.5 pr-4", !last && "border-b border-black/[0.08]")}>
+      <span className={cx("flex min-w-0 flex-1 items-center gap-2 py-3.5 pr-4", !last && "border-b border-white/10")}>
         <span className="min-w-0 flex-1">
           <span className="block text-[17px] leading-tight">{title}</span>
-          {sub && <span className="mt-0.5 block text-[14px] leading-snug text-black/45">{sub}</span>}
+          {sub && <span className="mt-0.5 block text-[14px] leading-snug text-white/55">{sub}</span>}
         </span>
         {selected ? (
-          <span className="ios-bounce grid h-6 w-6 place-items-center rounded-full bg-[#5B34D6] text-white">
+          <span className="ios-bounce grid h-6 w-6 place-items-center rounded-full bg-[#F3EA3B] text-[#1C1234]">
             <Check className="h-3.5 w-3.5" strokeWidth={3} />
           </span>
         ) : noChevron ? (
-          <span className="h-6 w-6 rounded-full ring-[1.5px] ring-black/15" />
+          <span className="h-6 w-6 rounded-full ring-[1.5px] ring-white/25" />
         ) : (
-          <ChevronRight className="h-5 w-5 text-black/25" />
+          <ChevronRight className="h-5 w-5 text-white/35" />
         )}
       </span>
     </button>
@@ -807,9 +806,9 @@ function InfoRow({ icon, bg, title, text, last }: { icon: ReactNode; bg: string;
       <span className="pt-3.5">
         <AppIcon bg={bg}>{icon}</AppIcon>
       </span>
-      <div className={cx("min-w-0 flex-1 py-3.5 pr-4", !last && "border-b border-black/[0.08]")}>
+      <div className={cx("min-w-0 flex-1 py-3.5 pr-4", !last && "border-b border-white/10")}>
         <p className="text-[16px] leading-tight font-medium">{title}</p>
-        <p className="mt-0.5 text-[14px] leading-snug text-black/50">{text}</p>
+        <p className="mt-0.5 text-[14px] leading-snug text-white/60">{text}</p>
       </div>
     </div>
   );
@@ -818,9 +817,9 @@ function InfoRow({ icon, bg, title, text, last }: { icon: ReactNode; bg: string;
 function Field({ label, value, onChange, last, ...rest }: { label: string; value: string; onChange: (v: string) => void; last?: boolean } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
   return (
     <label className="flex items-center gap-3 pl-4">
-      <span className={cx("flex min-w-0 flex-1 items-center gap-3 pr-4", !last && "border-b border-black/[0.08]")}>
+      <span className={cx("flex min-w-0 flex-1 items-center gap-3 pr-4", !last && "border-b border-white/10")}>
         <span className="w-[84px] shrink-0 text-[17px]">{label}</span>
-        <input {...rest} value={value} onChange={(e) => onChange(e.target.value)} className="h-[50px] min-w-0 flex-1 bg-transparent text-[17px] text-[#1C1234] outline-none placeholder:text-black/25" />
+        <input {...rest} value={value} onChange={(e) => onChange(e.target.value)} className="h-[50px] min-w-0 flex-1 bg-transparent text-[17px] text-white outline-none placeholder:text-white/30" />
       </span>
     </label>
   );
@@ -829,15 +828,15 @@ function Field({ label, value, onChange, last, ...rest }: { label: string; value
 function Segmented({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: [string, string][] }) {
   const i = options.findIndex(([v]) => v === value);
   return (
-    <div className="relative mt-2 grid rounded-[10px] bg-[#767680]/[0.12] p-[2px]" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0,1fr))` }}>
+    <div className="relative mt-2 grid rounded-[10px] bg-white/10 p-[2px]" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0,1fr))` }}>
       {i >= 0 && (
         <span
-          className="absolute top-[2px] bottom-[2px] rounded-[8px] bg-white shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)] transition-all duration-300"
+          className="absolute top-[2px] bottom-[2px] rounded-[8px] bg-[#F3EA3B] shadow-[0_3px_8px_rgba(0,0,0,0.3)] transition-all duration-300"
           style={{ left: `calc(${(i / options.length) * 100}% + 2px)`, width: `calc(${100 / options.length}% - 4px)` }}
         />
       )}
       {options.map(([v, l]) => (
-        <button key={v} type="button" onClick={() => onChange(v)} className={cx("relative z-10 h-9 text-[14px] transition", value === v ? "font-semibold" : "text-black/70")}>
+        <button key={v} type="button" onClick={() => onChange(v)} className={cx("relative z-10 h-9 text-[14px] transition", value === v ? "font-semibold text-[#1C1234]" : "text-white/70")}>
           {l}
         </button>
       ))}
@@ -859,7 +858,7 @@ function SliderRow({ value, min, max, step, bump, onChange, label }: { value: nu
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="ios-slider flex-1"
+        className="anam-range flex-1"
         style={{ ["--fill" as string]: `${fill}%` }}
         aria-label={label}
       />
@@ -872,7 +871,7 @@ function SliderRow({ value, min, max, step, bump, onChange, label }: { value: nu
 
 function Round({ children, onClick, label }: { children: ReactNode; onClick: () => void; label: string }) {
   return (
-    <button type="button" onClick={onClick} aria-label={label} className="ios-press grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#767680]/[0.12] text-[#1C1234]">
+    <button type="button" onClick={onClick} aria-label={label} className="ios-press grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-white">
       {children}
     </button>
   );
@@ -884,8 +883,7 @@ function Primary({ children, onClick, type = "button", disabled }: { children: R
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="ios-press mt-8 h-[54px] w-full rounded-[16px] text-[17px] font-semibold text-white shadow-[0_10px_30px_-10px_rgba(28,18,52,0.6)] disabled:opacity-40"
-      style={{ background: PURPLE }}
+      className="ios-press mt-8 h-[54px] w-full rounded-[16px] bg-[#F3EA3B] text-[17px] font-bold text-[#1C1234] shadow-[0_18px_40px_-14px_rgba(243,234,59,0.8)] disabled:opacity-40"
     >
       {children}
     </button>
@@ -897,20 +895,20 @@ function PhotoCard({ photo, art, label, sub, active, wide, delay, onClick }: { p
   return (
     <button
       onClick={onClick}
-      className={cx("ios-press ios-rise flex flex-col overflow-hidden rounded-[22px] bg-white/75 text-left shadow-[0_10px_30px_-14px_rgba(28,18,52,0.3)] ring-1 backdrop-blur-xl", wide && "col-span-2", active ? "ring-[3px] ring-[#5B34D6]" : "ring-black/[0.05]")}
+      className={cx("ios-press ios-rise flex flex-col overflow-hidden rounded-[22px] bg-white/[0.06] text-left shadow-[0_10px_30px_-14px_rgba(0,0,0,0.5)] ring-1 backdrop-blur-xl", wide && "col-span-2", active ? "ring-[3px] ring-[#F3EA3B]" : "ring-white/10")}
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className={cx("relative w-full overflow-hidden", wide ? "aspect-[21/8]" : "aspect-[4/3]")}>
         {photo && !failed ? <img src={photo} alt={label} loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-cover" /> : art}
         {active && (
-          <span className="ios-bounce absolute top-2.5 right-2.5 grid h-7 w-7 place-items-center rounded-full bg-[#5B34D6] text-white shadow-lg">
+          <span className="ios-bounce absolute top-2.5 right-2.5 grid h-7 w-7 place-items-center rounded-full bg-[#F3EA3B] text-[#1C1234] shadow-lg">
             <Check className="h-4 w-4" strokeWidth={3} />
           </span>
         )}
       </div>
       <div className="px-3.5 py-3">
         <p className="text-[16px] font-semibold">{label}</p>
-        <p className="text-[13px] text-black/45">{sub}</p>
+        <p className="text-[13px] text-white/55">{sub}</p>
       </div>
     </button>
   );
@@ -920,7 +918,7 @@ function Tile({ icon, bg, label, active, delay, onClick }: { icon: ReactNode; bg
   return (
     <button
       onClick={onClick}
-      className={cx("ios-press ios-rise flex flex-col items-start gap-3 rounded-[22px] bg-white/75 p-4 text-left shadow-[0_10px_30px_-14px_rgba(28,18,52,0.3)] ring-1 backdrop-blur-xl", active ? "ring-[3px] ring-[#5B34D6]" : "ring-black/[0.05]")}
+      className={cx("ios-press ios-rise flex flex-col items-start gap-3 rounded-[22px] bg-white/[0.06] p-4 text-left shadow-[0_10px_30px_-14px_rgba(0,0,0,0.5)] ring-1 backdrop-blur-xl", active ? "ring-[3px] ring-[#F3EA3B]" : "ring-white/10")}
       style={{ animationDelay: `${delay}ms` }}
     >
       <AppIcon bg={bg} size={44}>
@@ -940,7 +938,7 @@ function Trust({ company }: { company: PublicCompany }) {
   return (
     <div className="mt-8 grid gap-2.5 px-2">
       {items.map((t) => (
-        <p key={t} className="flex items-center gap-2.5 text-[14px] text-black/55">
+        <p key={t} className="flex items-center gap-2.5 text-[14px] text-white/65">
           <ShieldCheck className="h-4 w-4 shrink-0 text-[#2FB57A]" /> {t}
         </p>
       ))}
@@ -975,12 +973,12 @@ function Compare({ rows }: { rows: { label: string; value: number; color: string
       {rows.map((r) => (
         <div key={r.label}>
           <div className="mb-1.5 flex items-center justify-between gap-2 text-[15px]">
-            <span className="flex items-center gap-2 text-black/60">
-              <span className="text-black/40">{r.icon}</span> {r.label}
+            <span className="flex items-center gap-2 text-white/70">
+              <span className="text-white/50">{r.icon}</span> {r.label}
             </span>
             <span className="ios-rounded font-semibold">{brl(r.value, 0)}</span>
           </div>
-          <div className="h-3 overflow-hidden rounded-full bg-black/5">
+          <div className="h-3 overflow-hidden rounded-full bg-white/[0.06]">
             <div className="h-full rounded-full transition-[width] duration-1000 ease-out" style={{ width: ready ? `${Math.max(3, (r.value / max) * 100)}%` : "0%", background: r.color }} />
           </div>
         </div>
@@ -995,9 +993,9 @@ function Stat({ icon, bg, label, value, sub }: { icon: ReactNode; bg: string; la
       <AppIcon bg={bg} size={28}>
         {icon}
       </AppIcon>
-      <p className="mt-3 text-[12px] font-medium tracking-wide text-black/45 uppercase">{label}</p>
+      <p className="mt-3 text-[12px] font-medium tracking-wide text-white/55 uppercase">{label}</p>
       <p className="ios-rounded mt-0.5 text-[22px] leading-tight font-bold">{value}</p>
-      <p className="text-[12px] text-black/45">{sub}</p>
+      <p className="text-[12px] text-white/55">{sub}</p>
     </Glass>
   );
 }
@@ -1011,7 +1009,7 @@ function Legend({ color, title, value, sub }: { color: string; title: string; va
           <p className="text-[15px] font-medium">{title}</p>
           <p className="ios-rounded text-[17px] font-bold">{value}</p>
         </div>
-        <p className="text-[13px] leading-snug text-black/45">{sub}</p>
+        <p className="text-[13px] leading-snug text-white/55">{sub}</p>
       </div>
     </div>
   );
@@ -1019,11 +1017,11 @@ function Legend({ color, title, value, sub }: { color: string; title: string; va
 
 function Tip({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <div className="ios-rise mt-4 flex items-start gap-3 rounded-[20px] bg-gradient-to-br from-[#FFF8D6] to-[#EAF8DD] p-4 ring-1 ring-black/[0.04]">
+    <div className="ios-rise mt-4 flex items-start gap-3 rounded-[20px] bg-gradient-to-br from-[#9BD373]/20 to-[#6CC690]/5 p-4 ring-1 ring-[#9BD373]/30">
       <AppIcon bg={G.sun} size={28}>
         {icon}
       </AppIcon>
-      <p className="text-[14px] leading-snug text-black/70">{children}</p>
+      <p className="text-[14px] leading-snug text-white/80">{children}</p>
     </div>
   );
 }
@@ -1080,9 +1078,9 @@ function Payments({ capture }: { capture: CapturePrefs }) {
               <AppIcon bg={s.bg}>
                 <s.icon className="h-[18px] w-[18px]" />
               </AppIcon>
-              <div className={cx("min-w-0 flex-1 py-3 pr-4", i < list.length - 1 && "border-b border-black/[0.08]")}>
+              <div className={cx("min-w-0 flex-1 py-3 pr-4", i < list.length - 1 && "border-b border-white/10")}>
                 <p className="text-[17px] leading-tight">{p.title}</p>
-                {p.text && <p className="mt-0.5 text-[14px] text-black/45">{p.text}</p>}
+                {p.text && <p className="mt-0.5 text-[14px] text-white/55">{p.text}</p>}
               </div>
             </div>
           );

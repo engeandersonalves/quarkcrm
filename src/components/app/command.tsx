@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CheckSquare, FileSignature, Trophy, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users } from "lucide-react";
+import { BarChart3, CheckSquare, FileSignature, Trophy, Zap, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { productOf } from "@/lib/constants";
@@ -73,6 +73,7 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
       { id: "p-props", group: "Ir para", label: "Propostas", icon: <FileText className="h-4 w-4" />, keywords: "propostas orcamentos", run: go("/propostas") },
       { id: "p-reports", group: "Ir para", label: "Relatórios", icon: <BarChart3 className="h-4 w-4" />, keywords: "relatorios graficos vendas funil desempenho", run: go("/relatorios") },
       { id: "p-docs", group: "Ir para", label: "Documentos (procurações e contratos)", icon: <FileSignature className="h-4 w-4" />, keywords: "documentos procuracao equatorial contrato aluguel locacao assinatura", run: go("/documentos") },
+      { id: "a-quick", group: "Ações", label: "Orçamento rápido (imagem/PDF)", icon: <Zap className="h-4 w-4" />, keywords: "orcamento rapido imagem png pdf whatsapp", run: go("/orcamento-rapido") },
       { id: "n-proc", group: "Ações", label: "Nova procuração (Equatorial)", icon: <FileSignature className="h-4 w-4" />, keywords: "procuracao equatorial assinatura", run: go("/documentos/novo?tipo=procuracao") },
       { id: "n-rent", group: "Ações", label: "Novo contrato de aluguel", icon: <FileSignature className="h-4 w-4" />, keywords: "contrato aluguel locacao locador locatario", run: go("/documentos/novo?tipo=aluguel") },
       { id: "p-arena", group: "Ir para", label: "Arena (ranking)", icon: <Trophy className="h-4 w-4" />, keywords: "arena ranking pontos xp nivel", run: go("/ranking") },
