@@ -1,5 +1,7 @@
+"use client";
+
 /* eslint-disable @next/next/no-img-element */
-import { forwardRef, type ReactNode } from "react";
+import { forwardRef, useState, type ReactNode } from "react";
 import type { QuickQuote } from "@/lib/quick-quote";
 import { brl, fmtNum } from "@/lib/pricing";
 
@@ -39,6 +41,13 @@ export interface OfferData {
 
 const SORA = "var(--font-sora), var(--font-jakarta), sans-serif";
 const GRAD_TEXT = (g: string) => ({ backgroundImage: g, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" }) as const;
+
+/** Foto do produto; se não carregar, mostra a ilustração (a arte nunca sai quebrada). */
+function ProductPhoto({ src, fallback, shadow }: { src: string; fallback: ReactNode; shadow: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <>{fallback}</>;
+  return <img src={src} alt="" onError={() => setFailed(true)} className="max-h-full max-w-full object-contain" style={{ filter: shadow }} />;
+}
 
 /** Placa solar em perspectiva (vetor), usada quando não há foto do kit. */
 function PanelArt({ id, className, style }: { id: string; className?: string; style?: React.CSSProperties }) {
@@ -221,11 +230,11 @@ export const OfferCard = forwardRef<HTMLDivElement, { q: QuickQuote; d: OfferDat
 
       {/* ---------- título ---------- */}
       <div className="absolute inset-x-0 top-[100px] px-7 text-center">
-        <p className="text-[27px] leading-none font-extrabold tracking-[0.06em] uppercase" style={{ fontFamily: SORA, ...GRAD_TEXT("linear-gradient(90deg,#6CC690,#C7E36B,#F3EA3B)") }}>
+        <p className="py-[0.08em] text-[27px] leading-none font-extrabold tracking-[0.06em] uppercase" style={{ fontFamily: SORA, ...GRAD_TEXT("linear-gradient(90deg,#6CC690,#C7E36B,#F3EA3B)") }}>
           {d.headline1.trim() || "Oportunidade"}
         </p>
         <p
-          className="mt-1 leading-[0.9] font-black tracking-[-0.03em]"
+          className="-mt-1 pt-[0.12em] leading-[0.95] font-black tracking-[-0.03em]"
           style={{ fontFamily: SORA, fontSize: h2Size, ...GRAD_TEXT("linear-gradient(180deg,#FFFFFF 0%,#FFFFFF 45%,#9BD373 100%)"), filter: "drop-shadow(0 10px 30px rgba(155,211,115,0.25))" }}
         >
           {h2}
@@ -240,7 +249,13 @@ export const OfferCard = forwardRef<HTMLDivElement, { q: QuickQuote; d: OfferDat
       <div className="absolute top-[262px] left-0 h-[272px] w-[330px]">
         <div className="absolute bottom-3 left-10 h-10 w-[270px] rounded-[50%] bg-[#9BD373]/25 blur-2xl" />
         {d.moduleImage ? (
-          <img src={d.moduleImage} alt="" className="absolute top-0 left-20 h-[230px] w-[220px] object-contain" style={{ filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.6))" }} />
+          <div className="absolute top-0 right-2 left-[70px] flex h-[232px] items-center justify-center">
+            <ProductPhoto
+              src={d.moduleImage}
+              shadow="drop-shadow(0 20px 30px rgba(0,0,0,0.6))"
+              fallback={<PanelArt id="p1f" className="h-[215px] w-auto" style={{ filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.55))" }} />}
+            />
+          </div>
         ) : (
           <>
             <PanelArt id="p1" className="absolute top-0 left-[92px] h-[215px] w-auto" style={{ filter: "drop-shadow(0 18px 24px rgba(0,0,0,0.55))" }} />
@@ -248,7 +263,13 @@ export const OfferCard = forwardRef<HTMLDivElement, { q: QuickQuote; d: OfferDat
           </>
         )}
         {d.inverterImage ? (
-          <img src={d.inverterImage} alt="" className="absolute bottom-0 left-6 h-[150px] w-[140px] object-contain" style={{ filter: "drop-shadow(0 20px 26px rgba(0,0,0,0.7))" }} />
+          <div className="absolute bottom-0 left-4 flex h-[150px] w-[150px] items-center justify-center">
+            <ProductPhoto
+              src={d.inverterImage}
+              shadow="drop-shadow(0 20px 26px rgba(0,0,0,0.7))"
+              fallback={<InverterArt id="invf" brand={d.inverterBrand || "Inversor"} className="h-[150px] w-auto" />}
+            />
+          </div>
         ) : (
           <InverterArt id="inv" brand={d.inverterBrand || "Inversor"} className="absolute bottom-0 left-8 h-[150px] w-auto" style={{ filter: "drop-shadow(0 20px 26px rgba(0,0,0,0.7))" }} />
         )}

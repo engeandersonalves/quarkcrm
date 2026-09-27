@@ -16,6 +16,7 @@ import { dataUrlToBytes, jpegToPdf } from "@/lib/pdf-image";
 import { brl, fmtNum } from "@/lib/pricing";
 import { DEFAULT_QUICK, inverterFor, modulesFor, quickQuote, type QuickQuoteInput } from "@/lib/quick-quote";
 import { supabase } from "@/lib/supabase/client";
+import { FIXED_INVERTER_IMAGE, FIXED_MODULE_IMAGE, inverterImageOf, moduleImageOf, productImg } from "@/lib/product-images";
 import type { Lead } from "@/lib/types";
 
 type LeadLite = Pick<Lead, "id" | "name" | "phone" | "city" | "consumption_kwh" | "avg_bill" | "roof_type" | "connection_type">;
@@ -186,8 +187,8 @@ export default function QuickQuotePage() {
     moduleWarranty: offer.moduleWarranty,
     inverterBrand: brands.inverter,
     inverterWarranty: offer.inverterWarranty,
-    moduleImage: images.module || null,
-    inverterImage: images.inverter || null,
+    moduleImage: productImg(moduleImageOf(images.module)) || null,
+    inverterImage: productImg(inverterImageOf(images.inverter)) || null,
     included: offer.included.split("\n"),
     footer1: offer.footer1,
     footer2: offer.footer2,
@@ -497,12 +498,16 @@ export default function QuickQuotePage() {
                 <Field label="Faixa 2 (financiamento)" className="col-span-2">
                   <Input value={offer.footer2} onChange={(e) => setO({ footer2: e.target.value })} />
                 </Field>
-                <Field label="Foto da placa (URL)" hint="Vazio = ilustração">
-                  <Input value={images.module} onChange={(e) => setImages((im) => ({ ...im, module: e.target.value.trim() }))} placeholder="https://…" />
-                </Field>
-                <Field label="Foto do inversor (URL)" hint="Use PNG sem fundo">
-                  <Input value={images.inverter} onChange={(e) => setImages((im) => ({ ...im, inverter: e.target.value.trim() }))} placeholder="https://…" />
-                </Field>
+                {!FIXED_MODULE_IMAGE && (
+                  <Field label="Foto da placa (URL)" hint="Vazio = ilustração">
+                    <Input value={images.module} onChange={(e) => setImages((im) => ({ ...im, module: e.target.value.trim() }))} placeholder="https://…" />
+                  </Field>
+                )}
+                {!FIXED_INVERTER_IMAGE && (
+                  <Field label="Foto do inversor (URL)" hint="Use PNG sem fundo">
+                    <Input value={images.inverter} onChange={(e) => setImages((im) => ({ ...im, inverter: e.target.value.trim() }))} placeholder="https://…" />
+                  </Field>
+                )}
               </div>
               <button onClick={() => setOffer({ ...DEFAULT_OFFER, moduleWarranty: settings.warranty_modules_years || 12, inverterWarranty: settings.warranty_inverter_years || 10 })} className="mt-3 flex items-center gap-1 text-xs font-semibold text-ink-400 hover:text-ink-700">
                 <RotateCcw className="h-3 w-3" /> Restaurar textos padrão

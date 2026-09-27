@@ -10,6 +10,7 @@ import { DEFAULT_FAQ, DEFAULT_TIMELINE } from "@/lib/proposal-content";
 import { Button, Field, Input, Modal, cx } from "../ui";
 import { CashflowChart, GenerationChart } from "./charts";
 import { InverterRender, ModuleRender, SystemDiagram } from "./renders";
+import { inverterImageOf, moduleImageOf, productImg } from "@/lib/product-images";
 
 export interface PublicProposal {
   proposal: {
@@ -70,8 +71,9 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
   const lastDay = steps.length ? steps[steps.length - 1].day : totalDays;
   const faq = s.proposal.faq.length ? s.proposal.faq : DEFAULT_FAQ;
   const headline = s.proposal.headline.trim().replaceAll("{nome}", firstName);
-  const moduleImg = inputs.moduleImage || s.proposal.moduleImage;
-  const inverterImg = inputs.inverterImage || s.proposal.inverterImage;
+  // Fotos fixas dos equipamentos (src/lib/product-images.ts) têm prioridade.
+  const moduleImg = productImg(moduleImageOf(inputs.moduleImage, s.proposal.moduleImage));
+  const inverterImg = productImg(inverterImageOf(inputs.inverterImage, s.proposal.inverterImage));
   const carKm = Math.round((energy.co2TonsPerYear * 1000) / CAR_KG_CO2_PER_KM);
   const milestones = energy.cashflow.filter((c) => [1, 5, 10, 15, 20, 25].includes(c.year));
 
@@ -767,7 +769,8 @@ export function Product({ image, render, kicker, title, specs }: { image?: strin
   return (
     <div className="overflow-hidden rounded-xl border border-ink-200 bg-white">
       <div className="relative grid aspect-[16/10] place-items-center overflow-hidden bg-gradient-to-b from-[#F3F2F8] to-[#E4E1EE]">
-        {image ? <Photo src={image} className="absolute inset-0 h-full w-full" fallback={<div className="grid h-full place-items-center">{render}</div>} /> : render}
+        {/* Foto de produto: inteira e centralizada, sem cortes (tamanho da imagem é desconhecido). */}
+        {image ? <Photo src={image} className="absolute inset-0 h-full w-full !object-contain p-5 drop-shadow-xl sm:p-7" fallback={<div className="grid h-full place-items-center">{render}</div>} /> : render}
       </div>
       <div className="p-5 sm:p-6">
         <p className="text-xs font-semibold tracking-[0.18em] text-[#2C7A52] uppercase">{kicker}</p>
