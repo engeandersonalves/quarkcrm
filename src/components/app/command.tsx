@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckSquare, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users } from "lucide-react";
+import { BarChart3, CheckSquare, Trophy, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { productOf } from "@/lib/constants";
@@ -71,6 +71,8 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
       { id: "p-home", group: "Ir para", label: "Painel", icon: <LayoutDashboard className="h-4 w-4" />, keywords: "painel inicio dashboard", run: go("/") },
       { id: "p-leads", group: "Ir para", label: "Leads", icon: <Users className="h-4 w-4" />, keywords: "leads funil kanban clientes", run: go("/leads") },
       { id: "p-props", group: "Ir para", label: "Propostas", icon: <FileText className="h-4 w-4" />, keywords: "propostas orcamentos", run: go("/propostas") },
+      { id: "p-reports", group: "Ir para", label: "Relatórios", icon: <BarChart3 className="h-4 w-4" />, keywords: "relatorios graficos vendas funil desempenho", run: go("/relatorios") },
+      { id: "p-arena", group: "Ir para", label: "Arena (ranking)", icon: <Trophy className="h-4 w-4" />, keywords: "arena ranking pontos xp nivel", run: go("/ranking") },
       { id: "p-tasks", group: "Ir para", label: "Tarefas", icon: <CheckSquare className="h-4 w-4" />, keywords: "tarefas agenda", run: go("/tarefas") },
       { id: "p-cfg", group: "Ir para", label: "Configurações", icon: <Settings className="h-4 w-4" />, keywords: "configuracoes ajustes empresa kits", run: go("/configuracoes") },
     ];

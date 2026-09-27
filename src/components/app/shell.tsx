@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { CheckSquare, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
+import { BarChart3, CheckSquare, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -28,7 +28,8 @@ const NAV = [
 ];
 const SAVE_NAV = { href: "/propostas?tipo=save", label: "S.A.V.E", icon: PlugZap };
 const ARENA_NAV = { href: "/ranking", label: "Arena", icon: Trophy };
-const DESKTOP_NAV = [...NAV.slice(0, 3), SAVE_NAV, NAV[3], ARENA_NAV, NAV[4]];
+const REPORTS_NAV = { href: "/relatorios", label: "Relatórios", icon: BarChart3 };
+const DESKTOP_NAV = [...NAV.slice(0, 3), SAVE_NAV, NAV[3], REPORTS_NAV, ARENA_NAV, NAV[4]];
 
 
 interface QuickCtx {
@@ -98,9 +99,9 @@ function ShellInner({ children }: { children: ReactNode }) {
 
   return (
     <Quick.Provider value={{ openLead, openTask }}>
-      <div className="min-h-dvh lg:pl-[264px]">
+      <div className="min-h-dvh lg:pl-[264px] print:pl-0">
         {/* Sidebar desktop */}
-        <aside className="fixed inset-y-0 left-0 z-30 hidden w-[264px] flex-col bg-ink-950 text-ink-300 lg:flex">
+        <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-[264px] flex-col bg-ink-950 text-ink-300 lg:flex">
           <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sun-500/15 blur-3xl" />
           <Link href="/" className="relative flex items-end gap-2.5 px-6 pt-7 pb-8" aria-label={settings.company_name || "Quark Energia"}>
             <BrandLogo className="h-10" />
@@ -165,7 +166,7 @@ function ShellInner({ children }: { children: ReactNode }) {
         </aside>
 
         {/* Topbar mobile */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink-200/60 bg-ink-50/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
+        <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink-200/60 bg-ink-50/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
           <Link href="/" className="flex items-center" aria-label={settings.company_name || "Quark Energia"}>
             <BrandLogo variant="color" className="h-8" />
           </Link>
@@ -183,7 +184,7 @@ function ShellInner({ children }: { children: ReactNode }) {
         <main className="mx-auto w-full max-w-[1400px] px-4 pt-5 pb-32 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">{children}</main>
 
         {/* Bottom nav mobile */}
-        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-200/70 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+        <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-ink-200/70 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
           <div className="relative grid h-16 grid-cols-5">
             {NAV.slice(0, 2).map((item) => (
               <TabLink key={item.href} {...item} active={isActive(item.href)} />
