@@ -59,6 +59,19 @@ export interface PublicCompany {
   fioBTariff?: number | null;
   publicLighting?: number | null;
   capture?: Partial<CapturePrefs> | null;
+  metaPixelId?: string | null;
+  gaId?: string | null;
+}
+
+/** Marca a conversão no Pixel da Meta e no Google Analytics, se estiverem configurados. */
+function trackLead(segment: string | null, value: number) {
+  const w = window as unknown as { fbq?: (...a: unknown[]) => void; gtag?: (...a: unknown[]) => void };
+  try {
+    w.fbq?.("track", "Lead", { content_category: segment ?? "solar", value: Math.round(value), currency: "BRL" });
+    w.gtag?.("event", "generate_lead", { lead_type: segment ?? "solar", value: Math.round(value), currency: "BRL" });
+  } catch {
+    // rastreamento nunca atrapalha o envio
+  }
 }
 
 type StepId = "interesse" | "conta" | "telhado" | "carro" | "negocio" | "operacao" | "usina" | "servicos" | "resultado" | "pronto";
@@ -258,6 +271,7 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
     }).catch(() => null);
     setSending(false);
     if (!res?.ok) return setError("Não conseguimos enviar agora. Confira seus dados e tente novamente.");
+    trackLead(segment, segment === "eletroposto" ? station.net + station.crossSell : segment === "save" ? ev.savingMonth : segment === "manutencao" ? maint.lossMonth : solar.monthlySavings);
     go("pronto");
   };
 

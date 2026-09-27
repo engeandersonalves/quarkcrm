@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { notifyNewLead, notifyNewTask } from "@/lib/notifications";
 import { serverSupabase } from "@/lib/supabase/server";
+import { fireWebhook, leadPayload } from "@/lib/webhooks";
 
 export async function POST(req: Request) {
   const sb = await serverSupabase();
@@ -15,7 +16,8 @@ export async function POST(req: Request) {
   if (type === "lead") {
     const { data: lead } = await sb.from("leads").select("*").eq("id", id).maybeSingle();
     if (!lead) return NextResponse.json({ error: "not found" }, { status: 404 });
-    return NextResponse.json(await notifyNewLead(sb, lead));
+    const [result] = await Promise.all([notifyNewLead(sb, lead), fireWebhook(sb, "lead.created", leadPayload(lead, "app"))]);
+    return NextResponse.json(result);
   }
   if (type === "task") {
     const { data: task } = await sb.from("tasks").select("*, lead:leads(name)").eq("id", id).maybeSingle();

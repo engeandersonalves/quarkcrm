@@ -241,7 +241,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
       </Card>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="grid min-w-0 content-start gap-5">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-5">
           {/* Propostas */}
           <Card>
             <CardHeader
@@ -358,7 +358,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
           </Card>
         </div>
 
-        <div className="grid min-w-0 content-start gap-5">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-5">
           {/* Tarefas */}
           <Card>
             <CardHeader

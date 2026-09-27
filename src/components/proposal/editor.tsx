@@ -312,7 +312,7 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
         ]}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="grid gap-5">
           {/* Cliente */}
           <Card id="sec-cliente" className="scroll-mt-28">

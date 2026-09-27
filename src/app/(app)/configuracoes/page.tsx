@@ -19,11 +19,13 @@ import {
   Trash2,
   UserRound,
   UsersRound,
+  Webhook,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
 import { CinematicBackdrop } from "@/components/app/cinematic";
+import { IntegrationsTab } from "@/components/app/integrations-tab";
 import { TeamTab } from "@/components/app/team-tab";
 import { Button, Card, CardHeader, Field, ImageField, Input, MoneyInput, NumberInput, PageHeader, Segmented, Select, Switch, Textarea, cx } from "@/components/ui";
 import { ROOF_TYPES } from "@/lib/constants";
@@ -34,7 +36,7 @@ import { brl, fmtNum, type AmountMode, type PriceComponent, type ProposalInputs 
 import { DEFAULT_FAQ, DEFAULT_TIMELINE, SECTION_LABELS } from "@/lib/proposal-content";
 import { supabase } from "@/lib/supabase/client";
 
-type Tab = "empresa" | "orcamento" | "kits" | "save" | "proposta" | "app" | "alertas" | "captura" | "equipe" | "perfil";
+type Tab = "empresa" | "orcamento" | "kits" | "save" | "proposta" | "app" | "alertas" | "captura" | "integracoes" | "equipe" | "perfil";
 
 const TABS: { id: Tab; label: string; icon: typeof Building2 }[] = [
   { id: "empresa", label: "Empresa", icon: Building2 },
@@ -45,6 +47,7 @@ const TABS: { id: Tab; label: string; icon: typeof Building2 }[] = [
   { id: "app", label: "App & inspiração", icon: Sparkles },
   { id: "alertas", label: "Alertas", icon: Bell },
   { id: "captura", label: "Captura", icon: Code2 },
+  { id: "integracoes", label: "Integrações", icon: Webhook },
   { id: "equipe", label: "Equipe", icon: UsersRound },
   { id: "perfil", label: "Meu perfil", icon: UserRound },
 ];
@@ -111,7 +114,7 @@ export default function SettingsPage() {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav className="scrollbar-none -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:sticky lg:top-8 lg:mx-0 lg:flex-col lg:self-start lg:overflow-visible lg:px-0">
           {TABS.map((t) => (
             <button
@@ -406,6 +409,8 @@ export default function SettingsPage() {
               </div>
             </Card>
           )}
+
+          {tab === "integracoes" && <IntegrationsTab form={form} onChange={(v) => set("integrations", v)} />}
 
           {tab === "equipe" && <TeamTab />}
 

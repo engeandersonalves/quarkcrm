@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email";
 import { notifyNewLead } from "@/lib/notifications";
 import { quickEstimate } from "@/lib/quick-estimate";
 import { adminSupabase, anonSupabase } from "@/lib/supabase/server";
+import { fireWebhook, leadPayload } from "@/lib/webhooks";
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as Record<string, string | number> | null;
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
 
   // Destinatários da configuração exigem service role; sem ela, usa NOTIFY_EMAILS.
   const admin = adminSupabase();
-  await notifyNewLead(admin ?? anon, lead, admin ? undefined : "").catch(() => {});
+  await Promise.all([notifyNewLead(admin ?? anon, lead, admin ? undefined : "").catch(() => {}), fireWebhook(anon, "lead.created", leadPayload(lead, "captura"))]);
 
   // E-mail de boas-vindas ao cliente: estudo + autoridade + próximo passo.
   if (lead?.email) {

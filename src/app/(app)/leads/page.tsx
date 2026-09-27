@@ -14,6 +14,7 @@ import { formatPhone, relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
 import { downloadCsv, today } from "@/lib/csv";
+import { ImportLeadsButton } from "@/components/app/import-leads";
 import { useReward } from "@/components/app/rewards";
 import { Mantra } from "@/components/app/mantra";
 import { supabase } from "@/lib/supabase/client";
@@ -50,7 +51,7 @@ function Leads() {
     if (params.get("etapa")) setView("lista");
   }, [params]);
 
-  const { data, loading, setData } = useLive(
+  const { data, loading, setData, reload } = useLive(
     async () => must(await supabase().from("leads").select("*, proposals(final_price,status)").order("position", { ascending: false })) as LeadRow[],
     [],
     ["leads", "proposals"],
@@ -101,6 +102,7 @@ function Leads() {
                 { value: "lista", label: <><List className="h-3.5 w-3.5" /> Lista</> },
               ]}
             />
+            <ImportLeadsButton onDone={reload} />
             <Button
               variant="secondary"
               title="Baixar planilha (Excel) com os leads filtrados"

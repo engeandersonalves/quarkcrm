@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Suspense } from "react";
 import { CaptureFunnel, type PublicCompany } from "@/components/capture/funnel";
 import { DEFAULT_CAPTURE, type CapturePrefs, type RoofKey } from "@/lib/defaults";
@@ -45,6 +46,8 @@ function sanitize(raw: unknown): PublicCompany {
     sunHours: num(r.sunHours),
     fioBTariff: num(r.fioBTariff),
     publicLighting: typeof r.publicLighting === "number" ? r.publicLighting : num(r.publicLighting),
+    metaPixelId: /^\d{5,20}$/.test(String(r.metaPixelId ?? "").trim()) ? String(r.metaPixelId).trim() : null,
+    gaId: /^G-[A-Z0-9]{4,15}$/i.test(String(r.gaId ?? "").trim()) ? String(r.gaId).trim().toUpperCase() : null,
     capture: {
       roofImages,
       paymentTitle: str(cap.paymentTitle) ?? DEFAULT_CAPTURE.paymentTitle,
@@ -67,6 +70,20 @@ export default async function CapturePage() {
   const company = await loadCompany();
   return (
     <div translate="no" className="notranslate">
+      {/* IDs validados no servidor (só dígitos / formato G-XXXX): nada vindo do banco entra cru no script. */}
+      {company.metaPixelId && (
+        <Script id="meta-pixel" strategy="afterInteractive">
+          {`!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${company.metaPixelId}');fbq('track','PageView');`}
+        </Script>
+      )}
+      {company.gaId && (
+        <>
+          <Script src={`https://www.googletagmanager.com/gtag/js?id=${company.gaId}`} strategy="afterInteractive" />
+          <Script id="ga4" strategy="afterInteractive">
+            {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('config','${company.gaId}');`}
+          </Script>
+        </>
+      )}
       <Suspense>
         <CaptureFunnel company={company} />
       </Suspense>

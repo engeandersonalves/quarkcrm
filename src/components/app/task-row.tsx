@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Circle } from "lucide-react";
+import { AlertCircle, CalendarPlus, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
 import { TASK_TYPES } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format";
@@ -42,6 +42,28 @@ export function TaskRow({ task, showLead = true }: { task: Task; showLead?: bool
           {task.priority === "alta" && <span className="font-semibold text-rose-600">· Alta</span>}
         </p>
       </button>
+      {task.due_at && !task.done && (
+        <a
+          href={googleCalendarUrl(task)}
+          target="_blank"
+          rel="noreferrer"
+          title="Adicionar ao Google Agenda"
+          aria-label="Adicionar ao Google Agenda"
+          className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg text-ink-400 transition hover:bg-white hover:text-ink-900 sm:opacity-0 sm:group-hover:opacity-100"
+        >
+          <CalendarPlus className="h-4 w-4" />
+        </a>
+      )}
     </div>
   );
+}
+
+/** Link "adicionar evento" do Google Agenda (30 min a partir do horário da tarefa). */
+function googleCalendarUrl(task: Task) {
+  const start = new Date(task.due_at!);
+  const end = new Date(start.getTime() + 30 * 60000);
+  const f = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const details = [TASK_TYPES[task.type], task.lead?.name && `Cliente: ${task.lead.name}`, task.description].filter(Boolean).join("\n");
+  const q = new URLSearchParams({ action: "TEMPLATE", text: task.title, dates: `${f(start)}/${f(end)}`, details });
+  return `https://calendar.google.com/calendar/render?${q.toString()}`;
 }

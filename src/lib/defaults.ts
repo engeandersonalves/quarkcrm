@@ -34,6 +34,14 @@ export interface CompanySettings {
   proposal: ProposalPrefs;
   /** Página de captura (pública): fotos dos telhados e condições de pagamento. */
   capture: CapturePrefs;
+  /** Integrações: webhook (Zapier, Make, n8n, RD Station), Pixel da Meta e Google Analytics. */
+  integrations: IntegrationPrefs;
+}
+
+export interface IntegrationPrefs {
+  webhookUrl: string;
+  metaPixelId: string;
+  gaId: string;
 }
 
 export type RoofKey = "ceramic" | "fiber" | "metal" | "slab" | "ground";
@@ -220,6 +228,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
     faq: [],
   },
   capture: DEFAULT_CAPTURE,
+  integrations: { webhookUrl: "", metaPixelId: "", gaId: "" },
 };
 
 type StoredDefaults = Partial<ProposalInputs> & { kits?: KitPreset[]; app?: Partial<AppPrefs>; save?: Partial<SaveInputs> };
@@ -241,6 +250,7 @@ export function mergeSettings(s: Partial<CompanySettings> | null | undefined): C
     saveDefaults: save ?? {},
     app: { ...DEFAULT_SETTINGS.app, ...(s?.app ?? {}), ...(app ?? {}) },
     capture: { ...DEFAULT_CAPTURE, ...((s?.capture ?? {}) as Partial<CapturePrefs>) },
+    integrations: { ...DEFAULT_SETTINGS.integrations, ...((s?.integrations ?? {}) as Partial<IntegrationPrefs>) },
     proposal: {
       ...DEFAULT_SETTINGS.proposal,
       ...proposal,

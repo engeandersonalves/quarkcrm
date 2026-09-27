@@ -229,7 +229,7 @@ export function SaveEditor({ proposal, initialLeadId }: { proposal?: Proposal; i
         ]}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="grid gap-5">
           <Card id="s-cliente" className="scroll-mt-28">
             <CardHeader icon={<User className="h-[18px] w-[18px]" />} title="1. Cliente" subtitle="Quem vai receber a proposta" />

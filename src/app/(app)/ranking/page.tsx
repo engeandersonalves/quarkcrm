@@ -211,7 +211,7 @@ export default function RankingPage() {
             )}
           </Card>
 
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
             {/* Conquistas */}
             <Card>
               <CardHeader title="Suas conquistas" subtitle={`${BADGES.filter((b) => me && b.done(me)).length} de ${BADGES.length} desbloqueadas`} />

@@ -422,12 +422,27 @@ as $$
     'fioBTariff', data -> 'defaults' -> 'fioBTariff',
     'publicLighting', data -> 'defaults' -> 'publicLighting',
     'gallery', data -> 'proposal' -> 'gallery',
-    'capture', data -> 'capture'
+    'capture', data -> 'capture',
+    'metaPixelId', data -> 'integrations' ->> 'metaPixelId',
+    'gaId', data -> 'integrations' ->> 'gaId'
   )
   from public.settings where id = 1;
 $$;
 revoke all on function public.get_public_company() from public;
 grant execute on function public.get_public_company() to anon, authenticated;
+
+-- Endereço do webhook de integrações (Zapier, Make, n8n…), usado pelo servidor ao receber leads.
+create or replace function public.get_webhook_url()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select nullif(trim(data -> 'integrations' ->> 'webhookUrl'), '') from public.settings where id = 1;
+$$;
+revoke all on function public.get_webhook_url() from public;
+grant execute on function public.get_webhook_url() to anon, authenticated;
 
 revoke all on function public.get_public_proposal(text) from public;
 revoke all on function public.track_proposal_view(text) from public;

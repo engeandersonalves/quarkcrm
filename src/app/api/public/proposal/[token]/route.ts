@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { appUrl, emailTemplate, recipientsFrom, sendEmail } from "@/lib/email";
 import { brl } from "@/lib/pricing";
 import { adminSupabase, anonSupabase, serverSupabase } from "@/lib/supabase/server";
+import { fireWebhook } from "@/lib/webhooks";
 
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -23,6 +24,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     const { data, error } = await anon.rpc("accept_public_proposal", { p_token: token, p_name: String(name ?? "").slice(0, 120) });
     if (error || !data?.ok) return NextResponse.json({ ok: false }, { status: 400 });
     await alert(token, "accept", name);
+    const { data: pub } = await anon.rpc("get_public_proposal", { p_token: token });
+    if (pub)
+      await fireWebhook(anon, "proposal.accepted", {
+        accepted_by: String(name ?? "").slice(0, 120),
+        proposal: { number: pub.proposal?.number, final_price: pub.proposal?.final_price, title: pub.proposal?.title },
+        lead: { name: pub.lead?.name, city: pub.lead?.city, state: pub.lead?.state },
+      });
     return NextResponse.json({ ok: true });
   }
 

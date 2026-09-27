@@ -1,11 +1,14 @@
 "use client";
 
-import { ArrowUpRight, Calculator, CheckCircle2, ChevronRight, Eye, FileText, Flame, Lightbulb, Target, TrendingUp, Users, Zap } from "lucide-react";
+import { Calculator, CheckCircle2, ChevronRight, Eye, FileText, Flame, Lightbulb, Target, TrendingUp, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useApp } from "@/components/app/app-context";
 import { useQuick } from "@/components/app/shell";
 import { AttentionCard } from "@/components/app/attention";
+import { BarChart } from "@/components/charts";
+import { KpiCard } from "@/components/charts/kpi";
+import { buildReport, delta, rangeOf } from "@/lib/analytics";
 import { TaskRow } from "@/components/app/task-row";
 import { CinematicBackdrop } from "@/components/app/cinematic";
 import { SALES_TIPS, imagePool, pickDaily, quotePool } from "@/lib/inspiration";
@@ -24,7 +27,7 @@ interface DashData {
 }
 
 export default function Dashboard() {
-  const { profile, settings } = useApp();
+  const { profile, settings, profiles } = useApp();
   const { openLead, openTask } = useQuick();
   const { data, loading } = useLive<DashData>(
     async () => {
@@ -46,6 +49,8 @@ export default function Dashboard() {
   );
 
   const m = useMemo(() => (data ? metrics(data) : null), [data]);
+  const month = useMemo(() => (data ? buildReport(data.leads, data.proposals, profiles, rangeOf("mes")) : null), [data, profiles]);
+  const last30 = useMemo(() => (data ? buildReport(data.leads, data.proposals, profiles, rangeOf("30d")) : null), [data, profiles]);
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   const firstName = (profile?.full_name ?? "").split(" ")[0];
@@ -56,14 +61,29 @@ export default function Dashboard() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {!m ? (
-          [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[118px]" />)
+        {!m || !month || !last30 ? (
+          [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[150px]" />)
         ) : (
           <>
-            <Kpi dark label="Vendido no mês" value={brl(m.wonMonth, 0)} sub={`${m.wonMonthCount} ${m.wonMonthCount === 1 ? "contrato" : "contratos"} · ${fmtNum(m.kwpMonth, 1)} kWp`} icon={<TrendingUp className="h-4 w-4" />} />
-            <Kpi label="Pipeline em aberto" value={brl(m.pipeline, 0)} sub={`${m.openLeads} leads em negociação`} icon={<Zap className="h-4 w-4" />} />
-            <Kpi label="Novos leads (30 dias)" value={fmtNum(m.newLeads30)} sub={m.hotLeads ? `${m.hotLeads} quentes 🔥` : "Cadastre e acompanhe"} icon={<Users className="h-4 w-4" />} />
-            <Kpi label="Taxa de conversão" value={m.conversion == null ? "—" : pct(m.conversion, 0)} sub={`Lucro previsto no mês: ${brl(m.profitMonth, 0)}`} icon={<CheckCircle2 className="h-4 w-4" />} />
+            <KpiCard
+              dark
+              label="Vendido no mês"
+              value={brl(m.wonMonth, 0)}
+              d={delta(month.cur.sold, month.prev.sold)}
+              sub={`${m.wonMonthCount} ${m.wonMonthCount === 1 ? "contrato" : "contratos"}`}
+              spark={month.months.map((x) => x.value)}
+              icon={<TrendingUp className="h-4 w-4" />}
+            />
+            <KpiCard label="Previsão de fechamento" value={brl(month.forecast, 0)} d={0} sub={`de ${brl(m.pipeline, 0)} em aberto`} icon={<Zap className="h-4 w-4" />} hideDelta />
+            <KpiCard
+              label="Novos leads (30 dias)"
+              value={fmtNum(m.newLeads30)}
+              d={delta(last30.cur.newLeads, last30.prev.newLeads)}
+              sub={m.hotLeads ? `${m.hotLeads} quentes` : "vs. 30 dias antes"}
+              spark={last30.weeks.map((w) => w.value)}
+              icon={<Users className="h-4 w-4" />}
+            />
+            <KpiCard label="Taxa de conversão" value={m.conversion == null ? "—" : pct(m.conversion, 0)} d={0} hideDelta sub={`Lucro previsto no mês: ${brl(m.profitMonth, 0)}`} icon={<CheckCircle2 className="h-4 w-4" />} />
           </>
         )}
       </div>
@@ -72,11 +92,29 @@ export default function Dashboard() {
 
       {settings.app.showTips && <TipCard />}
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         {/* Vendas por mês */}
         <Card>
-          <CardHeader title="Vendas por mês" subtitle="Valor das propostas aceitas nos últimos 6 meses" />
-          <div className="px-5 pb-5">{m ? <SalesBars data={m.months} /> : <Skeleton className="h-52" />}</div>
+          <CardHeader
+            title="Vendas por mês"
+            subtitle="Propostas aceitas nos últimos 12 meses"
+            action={
+              <Link href="/relatorios" className="text-[13px] font-semibold text-sun-700 hover:text-sun-800">
+                Relatórios
+              </Link>
+            }
+          />
+          <div className="px-5 pb-5">
+            {month ? (
+              <BarChart
+                data={month.months}
+                format={(v) => (v >= 1000 ? `R$ ${fmtNum(v / 1000, v >= 10000 ? 0 : 1)} mil` : brl(v, 0))}
+                sub={(i) => `${month.months[i].count} ${month.months[i].count === 1 ? "contrato" : "contratos"}`}
+              />
+            ) : (
+              <Skeleton className="h-52" />
+            )}
+          </div>
         </Card>
 
         {/* Funil */}
@@ -105,7 +143,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-3">
+      <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-3">
         {/* Tarefas */}
         <Card className="lg:col-span-1">
           <CardHeader
@@ -251,55 +289,6 @@ function metrics({ leads, proposals, tasks }: DashData) {
     overdue: tasks.filter((t) => t.due_at && new Date(t.due_at) < now).length,
     dueToday: tasks.filter((t) => t.due_at && new Date(t.due_at) <= endOfToday).length,
   };
-}
-
-function Kpi({ label, value, sub, icon, dark }: { label: string; value: string; sub: string; icon: React.ReactNode; dark?: boolean }) {
-  return (
-    <Card className={cx("relative overflow-hidden p-4 sm:p-5", dark && "bg-ink-950 text-white ring-ink-950")}>
-      {dark && <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-sun-500/25 blur-2xl" />}
-      <div className="relative flex items-center justify-between">
-        <p className={cx("text-xs font-semibold sm:text-[13px]", dark ? "text-ink-400" : "text-ink-500")}>{label}</p>
-        <span className={cx("grid h-7 w-7 place-items-center rounded-lg", dark ? "bg-white/10 text-sun-400" : "bg-sun-50 text-sun-600")}>{icon}</span>
-      </div>
-      <p className={cx("tnum relative mt-3 font-display text-xl font-semibold tracking-tight sm:text-[26px]", dark && "text-sun-gradient")}>{value}</p>
-      <p className={cx("relative mt-1 truncate text-xs", dark ? "text-ink-500" : "text-ink-400")}>{sub}</p>
-    </Card>
-  );
-}
-
-function SalesBars({ data }: { data: { label: string; value: number; count: number }[] }) {
-  const [hover, setHover] = useState<number | null>(null);
-  const max = Math.max(1, ...data.map((d) => d.value));
-  if (!data.some((d) => d.value)) {
-    return (
-      <div className="grid h-52 place-items-center rounded-2xl border border-dashed border-ink-200 text-center text-sm text-ink-400">
-        <div>
-          <ArrowUpRight className="mx-auto mb-2 h-5 w-5" />
-          As vendas aparecem aqui quando uma proposta for aceita.
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="relative flex h-52 items-end gap-2 sm:gap-4">
-      {data.map((d, i) => (
-        <div key={i} className="group relative flex h-full flex-1 flex-col items-center justify-end gap-2" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
-          {d.value > 0 && <p className="tnum text-[11px] font-semibold text-ink-600">{fmtNum(d.value / 1000, d.value >= 100000 ? 0 : 1)} mil</p>}
-          <div
-            className={cx("w-full max-w-14 rounded-t-[4px] transition-opacity", i === data.length - 1 ? "bg-sun-600" : "bg-sun-600/75", hover !== null && hover !== i && "opacity-50")}
-            style={{ height: `${d.value ? Math.max(3, (d.value / max) * 78) : 1.5}%` }}
-          />
-          <p className="text-xs text-ink-500 capitalize">{d.label}</p>
-          {hover === i && (
-            <div className="pointer-events-none absolute bottom-full z-10 mb-1 rounded-xl bg-ink-950 px-3 py-2 text-xs whitespace-nowrap text-white shadow-lift">
-              <p className="tnum font-semibold">{brl(d.value, 0)}</p>
-              <p className="text-ink-400">{d.count} {d.count === 1 ? "venda" : "vendas"}</p>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function HeroBanner({ greet, firstName, wonMonth, deals, onNewLead }: { greet: string; firstName: string; wonMonth: number; deals: number; onNewLead: () => void }) {

@@ -3,7 +3,8 @@
 import { BadgeDollarSign, CalendarClock, Download, FileBarChart, Handshake, Printer, Sparkles, Target, TrendingUp, Trophy, Users } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useApp } from "@/components/app/app-context";
-import { AreaChart, BarChart, DeltaBadge, Donut, Funnel, SERIES, Sparkline, topWithOther } from "@/components/charts";
+import { AreaChart, BarChart, DeltaBadge, Donut, Funnel, SERIES, topWithOther } from "@/components/charts";
+import { KpiCard } from "@/components/charts/kpi";
 import { Avatar, Card, CardHeader, Empty, PageHeader, Segmented, Select, Skeleton, Button, cx } from "@/components/ui";
 import { buildReport, delta, rangeOf, type Period } from "@/lib/analytics";
 import { SEGMENTS, stageOf } from "@/lib/constants";
@@ -277,23 +278,5 @@ export default function ReportsPage() {
         </>
       )}
     </div>
-  );
-}
-
-function KpiCard({ label, value, d, sub, icon, spark, dark }: { label: string; value: string; d: number | null; sub?: string; icon: ReactNode; spark?: number[]; dark?: boolean }) {
-  return (
-    <Card className={cx("relative overflow-hidden p-4 sm:p-5", dark && "bg-ink-950 text-white ring-ink-950")}>
-      {dark && <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-sun-500/25 blur-2xl" />}
-      <div className="relative flex items-center justify-between gap-2">
-        <p className={cx("text-xs font-semibold sm:text-[13px]", dark ? "text-ink-400" : "text-ink-500")}>{label}</p>
-        <span className={cx("grid h-7 w-7 place-items-center rounded-lg", dark ? "bg-white/10 text-sun-400" : "bg-sun-50 text-sun-600")}>{icon}</span>
-      </div>
-      <p className={cx("tnum relative mt-2 truncate font-display text-xl font-semibold tracking-tight sm:text-[26px]", dark && "text-sun-gradient")}>{value}</p>
-      <div className="relative mt-1 flex items-center gap-2">
-        <DeltaBadge value={d} dark={dark} />
-        {sub && <span className={cx("truncate text-xs", dark ? "text-ink-500" : "text-ink-400")}>{sub}</span>}
-      </div>
-      {spark && <Sparkline values={spark} color={dark ? "#9BD373" : SERIES[0]} className="relative mt-3" />}
-    </Card>
   );
 }

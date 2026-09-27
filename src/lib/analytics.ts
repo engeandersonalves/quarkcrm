@@ -4,7 +4,7 @@
  */
 import type { Lead, LeadStatus, Profile, Proposal } from "./types";
 
-export type Period = "30d" | "90d" | "12m" | "ano";
+export type Period = "mes" | "30d" | "90d" | "12m" | "ano";
 
 export interface Range {
   from: Date;
@@ -18,6 +18,13 @@ export function rangeOf(p: Period, now = new Date()): Range {
   const to = now;
   let from: Date;
   let label: string;
+  if (p === "mes") {
+    // Mês atual até hoje, comparado ao mesmo número de dias do mês anterior.
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    const prevFrom = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevTo = new Date(prevFrom.getTime() + (now.getTime() - from.getTime()));
+    return { from, to, prevFrom, prevTo, label: "Este mês" };
+  }
   if (p === "30d") {
     from = new Date(now.getTime() - 30 * 86400000);
     label = "Últimos 30 dias";
