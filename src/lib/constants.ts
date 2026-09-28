@@ -35,7 +35,7 @@ export const PRIORITIES: Record<Priority, { label: string; cls: string }> = {
   alta: { label: "Alta", cls: "bg-rose-50 text-rose-700 ring-rose-600/15" },
 };
 
-export const SOURCES = ["Indicação", "Instagram", "Facebook", "Google", "Site", "WhatsApp", "Porta a porta", "Evento", "Outro"];
+export const SOURCES = ["Indicação", "Instagram", "Facebook", "Google", "Site", "WhatsApp", "Porta a porta", "Prospecção ativa", "Evento", "Outro"];
 export const ROOF_TYPES = ["Telhado cerâmico", "Telhado fibrocimento", "Telhado metálico", "Laje", "Solo", "Carport"];
 export const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ");
 

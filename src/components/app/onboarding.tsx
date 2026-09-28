@@ -512,6 +512,16 @@ export function DailyBriefing({ open, onClose }: { open: boolean; onClose: () =>
                       <Copy className="h-4 w-4" /> Copiar link
                     </Action>
                   </div>
+                  <Link
+                    href="/prospeccao"
+                    onClick={() => {
+                      mark("prospect");
+                      onClose();
+                    }}
+                    className="mt-2 flex h-11 items-center justify-center gap-2 rounded-xl bg-white/10 px-3 text-sm font-semibold ring-1 ring-white/15 hover:bg-white/15"
+                  >
+                    <Target className="h-4 w-4 text-[#F3EA3B]" /> Radar: ache 5 comércios perto de você <ChevronRight className="h-4 w-4" />
+                  </Link>
                 </>
               )}
             </Mission>
