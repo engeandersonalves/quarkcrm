@@ -208,10 +208,10 @@ function ShellInner({ children }: { children: ReactNode }) {
           <div className="fixed inset-0 z-30 lg:hidden" onClick={() => setFab(false)}>
             <div className="absolute inset-0 bg-ink-950/40 backdrop-blur-[2px]" />
             <div className="animate-fade-up absolute inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] grid max-h-[calc(100dvh-8rem)] gap-1 overflow-y-auto rounded-3xl bg-white p-2 shadow-lift">
+              <FabItem icon={<Radar className="h-5 w-5" />} title="Prospecção ativa · novo" text="Comércios da região com contatos" onClick={() => router.push("/prospeccao")} />
               <FabItem icon={<Calculator className="h-5 w-5" />} title="Orçamento solar" text="Calcular e gerar proposta" onClick={() => router.push("/propostas/nova")} />
               <FabItem icon={<PlugZap className="h-5 w-5" />} title="Orçamento S.A.V.E" text="Carregador de veículo elétrico" onClick={() => router.push("/propostas/nova?tipo=save")} />
               <FabItem icon={<Flame className="h-5 w-5" />} title="Plano do dia" text="Missões para vender mais hoje" onClick={() => window.dispatchEvent(new Event("quark:briefing"))} />
-              <FabItem icon={<Radar className="h-5 w-5" />} title="Prospecção ativa" text="Comércios da região com contatos" onClick={() => router.push("/prospeccao")} />
               <FabItem icon={<Zap className="h-5 w-5" />} title="Orçamento rápido" text="Imagem pronta para o WhatsApp" onClick={() => router.push("/orcamento-rapido")} />
               <FabItem icon={<UserPlus className="h-5 w-5" />} title="Novo lead" text="Cadastrar um cliente" onClick={() => openLead()} />
               <FabItem icon={<ListTodo className="h-5 w-5" />} title="Nova tarefa" text="Agendar um follow-up" onClick={() => openTask()} />
