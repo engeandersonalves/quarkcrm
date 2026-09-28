@@ -9,7 +9,7 @@ import { ALERT_STYLE } from "@/components/app/attention";
 import { Mantra } from "@/components/app/mantra";
 import { useQuick } from "@/components/app/shell";
 import { TaskRow } from "@/components/app/task-row";
-import { Button, Card, Empty, PageHeader, Segmented, Skeleton, cx } from "@/components/ui";
+import { Avatar, Button, Card, Empty, PageHeader, Segmented, Skeleton, cx } from "@/components/ui";
 import { computeAlerts, type SmartAlert } from "@/lib/alerts";
 import { TASK_TYPES } from "@/lib/constants";
 import { must, useLive } from "@/lib/live";
@@ -33,9 +33,15 @@ const readSnooze = (): Record<string, number> => {
 };
 
 export default function TasksPage() {
-  const { user, settings } = useApp();
+  const { user, settings, profiles } = useApp();
   const { openTask } = useQuick();
   const [scope, setScope] = useState<"minhas" | "todas">("minhas");
+  // Filtro por pessoa (também vem da Central da equipe: /tarefas?pessoa=<id>)
+  const [person, setPerson] = useState<string | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("pessoa");
+    if (id) setPerson(id);
+  }, []);
   const [type, setType] = useState<TaskType | "todas" | "auto">("todas");
   const [showDone, setShowDone] = useState(false);
   const [snooze, setSnooze] = useState<Record<string, number>>({});
@@ -61,7 +67,8 @@ export default function TasksPage() {
     ["tasks", "leads", "proposals", "documents"],
   );
 
-  const mine = (t: Task) => scope === "todas" || t.assigned_to === user.id || (!t.assigned_to && (t.created_by === user.id || !t.created_by));
+  const mine = (t: Task) =>
+    person ? (t.assigned_to ?? t.created_by) === person : scope === "todas" || t.assigned_to === user.id || (!t.assigned_to && (t.created_by === user.id || !t.created_by));
 
   const view = useMemo(() => {
     const all = (data?.tasks ?? []).filter(mine);
@@ -93,11 +100,15 @@ export default function TasksPage() {
     const auto = allOpen.filter((t) => t.cadence).length;
     const counts = Object.fromEntries((Object.keys(TASK_TYPES) as TaskType[]).map((k) => [k, allOpen.filter((t) => t.type === k).length])) as Record<TaskType, number>;
     return { groups, late, doneToday, todayTotal, next7, auto, counts, pending: allOpen.length };
-  }, [data, scope, type, showDone, user.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data, scope, person, type, showDone, user.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const alerts = useMemo(() => {
     if (!data) return [];
-    const myLeads = scope === "todas" ? data.leads : data.leads.filter((l) => !l.owner_id || l.owner_id === user.id || l.created_by === user.id);
+    const myLeads = person
+      ? data.leads.filter((l) => (l.owner_id ?? l.created_by) === person)
+      : scope === "todas"
+        ? data.leads
+        : data.leads.filter((l) => !l.owner_id || l.owner_id === user.id || l.created_by === user.id);
     const ids = new Set(myLeads.map((l) => l.id));
     const now = Date.now();
     return computeAlerts({
@@ -106,7 +117,7 @@ export default function TasksPage() {
       tasks: data.tasks,
       documents: data.documents,
     }).filter((a) => a.kind !== "overdue" && !(snooze[a.id] > now));
-  }, [data, scope, snooze, user.id]);
+  }, [data, scope, person, snooze, user.id]);
 
   const dismiss = (id: string) => {
     const next = { ...readSnooze(), [id]: Date.now() + 86400000 };
@@ -232,7 +243,7 @@ export default function TasksPage() {
 
           <Link
             href="/configuracoes?aba=cadencias"
-            className="group relative block overflow-hidden rounded-2xl bg-white p-4 shadow-soft ring-1 ring-ink-200/70 transition hover:ring-ink-300"
+            className="group relative block overflow-hidden rounded-2xl glass p-4 transition hover:ring-ink-300"
           >
             <div className="flex items-start gap-3">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-ink-900 text-brand-yellow">
@@ -250,14 +261,35 @@ export default function TasksPage() {
         {/* Lista */}
         <section className="min-w-0">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <Segmented
-              value={scope}
-              onChange={setScope}
-              options={[
-                { value: "minhas", label: "Minhas" },
-                { value: "todas", label: "Toda a equipe" },
-              ]}
-            />
+            <div className="scrollbar-none -mx-4 flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+              <Segmented
+                value={person ? ("" as "minhas") : scope}
+                onChange={(v) => {
+                  setPerson(null);
+                  setScope(v);
+                }}
+                options={[
+                  { value: "minhas", label: "Minhas" },
+                  { value: "todas", label: "Toda a equipe" },
+                ]}
+              />
+              {profiles
+                .filter((p) => p.active !== false && p.id !== user.id)
+                .map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setPerson(person === p.id ? null : p.id)}
+                    title={`Tarefas de ${p.full_name ?? p.email}`}
+                    className={cx(
+                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full pr-3 pl-1 text-[13px] font-semibold ring-1 transition",
+                      person === p.id ? "bg-ink-900 text-white ring-ink-900" : "bg-white/70 text-ink-700 ring-ink-900/10 hover:bg-white",
+                    )}
+                  >
+                    <Avatar name={p.full_name} src={p.avatar_url} className="h-7 w-7" />
+                    {(p.full_name ?? p.email ?? "").split(" ")[0]}
+                  </button>
+                ))}
+            </div>
             <button onClick={() => setShowDone((v) => !v)} className="text-[13px] font-semibold text-ink-500 hover:text-ink-900">
               {showDone ? "Ocultar concluídas" : "Mostrar concluídas"}
             </button>
@@ -327,7 +359,7 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
 
 function Stat({ icon, tone, label, value, hint }: { icon: React.ReactNode; tone: string; label: string; value: number; hint: string }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-soft ring-1 ring-ink-200/70">
+    <div className="rounded-2xl glass p-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[12px] font-semibold text-ink-500">{label}</p>
         <span className={`grid h-7 w-7 place-items-center rounded-lg ${tone}`}>{icon}</span>

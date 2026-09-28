@@ -79,6 +79,28 @@
   color: transparent;
 }
 
+/* Vidro: cartões translúcidos sobre o fundo em degradê */
+@utility glass {
+  background-color: rgb(255 255 255 / 0.72);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  backdrop-filter: blur(20px) saturate(1.6);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    0 0 0 1px rgb(28 18 52 / 0.06),
+    0 1px 2px rgb(28 18 52 / 0.04),
+    0 12px 32px -14px rgb(28 18 52 / 0.18);
+}
+
+@utility glass-dark {
+  background-image: linear-gradient(145deg, rgb(42 29 77 / 0.92), rgb(18 11 36 / 0.94));
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 0 0 1px rgb(255 255 255 / 0.06),
+    0 18px 40px -16px rgb(18 11 36 / 0.6);
+}
+
 @utility scrollbar-none {
   scrollbar-width: none;
   &::-webkit-scrollbar {
@@ -357,3 +379,18 @@
 .poster-col { animation: poster-up var(--dur, 60s) linear infinite; will-change: transform; }
 .poster-col.reverse { animation-direction: reverse; }
 @media (prefers-reduced-motion: reduce) { .poster-col { animation: none; } }
+
+/* Fundo do app: aurora suave nas cores da marca, fixa atrás de tudo */
+.app-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(56rem 38rem at 105% -8%, rgb(155 211 115 / 0.4), transparent 62%),
+    radial-gradient(48rem 34rem at -12% 6%, rgb(91 52 214 / 0.22), transparent 60%),
+    radial-gradient(42rem 30rem at 55% 112%, rgb(243 234 59 / 0.3), transparent 62%),
+    radial-gradient(30rem 24rem at 30% 45%, rgb(108 198 144 / 0.14), transparent 70%),
+    linear-gradient(180deg, #f8f7fc 0%, #f1f0f8 100%);
+}
+@media print { .app-aurora { display: none; } }

@@ -18,11 +18,11 @@ type Variant = "primary" | "sun" | "secondary" | "ghost" | "danger" | "outline";
 type Size = "sm" | "md" | "lg" | "icon";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-ink-900 text-white hover:bg-ink-800 shadow-soft",
+  primary: "bg-gradient-to-br from-[#3a2a6b] via-ink-900 to-ink-950 text-white ring-1 ring-white/10 shadow-[0_10px_28px_-12px_rgba(28,18,52,0.75)] hover:brightness-125",
   sun: "bg-sun-gradient text-ink-950 shadow-glow hover:brightness-105",
-  secondary: "bg-white text-ink-800 ring-1 ring-ink-200 hover:bg-ink-50 hover:ring-ink-300 shadow-soft",
-  outline: "bg-transparent text-ink-700 ring-1 ring-ink-200 hover:bg-white",
-  ghost: "text-ink-600 hover:bg-ink-100 hover:text-ink-900",
+  secondary: "bg-white/70 text-ink-800 ring-1 ring-ink-900/10 backdrop-blur-md hover:bg-white shadow-soft",
+  outline: "bg-white/30 text-ink-700 ring-1 ring-ink-900/10 backdrop-blur-md hover:bg-white/80",
+  ghost: "text-ink-600 hover:bg-ink-900/[0.06] hover:text-ink-900",
   danger: "bg-rose-600 text-white hover:bg-rose-700",
 };
 const sizes: Record<Size, string> = {
@@ -63,7 +63,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 /* ------------------------------------------------------------------ Inputs */
 
 const fieldBase =
-  "w-full rounded-xl bg-white px-3.5 text-[15px] sm:text-sm text-ink-900 ring-1 ring-ink-200 placeholder:text-ink-400 transition focus:outline-none focus:ring-2 focus:ring-sun-500 disabled:bg-ink-50 disabled:text-ink-500";
+  "w-full rounded-xl bg-white/80 px-3.5 text-[15px] sm:text-sm text-ink-900 ring-1 ring-ink-900/10 shadow-[inset_0_1px_2px_rgba(28,18,52,0.04)] backdrop-blur-sm placeholder:text-ink-400 transition focus:bg-white focus:outline-none focus:ring-2 focus:ring-sun-500 disabled:bg-ink-50/70 disabled:text-ink-500";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...rest }, ref) {
   return <input ref={ref} className={cx(fieldBase, "h-11 sm:h-10", className)} {...rest} />;
@@ -198,7 +198,7 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   return (
-    <div className={cx("inline-flex rounded-xl bg-ink-100 p-1", className)} role="tablist">
+    <div className={cx("inline-flex rounded-xl bg-ink-900/[0.05] p-1 ring-1 ring-ink-900/[0.04] backdrop-blur-md", className)} role="tablist">
       {options.map((o) => (
         <button
           key={o.value}
@@ -209,7 +209,7 @@ export function Segmented<T extends string>({
           className={cx(
             "flex items-center justify-center gap-1.5 rounded-lg font-semibold transition-all",
             size === "sm" ? "h-7 px-2.5 text-xs" : "h-8 px-3.5 text-[13px]",
-            value === o.value ? "bg-white text-ink-900 shadow-soft" : "text-ink-500 hover:text-ink-800",
+            value === o.value ? "bg-white text-ink-900 shadow-[0_2px_10px_-2px_rgba(28,18,52,0.18)]" : "text-ink-500 hover:text-ink-800",
           )}
         >
           {o.label}
@@ -223,7 +223,7 @@ export function Segmented<T extends string>({
 
 export function Card({ className, children, ...rest }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cx("rounded-2xl bg-white shadow-soft ring-1 ring-ink-200/70", className)} {...rest}>
+    <div className={cx(/(^|\s)(bg-|glass-dark)/.test(className ?? "") ? "shadow-soft ring-1 ring-ink-900/5" : "glass", "rounded-2xl", className)} {...rest}>
       {children}
     </div>
   );
@@ -233,7 +233,7 @@ export function CardHeader({ title, subtitle, action, icon }: { title: ReactNode
   return (
     <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4">
       <div className="flex min-w-0 items-start gap-3">
-        {icon && <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-sun-50 text-sun-600 ring-1 ring-sun-200/60">{icon}</div>}
+        {icon && <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-sun-100 to-white text-sun-600 ring-1 ring-sun-200/70 shadow-[0_4px_12px_-4px_rgba(127,203,134,0.5)]">{icon}</div>}
         <div className="min-w-0">
           <h3 className="font-display text-[15px] font-semibold tracking-tight text-ink-900">{title}</h3>
           {subtitle && <p className="mt-0.5 text-[13px] text-ink-500">{subtitle}</p>}
@@ -248,7 +248,7 @@ export function PageHeader({ title, subtitle, actions }: { title: ReactNode; sub
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink-950 sm:text-[28px]">{title}</h1>
+        <h1 className="bg-gradient-to-br from-ink-950 via-ink-900 to-[#4a3590] bg-clip-text pb-0.5 font-display text-2xl font-semibold tracking-tight text-transparent sm:text-[28px]">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-ink-500">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -289,7 +289,7 @@ export function Avatar({ name, className, src }: { name: string | null | undefin
 export function Empty({ icon, title, text, action }: { icon: ReactNode; title: string; text?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-ink-100 text-ink-400">{icon}</div>
+      <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-white to-ink-100 text-ink-400 ring-1 ring-ink-900/5 shadow-soft">{icon}</div>
       <p className="font-display font-semibold text-ink-800">{title}</p>
       {text && <p className="mt-1 max-w-sm text-sm text-ink-500">{text}</p>}
       {action && <div className="mt-5">{action}</div>}
@@ -298,7 +298,7 @@ export function Empty({ icon, title, text, action }: { icon: ReactNode; title: s
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cx("animate-pulse rounded-xl bg-ink-200/60", className)} />;
+  return <div className={cx("animate-pulse rounded-xl bg-ink-900/[0.06]", className)} />;
 }
 
 /* ------------------------------------------------------------------- Modal */
@@ -336,10 +336,10 @@ export function Modal({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby={id}>
-      <div className="absolute inset-0 bg-ink-950/50 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="absolute inset-0 bg-ink-950/45 backdrop-blur-sm" onClick={onClose} />
       <div
         className={cx(
-          "animate-sheet-up sm:animate-fade-up relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-white shadow-lift sm:rounded-3xl",
+          "animate-sheet-up sm:animate-fade-up relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-white/90 shadow-lift ring-1 ring-white/70 backdrop-blur-2xl sm:rounded-3xl",
           size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg",
         )}
       >
@@ -357,7 +357,7 @@ export function Modal({
         </div>
         <div className="overflow-y-auto px-6 pb-6">{children}</div>
         {footer && (
-          <div className="flex items-center justify-end gap-2 border-t border-ink-100 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</div>
+          <div className="flex items-center justify-end gap-2 border-t border-ink-900/[0.06] px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">{footer}</div>
         )}
       </div>
     </div>
@@ -378,7 +378,7 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={cx("relative h-6 w-10 rounded-full transition", checked ? "bg-sun-500" : "bg-ink-300")}
+        className={cx("relative h-6 w-10 rounded-full transition", checked ? "bg-sun-gradient" : "bg-ink-300")}
       >
         <span className={cx("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all", checked ? "left-[18px]" : "left-0.5")} />
       </button>

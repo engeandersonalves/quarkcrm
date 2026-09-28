@@ -234,7 +234,7 @@ function Proposals() {
 
 function Stat({ label, value, sub, accent, className }: { label: string; value: string; sub: string; accent?: boolean; className?: string }) {
   return (
-    <Card className={cx("p-4 sm:p-5", accent && "bg-ink-950 text-white ring-ink-950", className)}>
+    <Card className={cx("p-4 sm:p-5", accent && "glass-dark text-white ring-0", className)}>
       <p className={cx("text-xs font-semibold", accent ? "text-ink-400" : "text-ink-500")}>{label}</p>
       <p className={cx("tnum mt-1 font-display text-xl font-semibold tracking-tight sm:text-2xl", accent && "text-sun-gradient")}>{value}</p>
       <p className={cx("mt-0.5 text-xs", accent ? "text-ink-500" : "text-ink-400")}>{sub}</p>

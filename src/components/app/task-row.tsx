@@ -131,7 +131,7 @@ export function TaskRow({ task, showLead = true, lead: leadProp }: { task: Task;
 
       {open && task.copy && (
         <div className="animate-fade-up px-3 pb-3 sm:pl-11">
-          <div className="relative rounded-2xl rounded-tl-md bg-white p-3.5 text-[13.5px] leading-relaxed whitespace-pre-line text-ink-800 shadow-soft ring-1 ring-ink-200/70">{text}</div>
+          <div className="relative rounded-2xl rounded-tl-md glass p-3.5 text-[13.5px] leading-relaxed whitespace-pre-line text-ink-800">{text}</div>
           {materials.length > 0 && (task.type === "whatsapp" || task.type === "email" || task.type === "tarefa") && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className="flex items-center gap-1 text-[11px] font-semibold text-ink-500">

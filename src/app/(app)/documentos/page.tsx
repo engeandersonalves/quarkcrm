@@ -64,7 +64,7 @@ export default function DocumentsPage() {
         </Link>
         <Link
           href="/documentos/novo?tipo=aluguel"
-          className="group relative overflow-hidden rounded-3xl bg-white p-5 shadow-soft ring-1 ring-ink-200/70 transition hover:-translate-y-0.5 hover:shadow-lift sm:p-6"
+          className="group relative overflow-hidden rounded-3xl glass p-5 transition hover:-translate-y-0.5 hover:shadow-lift sm:p-6"
         >
           <div className="pointer-events-none absolute -top-16 -right-10 h-48 w-48 rounded-full bg-brand-lime/25 blur-3xl" />
           <div className="relative flex items-start gap-4">

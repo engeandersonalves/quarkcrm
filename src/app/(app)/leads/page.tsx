@@ -255,7 +255,7 @@ function LeadCard({ lead, onMove }: { lead: LeadRow; onMove: (id: string, s: Lea
       draggable
       onDragStart={(e) => e.dataTransfer.setData("text/lead", lead.id)}
       onClick={() => router.push(`/leads/${lead.id}`)}
-      className="group cursor-pointer rounded-2xl bg-white p-3.5 shadow-soft ring-1 ring-ink-200/60 transition hover:-translate-y-0.5 hover:shadow-lift active:cursor-grabbing"
+      className="group cursor-pointer rounded-2xl glass p-3.5 transition hover:-translate-y-0.5 hover:shadow-lift active:cursor-grabbing"
     >
       <div className="flex items-start gap-2.5">
         <Avatar name={lead.name} className="h-8 w-8 text-[11px]" />

@@ -135,7 +135,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
   return (
     <div className="animate-fade-up">
       <div className="mb-6 flex items-start gap-3">
-        <Link href="/leads" className="mt-1 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-ink-500 shadow-soft ring-1 ring-ink-200 hover:text-ink-900">
+        <Link href="/leads" className="mt-1 grid h-10 w-10 shrink-0 place-items-center rounded-xl glass text-ink-500 hover:text-ink-900">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

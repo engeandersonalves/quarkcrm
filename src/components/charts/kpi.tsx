@@ -7,7 +7,7 @@ import { DeltaBadge, SERIES, Sparkline } from ".";
 /** Cartão de indicador: valor, variação contra o período anterior e minigráfico de tendência. */
 export function KpiCard({ label, value, d, sub, icon, spark, dark, hideDelta }: { label: string; value: string; d: number | null; sub?: string; icon: ReactNode; spark?: number[]; dark?: boolean; hideDelta?: boolean }) {
   return (
-    <Card className={cx("relative overflow-hidden p-4 sm:p-5", dark && "bg-ink-950 text-white ring-ink-950")}>
+    <Card className={cx("relative overflow-hidden p-4 sm:p-5", dark && "glass-dark text-white ring-0")}>
       {dark && <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-sun-500/25 blur-2xl" />}
       <div className="relative flex items-center justify-between gap-2">
         <p className={cx("text-xs font-semibold sm:text-[13px]", dark ? "text-ink-400" : "text-ink-500")}>{label}</p>

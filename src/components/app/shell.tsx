@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, Radar, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
+import { BarChart3, CheckSquare, Crown, Radar, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -28,6 +28,8 @@ interface NavItem {
   icon: typeof Sun;
   badge?: NavKey;
   hint?: string;
+  /** Só aparece para o master (administrador). */
+  admin?: boolean;
 }
 
 /** Menu em seções: o S.A.V.E fica dentro de Propostas (lá se escolhe o tipo). */
@@ -53,6 +55,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Desempenho",
     items: [
+      { href: "/equipe", label: "Equipe", icon: Crown, admin: true },
       { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
       { href: "/ranking", label: "Arena", icon: Trophy },
     ],
@@ -150,6 +153,7 @@ function ShellInner({ children }: { children: ReactNode }) {
   return (
     <Quick.Provider value={{ openLead, openTask }}>
       <div className={cx("min-h-dvh transition-[padding] duration-300 print:pl-0", collapsed ? "lg:pl-[88px]" : "lg:pl-[276px]")}>
+        <div className="app-aurora" aria-hidden />
         <Sidebar
           collapsed={collapsed}
           onToggle={toggleCollapsed}
@@ -163,7 +167,7 @@ function ShellInner({ children }: { children: ReactNode }) {
         />
 
         {/* Topbar mobile */}
-        <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink-200/60 bg-ink-50/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
+        <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-white/60 bg-white/55 px-4 shadow-[0_1px_0_rgba(28,18,52,0.05)] pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
           <Link href="/" className="flex items-center" aria-label={settings.company_name || "Quark Energia"}>
             <BrandLogo variant="color" className="h-8" />
           </Link>
@@ -184,7 +188,7 @@ function ShellInner({ children }: { children: ReactNode }) {
         <main className="mx-auto w-full max-w-[1400px] px-4 pt-5 pb-32 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">{children}</main>
 
         {/* Bottom nav mobile */}
-        <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-ink-200/70 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+        <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/65 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_rgba(28,18,52,0.18)] backdrop-blur-2xl backdrop-saturate-150 lg:hidden">
           <div className="relative grid h-16 grid-cols-5">
             {MOBILE_TABS.slice(0, 2).map((item) => (
               <TabLink key={item.href} {...item} active={isActive(item.href)} count={item.badge ? badges[item.badge] : 0} alert={item.badge === "tasks" && badges.late > 0} />
@@ -207,8 +211,9 @@ function ShellInner({ children }: { children: ReactNode }) {
         {fab && (
           <div className="fixed inset-0 z-30 lg:hidden" onClick={() => setFab(false)}>
             <div className="absolute inset-0 bg-ink-950/40 backdrop-blur-[2px]" />
-            <div className="animate-fade-up absolute inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] grid max-h-[calc(100dvh-8rem)] gap-1 overflow-y-auto rounded-3xl bg-white p-2 shadow-lift">
+            <div className="animate-fade-up absolute inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] grid max-h-[calc(100dvh-8rem)] gap-1 overflow-y-auto rounded-3xl bg-white/85 p-2 shadow-lift ring-1 ring-white/70 backdrop-blur-2xl">
               <FabItem icon={<Radar className="h-5 w-5" />} title="Prospecção ativa · novo" text="Comércios da região com contatos" onClick={() => router.push("/prospeccao")} />
+              {profile?.role === "admin" && <FabItem icon={<Crown className="h-5 w-5" />} title="Central da equipe" text="Ações e tarefas de cada pessoa" onClick={() => router.push("/equipe")} />}
               <FabItem icon={<Calculator className="h-5 w-5" />} title="Orçamento solar" text="Calcular e gerar proposta" onClick={() => router.push("/propostas/nova")} />
               <FabItem icon={<PlugZap className="h-5 w-5" />} title="Orçamento S.A.V.E" text="Carregador de veículo elétrico" onClick={() => router.push("/propostas/nova?tipo=save")} />
               <FabItem icon={<Flame className="h-5 w-5" />} title="Plano do dia" text="Missões para vender mais hoje" onClick={() => window.dispatchEvent(new Event("quark:briefing"))} />
@@ -358,7 +363,7 @@ function Sidebar({
               <p className="mb-1.5 px-3 text-[10px] font-bold tracking-[0.2em] text-ink-500 uppercase">{sec.title}</p>
             )}
             <div className="grid gap-0.5">
-              {sec.items.map((item) => {
+              {sec.items.filter((item) => !item.admin || profile?.role === "admin").map((item) => {
                 const active = isActive(item.href);
                 const n = item.badge ? badges[item.badge] : 0;
                 const alert = item.badge === "tasks" && badges.late > 0;

@@ -668,7 +668,7 @@ export default function ProspeccaoPage() {
 
       {/* ------------------------------------------------ estados */}
       {loading && (
-        <div className="mt-6 grid place-items-center rounded-3xl bg-white p-10 text-center shadow-soft ring-1 ring-ink-200/70">
+        <div className="mt-6 grid place-items-center rounded-3xl glass p-10 text-center">
           <div className="relative h-28 w-28 rounded-full bg-[#07060F] ring-1 ring-ink-200">
             <div className="absolute inset-4 rounded-full ring-1 ring-white/15" />
             <div className="radar-sweep absolute inset-0 rounded-full" />
@@ -701,7 +701,7 @@ export default function ProspeccaoPage() {
             { icon: Earth, t: "Veja o telhado antes de ligar", d: "Foto de satélite de cada comércio e atalho para o Google Earth em 3D, para avaliar a área útil." },
             { icon: MessageCircle, t: "Aborde com números", d: "Consumo e economia estimados pelo tipo de negócio e horário, e uma mensagem de WhatsApp pronta." },
           ].map(({ icon: Icon, t, d }) => (
-            <div key={t} className="rounded-2xl bg-white p-5 shadow-soft ring-1 ring-ink-200/70">
+            <div key={t} className="rounded-2xl glass p-5">
               <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#1C1234] text-[#F3EA3B]">
                 <Icon className="h-5 w-5" />
               </span>
@@ -723,7 +723,7 @@ export default function ProspeccaoPage() {
               { k: "Consumo somado", v: `${fmtNum(Math.round(stats.kwh / 1000))} MWh`, s: "por mês, estimado" },
               { k: "Economia na mesa", v: brlShort(stats.savings), s: "por mês, se todos fecharem", wide: true },
             ].map((x) => (
-              <div key={x.k} className={cx("rounded-2xl bg-white p-4 shadow-soft ring-1 ring-ink-200/70", x.wide && "col-span-2 lg:col-span-1")}>
+              <div key={x.k} className={cx("rounded-2xl glass p-4", x.wide && "col-span-2 lg:col-span-1")}>
                 <p className="text-[11px] font-semibold tracking-wide text-ink-500 uppercase">{x.k}</p>
                 <p className="mt-1 text-2xl font-bold tracking-tight text-ink-900 tabular-nums">{x.v}</p>
                 <p className="text-xs text-ink-500">{x.s}</p>

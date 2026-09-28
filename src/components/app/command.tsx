@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CheckSquare, Radar, FileSignature, Megaphone, Trophy, Zap, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users } from "lucide-react";
+import { BarChart3, CheckSquare, Crown, Radar, FileSignature, Megaphone, Trophy, Zap, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { productOf } from "@/lib/constants";
@@ -75,6 +75,7 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
       { id: "p-mkt", group: "Ir para", label: "Marketing (artes para postar)", icon: <Megaphone className="h-4 w-4" />, keywords: "marketing artes instagram status post story imagens", run: go("/marketing") },
       { id: "p-docs", group: "Ir para", label: "Documentos (procurações e contratos)", icon: <FileSignature className="h-4 w-4" />, keywords: "documentos procuracao equatorial contrato aluguel locacao assinatura", run: go("/documentos") },
       { id: "a-brief", group: "Ações", label: "Plano do dia (missões)", icon: <Zap className="h-4 w-4" />, keywords: "plano do dia missoes sugestoes postar prospeccao", run: () => window.dispatchEvent(new Event("quark:briefing")) },
+      { id: "a-team", group: "Ações", label: "Central da equipe (ações e tarefas por pessoa)", icon: <Crown className="h-4 w-4" />, keywords: "equipe time vendedores acoes tarefas pessoa master", run: go("/equipe") },
       { id: "a-prospect", group: "Ações", label: "Prospecção ativa (radar de comércios)", icon: <Radar className="h-4 w-4" />, keywords: "prospeccao ativa radar comercio nicho telhado satelite", run: go("/prospeccao") },
       { id: "a-quick", group: "Ações", label: "Orçamento rápido (imagem/PDF)", icon: <Zap className="h-4 w-4" />, keywords: "orcamento rapido imagem png pdf whatsapp", run: go("/orcamento-rapido") },
       { id: "n-proc", group: "Ações", label: "Nova procuração (Equatorial)", icon: <FileSignature className="h-4 w-4" />, keywords: "procuracao equatorial assinatura", run: go("/documentos/novo?tipo=procuracao") },
