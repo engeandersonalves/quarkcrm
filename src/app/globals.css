@@ -329,3 +329,19 @@
   background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
   animation: anam-shine 2.8s ease-in-out infinite;
 }
+
+/* Menu lateral: rolagem fina e discreta */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.12) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.12);
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 0.22);
+}

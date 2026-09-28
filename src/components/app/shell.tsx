@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
+import { BarChart3, CheckSquare, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -19,21 +19,51 @@ import { LeadFormModal } from "./lead-form";
 import { TaskFormModal } from "./task-form";
 import { Avatar, cx } from "../ui";
 import { AvatarPicker, OpeningFlow } from "./onboarding";
+import { useNavBadges, type NavBadges } from "./nav-badges";
 
-const NAV = [
-  { href: "/", label: "Início", icon: LayoutDashboard },
-  { href: "/leads", label: "Leads", icon: Users },
-  { href: "/propostas", label: "Propostas", icon: FileText },
-  { href: "/tarefas", label: "Tarefas", icon: CheckSquare },
-  { href: "/configuracoes", label: "Ajustes", icon: Settings },
+type NavKey = "tasks" | "leads" | "proposals" | "documents";
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof Sun;
+  badge?: NavKey;
+  hint?: string;
+}
+
+/** Menu em seções: o S.A.V.E fica dentro de Propostas (lá se escolhe o tipo). */
+const SECTIONS: { title: string; items: NavItem[] }[] = [
+  {
+    title: "Vendas",
+    items: [
+      { href: "/", label: "Painel", icon: LayoutDashboard },
+      { href: "/leads", label: "Leads", icon: Users, badge: "leads", hint: "leads novos sem contato" },
+      { href: "/propostas", label: "Propostas", icon: FileText, badge: "proposals", hint: "propostas vistas aguardando resposta" },
+      { href: "/tarefas", label: "Tarefas", icon: CheckSquare, badge: "tasks", hint: "tarefas para hoje" },
+    ],
+  },
+  {
+    title: "Ferramentas",
+    items: [
+      { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap },
+      { href: "/documentos", label: "Documentos", icon: FileSignature, badge: "documents", hint: "aguardando assinatura" },
+      { href: "/marketing", label: "Marketing", icon: Megaphone },
+    ],
+  },
+  {
+    title: "Desempenho",
+    items: [
+      { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
+      { href: "/ranking", label: "Arena", icon: Trophy },
+    ],
+  },
 ];
-const SAVE_NAV = { href: "/propostas?tipo=save", label: "S.A.V.E", icon: PlugZap };
-const ARENA_NAV = { href: "/ranking", label: "Arena", icon: Trophy };
-const REPORTS_NAV = { href: "/relatorios", label: "Relatórios", icon: BarChart3 };
-const DOCS_NAV = { href: "/documentos", label: "Documentos", icon: FileSignature };
-const MARKETING_NAV = { href: "/marketing", label: "Marketing", icon: Megaphone };
-const DESKTOP_NAV = [...NAV.slice(0, 3), SAVE_NAV, NAV[3], DOCS_NAV, MARKETING_NAV, REPORTS_NAV, ARENA_NAV, NAV[4]];
 
+const MOBILE_TABS: NavItem[] = [
+  { href: "/", label: "Início", icon: LayoutDashboard },
+  { href: "/leads", label: "Leads", icon: Users, badge: "leads" },
+  { href: "/propostas", label: "Propostas", icon: FileText, badge: "proposals" },
+  { href: "/tarefas", label: "Tarefas", icon: CheckSquare, badge: "tasks" },
+];
 
 interface QuickCtx {
   openLead: (lead?: Lead | null, opts?: { onCreated?: (id: string) => void }) => void;
@@ -90,12 +120,26 @@ function ShellInner({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   const search = useSearchParams();
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    if (href === SAVE_NAV.href) return pathname.startsWith("/propostas") && search.get("tipo") === "save";
-    if (href === "/propostas") return pathname.startsWith("/propostas") && search.get("tipo") !== "save";
-    return pathname.startsWith(href);
-  };
+  void search;
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const badges = useNavBadges(user.id);
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem("sidebar-collapsed") === "1");
+    } catch {
+      /* navegação privada */
+    }
+  }, []);
+  const toggleCollapsed = () =>
+    setCollapsed((v) => {
+      try {
+        localStorage.setItem("sidebar-collapsed", v ? "0" : "1");
+      } catch {
+        /* navegação privada */
+      }
+      return !v;
+    });
   const signOut = async () => {
     await supabase().auth.signOut();
     router.replace("/login");
@@ -104,79 +148,18 @@ function ShellInner({ children }: { children: ReactNode }) {
 
   return (
     <Quick.Provider value={{ openLead, openTask }}>
-      <div className="min-h-dvh lg:pl-[264px] print:pl-0">
-        {/* Sidebar desktop */}
-        <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-[264px] flex-col bg-ink-950 text-ink-300 lg:flex">
-          <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sun-500/15 blur-3xl" />
-          <Link href="/" className="relative flex items-end gap-2.5 px-6 pt-7 pb-8" aria-label={settings.company_name || "Quark Energia"}>
-            <BrandLogo className="h-10" />
-            <span className="mb-1 rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tracking-[0.18em] text-brand-lime">CRM</span>
-          </Link>
-
-          <div className="relative px-4">
-            <button
-              onClick={() => setPalette(true)}
-              className="mb-3 flex h-10 w-full items-center gap-2.5 rounded-xl bg-white/[0.06] px-3 text-sm text-ink-400 ring-1 ring-white/[0.06] transition hover:bg-white/[0.09] hover:text-white"
-            >
-              <Search className="h-4 w-4" /> Buscar…
-              <kbd className="ml-auto rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-ink-300">Ctrl K</kbd>
-            </button>
-            <Link
-              href="/propostas/nova"
-              className="mb-6 flex h-11 items-center justify-center gap-2 rounded-xl bg-sun-gradient text-sm font-semibold text-ink-950 shadow-glow transition hover:brightness-105"
-            >
-              <Calculator className="h-4 w-4" /> Novo orçamento
-            </Link>
-          </div>
-
-          <nav className="relative flex flex-1 flex-col gap-1 px-3">
-            {DESKTOP_NAV.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cx(
-                    "group flex h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-medium transition",
-                    active ? "bg-white/[0.08] text-white" : "hover:bg-white/[0.04] hover:text-white",
-                  )}
-                >
-                  <item.icon className={cx("h-[18px] w-[18px]", active ? "text-sun-400" : "text-ink-500 group-hover:text-ink-300")} />
-                  {item.label === "Ajustes" ? "Configurações" : item.label === "Início" ? "Painel" : item.label}
-                  {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-sun-400" />}
-                </Link>
-              );
-            })}
-            <div className="my-4 h-px bg-white/[0.06]" />
-            <button onClick={() => openLead()} className="flex h-10 items-center gap-3 rounded-xl px-3.5 text-sm text-ink-400 transition hover:bg-white/[0.04] hover:text-white">
-              <UserPlus className="h-[18px] w-[18px]" /> Novo lead
-            </button>
-            <button onClick={() => openTask()} className="flex h-10 items-center gap-3 rounded-xl px-3.5 text-sm text-ink-400 transition hover:bg-white/[0.04] hover:text-white">
-              <ListTodo className="h-[18px] w-[18px]" /> Nova tarefa
-            </button>
-            <button
-              onClick={() => window.dispatchEvent(new Event("quark:briefing"))}
-              className="flex h-10 items-center gap-3 rounded-xl px-3.5 text-sm text-ink-400 transition hover:bg-white/[0.04] hover:text-white"
-            >
-              <Flame className="h-[18px] w-[18px] text-brand-yellow" /> Plano do dia
-            </button>
-          </nav>
-
-          <XpCard />
-          <SidebarQuote />
-          <div className="relative m-3 flex items-center gap-3 rounded-2xl bg-white/[0.04] p-3">
-            <button onClick={() => setAvatarOpen(true)} className="rounded-full ring-2 ring-transparent transition hover:ring-sun-400" title="Trocar foto de perfil">
-              <Avatar name={profile?.full_name ?? user.email} src={profile?.avatar_url} className="h-10 w-10" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">{profile?.full_name ?? "Usuário"}</p>
-              <p className="truncate text-xs text-ink-500">{user.email}</p>
-            </div>
-            <button onClick={signOut} className="grid h-8 w-8 place-items-center rounded-lg text-ink-500 hover:bg-white/10 hover:text-white" title="Sair">
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        </aside>
+      <div className={cx("min-h-dvh transition-[padding] duration-300 print:pl-0", collapsed ? "lg:pl-[88px]" : "lg:pl-[276px]")}>
+        <Sidebar
+          collapsed={collapsed}
+          onToggle={toggleCollapsed}
+          isActive={isActive}
+          badges={badges}
+          onSearch={() => setPalette(true)}
+          onNewLead={() => openLead()}
+          onNewTask={() => openTask()}
+          onAvatar={() => setAvatarOpen(true)}
+          onSignOut={signOut}
+        />
 
         {/* Topbar mobile */}
         <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink-200/60 bg-ink-50/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
@@ -202,8 +185,8 @@ function ShellInner({ children }: { children: ReactNode }) {
         {/* Bottom nav mobile */}
         <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-ink-200/70 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
           <div className="relative grid h-16 grid-cols-5">
-            {NAV.slice(0, 2).map((item) => (
-              <TabLink key={item.href} {...item} active={isActive(item.href)} />
+            {MOBILE_TABS.slice(0, 2).map((item) => (
+              <TabLink key={item.href} {...item} active={isActive(item.href)} count={item.badge ? badges[item.badge] : 0} alert={item.badge === "tasks" && badges.late > 0} />
             ))}
             <div className="relative flex items-start justify-center">
               <button
@@ -214,8 +197,8 @@ function ShellInner({ children }: { children: ReactNode }) {
                 <Plus className="h-6 w-6" strokeWidth={2.5} />
               </button>
             </div>
-            {NAV.slice(2, 4).map((item) => (
-              <TabLink key={item.href} {...item} active={isActive(item.href)} />
+            {MOBILE_TABS.slice(2, 4).map((item) => (
+              <TabLink key={item.href} {...item} active={isActive(item.href)} count={item.badge ? badges[item.badge] : 0} alert={item.badge === "tasks" && badges.late > 0} />
             ))}
           </div>
         </nav>
@@ -246,12 +229,239 @@ function ShellInner({ children }: { children: ReactNode }) {
   );
 }
 
-function TabLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof Sun; active: boolean }) {
+function TabLink({ href, label, icon: Icon, active, count = 0, alert }: { href: string; label: string; icon: typeof Sun; active: boolean; count?: number; alert?: boolean }) {
   return (
-    <Link href={href} className={cx("flex flex-col items-center justify-center gap-1 text-[11px] font-semibold", active ? "text-ink-900" : "text-ink-400")}>
-      <Icon className={cx("h-[22px] w-[22px]", active && "text-sun-600")} strokeWidth={active ? 2.3 : 2} />
+    <Link href={href} className={cx("flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition", active ? "text-ink-900" : "text-ink-400")}>
+      <span className="relative">
+        <Icon className={cx("h-[22px] w-[22px]", active && "text-sun-600")} strokeWidth={active ? 2.3 : 2} />
+        {count > 0 && <Badge count={count} alert={alert} className="absolute -top-2 -right-3" />}
+      </span>
       {label}
     </Link>
+  );
+}
+
+/** Sinalizador estilo app de celular. */
+function Badge({ count, alert, className }: { count: number; alert?: boolean; className?: string }) {
+  return (
+    <span
+      className={cx(
+        "grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10px] leading-none font-bold tabular-nums shadow-[0_4px_12px_-2px_rgba(0,0,0,0.35)] ring-2",
+        alert ? "bg-[#FF3B5C] text-white ring-[#FF3B5C]/25" : "bg-gradient-to-br from-[#F3EA3B] to-[#9BD373] text-[#1C1234] ring-black/10",
+        className,
+      )}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+function Sidebar({
+  collapsed,
+  onToggle,
+  isActive,
+  badges,
+  onSearch,
+  onNewLead,
+  onNewTask,
+  onAvatar,
+  onSignOut,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+  isActive: (href: string) => boolean;
+  badges: NavBadges;
+  onSearch: () => void;
+  onNewLead: () => void;
+  onNewTask: () => void;
+  onAvatar: () => void;
+  onSignOut: () => void;
+}) {
+  const { profile, user, settings } = useApp();
+  const { xp, streak } = useReward();
+  const lvl = xp != null ? levelOf(xp) : null;
+  const pathname = usePathname();
+  const first = (profile?.full_name ?? "").split(" ")[0] || "Você";
+
+  return (
+    <aside
+      className={cx(
+        "no-print fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-white/[0.06] text-ink-300 transition-[width] duration-300 lg:flex",
+        collapsed ? "w-[88px]" : "w-[276px]",
+      )}
+      style={{ background: "linear-gradient(180deg, #16102C 0%, #0D0A1C 45%, #08070F 100%)" }}
+    >
+      {/* brilhos de fundo */}
+      <div className="pointer-events-none absolute -top-28 -left-24 h-72 w-72 rounded-full bg-[#5B34D6]/35 blur-[90px]" />
+      <div className="pointer-events-none absolute top-1/2 -right-32 h-72 w-72 rounded-full bg-[#9BD373]/10 blur-[90px]" />
+      <div className="pointer-events-none absolute -bottom-24 -left-10 h-60 w-60 rounded-full bg-[#F3EA3B]/10 blur-[90px]" />
+
+      {/* topo */}
+      <div className={cx("relative flex shrink-0 items-center pt-6 pb-5", collapsed ? "flex-col gap-4 px-3" : "justify-between px-5")}>
+        <Link href="/" className="flex items-end gap-2" aria-label={settings.company_name || "Quark Energia"}>
+          {collapsed ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/brand/symbol.png" alt="" className="h-9 w-9 object-contain" />
+          ) : (
+            <>
+              <BrandLogo className="h-9" />
+              <span className="mb-0.5 rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.18em] text-brand-lime">CRM</span>
+            </>
+          )}
+        </Link>
+        <button
+          onClick={onToggle}
+          className="grid h-8 w-8 place-items-center rounded-lg text-ink-500 ring-1 ring-white/[0.08] transition hover:bg-white/[0.08] hover:text-white"
+          aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+          title={collapsed ? "Expandir menu" : "Recolher menu"}
+        >
+          {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+        </button>
+      </div>
+
+      {/* busca + orçamento */}
+      <div className={cx("relative grid shrink-0 gap-2.5 pb-3", collapsed ? "px-3" : "px-4")}>
+        <button
+          onClick={onSearch}
+          title="Buscar (Ctrl K)"
+          className={cx(
+            "flex h-10 items-center gap-2.5 rounded-xl bg-white/[0.05] text-sm text-ink-400 ring-1 ring-white/[0.08] backdrop-blur-md transition hover:bg-white/[0.09] hover:text-white",
+            collapsed ? "justify-center" : "px-3",
+          )}
+        >
+          <Search className="h-4 w-4" />
+          {!collapsed && (
+            <>
+              Buscar…
+              <kbd className="ml-auto rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-ink-300">Ctrl K</kbd>
+            </>
+          )}
+        </button>
+        <Link
+          href="/propostas/nova"
+          title="Novo orçamento"
+          className="anam-shine relative flex h-11 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-[#F3EA3B] via-[#C7E36B] to-[#9BD373] text-sm font-bold text-[#1C1234] shadow-[0_12px_30px_-12px_rgba(243,234,59,0.7)] transition hover:brightness-105 active:scale-[0.98]"
+        >
+          <Calculator className="h-4 w-4" /> {!collapsed && "Novo orçamento"}
+        </Link>
+      </div>
+
+      {/* navegação (rola quando não cabe) */}
+      <nav className="sidebar-scroll relative min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3 [mask-image:linear-gradient(180deg,transparent,black_14px,black_calc(100%-18px),transparent)]">
+        {SECTIONS.map((sec) => (
+          <div key={sec.title} className="px-3 pt-3">
+            {collapsed ? (
+              <div className="mx-auto mb-2 h-px w-8 bg-white/[0.08]" />
+            ) : (
+              <p className="mb-1.5 px-3 text-[10px] font-bold tracking-[0.2em] text-ink-500 uppercase">{sec.title}</p>
+            )}
+            <div className="grid gap-0.5">
+              {sec.items.map((item) => {
+                const active = isActive(item.href);
+                const n = item.badge ? badges[item.badge] : 0;
+                const alert = item.badge === "tasks" && badges.late > 0;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    title={collapsed ? `${item.label}${n ? ` · ${n} ${item.hint ?? ""}` : ""}` : n ? `${n} ${item.hint ?? ""}` : undefined}
+                    className={cx(
+                      "group relative flex h-11 items-center gap-3 rounded-xl text-[14px] font-medium transition-all duration-200",
+                      collapsed ? "justify-center" : "px-3",
+                      active
+                        ? "bg-gradient-to-r from-white/[0.13] to-white/[0.03] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ring-1 ring-white/[0.08]"
+                        : "text-ink-300 hover:bg-white/[0.05] hover:text-white",
+                    )}
+                  >
+                    {active && <span className="absolute top-1/2 -left-3 h-6 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-[#F3EA3B] to-[#9BD373] shadow-[0_0_12px_rgba(243,234,59,0.8)]" />}
+                    <span className="relative grid h-8 w-8 shrink-0 place-items-center">
+                      <item.icon
+                        className={cx("h-[19px] w-[19px] transition-transform duration-200 group-hover:scale-110", active ? "text-[#F3EA3B]" : "text-ink-500 group-hover:text-ink-200")}
+                        strokeWidth={active ? 2.3 : 2}
+                      />
+                      {collapsed && n > 0 && <Badge count={n} alert={alert} className="absolute -top-1 -right-2" />}
+                    </span>
+                    {!collapsed && (
+                      <>
+                        <span className="truncate">{item.label}</span>
+                        {n > 0 && <Badge count={n} alert={alert} className="ml-auto" />}
+                      </>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* atalhos */}
+        <div className={cx("pt-4", collapsed ? "px-3" : "px-4")}>
+          {!collapsed && <p className="mb-2 px-2 text-[10px] font-bold tracking-[0.2em] text-ink-500 uppercase">Atalhos</p>}
+          <div className={cx("grid gap-2", collapsed ? "grid-cols-1" : "grid-cols-3")}>
+            {[
+              { label: "Lead", icon: UserPlus, run: onNewLead, title: "Novo lead" },
+              { label: "Tarefa", icon: ListTodo, run: onNewTask, title: "Nova tarefa" },
+              { label: "Plano", icon: Flame, run: () => window.dispatchEvent(new Event("quark:briefing")), title: "Plano do dia" },
+            ].map((a) => (
+              <button
+                key={a.label}
+                onClick={a.run}
+                title={a.title}
+                className="group flex flex-col items-center gap-1 rounded-xl bg-white/[0.04] py-2.5 text-[11px] font-semibold text-ink-400 ring-1 ring-white/[0.06] transition hover:bg-white/[0.08] hover:text-white"
+              >
+                <a.icon className={cx("h-[18px] w-[18px] transition group-hover:scale-110", a.label === "Plano" && "text-[#F3EA3B]")} />
+                {!collapsed && a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
+      {/* perfil */}
+      <div className="relative shrink-0 border-t border-white/[0.06] bg-white/[0.02] p-3 backdrop-blur-xl">
+        <div className={cx("flex items-center gap-3 rounded-2xl p-2", collapsed ? "flex-col" : "bg-white/[0.04] ring-1 ring-white/[0.06]")}>
+          <button onClick={onAvatar} className="relative shrink-0 rounded-full" title="Trocar foto de perfil">
+            <span className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-[#F3EA3B] to-[#9BD373] opacity-80" />
+            <Avatar name={profile?.full_name ?? user.email} src={profile?.avatar_url} className="relative h-10 w-10 ring-2 ring-[#0D0A1C]" />
+            {streak > 1 && (
+              <span className="absolute -right-1 -bottom-1 flex items-center rounded-full bg-[#1C1234] px-1 text-[9px] font-bold text-[#FFB36B] ring-1 ring-white/10">
+                <Flame className="h-2.5 w-2.5" />
+                {streak}
+              </span>
+            )}
+          </button>
+          {!collapsed && (
+            <Link href="/ranking" className="min-w-0 flex-1" title="Ver a Arena">
+              <p className="truncate text-sm font-semibold text-white">{first}</p>
+              {lvl ? (
+                <>
+                  <p className="truncate text-[11px] font-semibold text-[#F3EA3B]">
+                    Nív. {lvl.level.n} · {lvl.level.title}
+                  </p>
+                  <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] transition-all duration-700" style={{ width: `${Math.max(4, lvl.progress * 100)}%` }} />
+                  </div>
+                </>
+              ) : (
+                <p className="truncate text-[11px] text-ink-500">{user.email}</p>
+              )}
+            </Link>
+          )}
+          <div className={cx("flex", collapsed ? "flex-col gap-1" : "gap-0.5")}>
+            <Link
+              href="/configuracoes"
+              title="Configurações"
+              className={cx("grid h-8 w-8 place-items-center rounded-lg transition hover:bg-white/10 hover:text-white", pathname.startsWith("/configuracoes") ? "text-[#F3EA3B]" : "text-ink-500")}
+            >
+              <Settings className="h-4 w-4" />
+            </Link>
+            <button onClick={onSignOut} className="grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition hover:bg-white/10 hover:text-white" title="Sair">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -267,43 +477,7 @@ function FabItem({ icon, title, text, onClick }: { icon: ReactNode; title: strin
   );
 }
 
-function SidebarQuote() {
-  const { settings } = useApp();
-  const q = pickDaily(quotePool(settings.app.customQuotes, settings.app.useDefaultQuotes), 7);
-  if (!q) return null;
-  return (
-    <div className="relative mx-4 mb-2 border-l-2 border-[#9BD373]/60 pl-3">
-      <p className="font-serif text-[13px] leading-snug text-ink-300 italic">“{q.text}”</p>
-      <p className="mt-1 text-[10px] tracking-[0.18em] text-ink-500 uppercase">{q.author}</p>
-    </div>
-  );
-}
 
-/** Nível, XP e sequência de dias — leva para a Arena. */
-function XpCard() {
-  const { xp, streak } = useReward();
-  if (xp == null) return null;
-  const { level, next, progress, toNext } = levelOf(xp);
-  return (
-    <Link href="/ranking" className="relative mx-3 mb-3 block rounded-2xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-3.5 ring-1 ring-white/[0.08] transition hover:ring-white/20">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-semibold tracking-[0.2em] text-ink-400 uppercase">Nível {level.n}</p>
-        {streak > 0 && (
-          <span className="flex items-center gap-1 text-[11px] font-semibold text-brand-yellow">
-            <Flame className="h-3.5 w-3.5" /> {streak} {streak === 1 ? "dia" : "dias"}
-          </span>
-        )}
-      </div>
-      <p className="text-sun-gradient mt-0.5 font-display text-lg font-bold">{level.title}</p>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-        <div className="h-full rounded-full bg-sun-gradient transition-all duration-700" style={{ width: `${Math.max(4, progress * 100)}%` }} />
-      </div>
-      <p className="tnum mt-1.5 text-[11px] text-ink-400">
-        {xp.toLocaleString("pt-BR")} XP{next ? ` · faltam ${toNext.toLocaleString("pt-BR")} para ${next.title}` : " · topo do mundo"}
-      </p>
-    </Link>
-  );
-}
 
 function XpChip() {
   const { xp, streak } = useReward();
