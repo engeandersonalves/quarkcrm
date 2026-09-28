@@ -15,6 +15,8 @@ export interface Profile {
   role: string;
   /** Acesso liberado por um administrador (quem se cadastra sozinho aguarda aprovação). */
   active?: boolean;
+  /** Foto enviada (URL) ou personagem ilustrado ("preset:lobo"). */
+  avatar_url?: string | null;
   created_at?: string;
 }
 

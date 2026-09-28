@@ -23,6 +23,8 @@ alter table public.profiles add column if not exists active boolean;
 update public.profiles set active = true where active is null;
 alter table public.profiles alter column active set default false;
 alter table public.profiles alter column active set not null;
+-- Foto de perfil (URL enviada ou um personagem ilustrado: "preset:lobo").
+alter table public.profiles add column if not exists avatar_url text;
 -- Garante ao menos um administrador (o usuário mais antigo).
 update public.profiles set role = 'admin'
 where id = (select id from public.profiles order by created_at limit 1)

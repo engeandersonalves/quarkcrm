@@ -113,7 +113,7 @@ export function TeamTab() {
           <div className="grid gap-2 px-5 pb-5">
             {pending.map((p) => (
               <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl bg-ink-50 p-3 ring-1 ring-ink-200/60">
-                <Avatar name={p.full_name ?? p.email} />
+                <Avatar name={p.full_name ?? p.email} src={p.avatar_url} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{p.full_name}</p>
                   <p className="truncate text-xs text-ink-500">{p.email}</p>
@@ -139,7 +139,7 @@ export function TeamTab() {
             const me = p.id === user.id;
             return (
               <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl p-3 ring-1 ring-ink-200/70">
-                <Avatar name={p.full_name ?? p.email} />
+                <Avatar name={p.full_name ?? p.email} src={p.avatar_url} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">
                     {p.full_name} {me && <span className="text-xs font-medium text-ink-400">(você)</span>}

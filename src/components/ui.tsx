@@ -6,6 +6,7 @@ import { Loader2, X } from "lucide-react";
 import { forwardRef, useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 import { brl, fmtNum } from "@/lib/pricing";
 import { parseNumber } from "@/lib/format";
+import { CharacterArt, presetId } from "./avatars";
 
 const merge = extendTailwindMerge({ extend: { classGroups: { shadow: ["shadow-soft", "shadow-lift", "shadow-glow"] } } });
 /** clsx + tailwind-merge: classes passadas por props sobrescrevem as padrão. */
@@ -264,7 +265,14 @@ export function Badge({ className, children, dot }: { className?: string; childr
   );
 }
 
-export function Avatar({ name, className }: { name: string | null | undefined; className?: string }) {
+export function Avatar({ name, className, src }: { name: string | null | undefined; className?: string; src?: string | null }) {
+  const preset = presetId(src);
+  if (preset) return <CharacterArt id={preset} className={cx("h-9 w-9 shrink-0 overflow-hidden rounded-full", className)} />;
+  if (src)
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={name ?? ""} className={cx("h-9 w-9 shrink-0 rounded-full object-cover", className)} />
+    );
   const parts = (name ?? "?").trim().split(/\s+/);
   const ini = ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
   const hue = [...(name ?? "")].reduce((a, c) => a + c.charCodeAt(0), 0) % 360;

@@ -32,7 +32,8 @@ function periodStart(p: Period) {
 const PERIOD_LABEL: Record<Period, string> = { hoje: "de hoje", semana: "da semana", mes: "do mês", sempre: "de todos os tempos" };
 
 export default function RankingPage() {
-  const { user, settings } = useApp();
+  const { user, settings, profiles } = useApp();
+  const photo = (id: string) => profiles.find((p) => p.id === id)?.avatar_url ?? null;
   const { xp: myXp, streak } = useReward();
   const [period, setPeriod] = useState<Period>("semana");
 
@@ -136,7 +137,7 @@ export default function RankingPage() {
                   <div className="relative mb-2">
                     {place === 1 && <Crown className="absolute -top-6 left-1/2 h-6 w-6 -translate-x-1/2 text-brand-yellow drop-shadow" />}
                     <div className={cx("rounded-full p-[3px]", place === 1 ? "bg-sun-gradient" : "bg-ink-200")}>
-                      <Avatar name={r.full_name ?? r.email} className={cx("ring-2 ring-white", place === 1 ? "h-16 w-16 text-lg" : "h-12 w-12")} />
+                      <Avatar name={r.full_name ?? r.email} src={photo(r.user_id)} className={cx("ring-2 ring-white", place === 1 ? "h-16 w-16 text-lg" : "h-12 w-12")} />
                     </div>
                   </div>
                   <p className="max-w-full truncate text-sm font-semibold">{(r.full_name ?? r.email ?? "").split(" ")[0]}</p>
@@ -182,7 +183,7 @@ export default function RankingPage() {
                         <td className="px-5 py-3 font-display font-bold text-ink-400">{i < 3 ? ["🥇", "🥈", "🥉"][i] : `${i + 1}º`}</td>
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-3">
-                            <Avatar name={r.full_name ?? r.email} className="h-8 w-8 text-xs" />
+                            <Avatar name={r.full_name ?? r.email} src={photo(r.user_id)} className="h-8 w-8 text-xs" />
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-ink-900">
                                 {r.full_name ?? r.email}

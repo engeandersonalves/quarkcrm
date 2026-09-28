@@ -18,6 +18,7 @@ import { pickDaily, quotePool } from "@/lib/inspiration";
 import { LeadFormModal } from "./lead-form";
 import { TaskFormModal } from "./task-form";
 import { Avatar, cx } from "../ui";
+import { AvatarPicker, OpeningFlow } from "./onboarding";
 
 const NAV = [
   { href: "/", label: "Início", icon: LayoutDashboard },
@@ -49,6 +50,7 @@ export function Shell({ user, children }: { user: User; children: ReactNode }) {
           <RewardProvider>
             <ShellInner>{children}</ShellInner>
             <Splash />
+            <OpeningFlow />
           </RewardProvider>
         </AccessGate>
       </CelebrationProvider>
@@ -64,6 +66,7 @@ function ShellInner({ children }: { children: ReactNode }) {
   const [taskModal, setTaskModal] = useState<{ open: boolean; task?: Task | null; leadId?: string | null }>({ open: false });
   const [fab, setFab] = useState(false);
   const [palette, setPalette] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -151,12 +154,20 @@ function ShellInner({ children }: { children: ReactNode }) {
             <button onClick={() => openTask()} className="flex h-10 items-center gap-3 rounded-xl px-3.5 text-sm text-ink-400 transition hover:bg-white/[0.04] hover:text-white">
               <ListTodo className="h-[18px] w-[18px]" /> Nova tarefa
             </button>
+            <button
+              onClick={() => window.dispatchEvent(new Event("quark:briefing"))}
+              className="flex h-10 items-center gap-3 rounded-xl px-3.5 text-sm text-ink-400 transition hover:bg-white/[0.04] hover:text-white"
+            >
+              <Flame className="h-[18px] w-[18px] text-brand-yellow" /> Plano do dia
+            </button>
           </nav>
 
           <XpCard />
           <SidebarQuote />
           <div className="relative m-3 flex items-center gap-3 rounded-2xl bg-white/[0.04] p-3">
-            <Avatar name={profile?.full_name ?? user.email} />
+            <button onClick={() => setAvatarOpen(true)} className="rounded-full ring-2 ring-transparent transition hover:ring-sun-400" title="Trocar foto de perfil">
+              <Avatar name={profile?.full_name ?? user.email} src={profile?.avatar_url} className="h-10 w-10" />
+            </button>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">{profile?.full_name ?? "Usuário"}</p>
               <p className="truncate text-xs text-ink-500">{user.email}</p>
@@ -174,6 +185,9 @@ function ShellInner({ children }: { children: ReactNode }) {
           </Link>
           <div className="flex items-center gap-1">
             <XpChip />
+            <button onClick={() => setAvatarOpen(true)} className="ml-0.5 rounded-full" aria-label="Foto de perfil">
+              <Avatar name={profile?.full_name ?? user.email} src={profile?.avatar_url} className="h-8 w-8 text-[10px]" />
+            </button>
             <button onClick={() => setPalette(true)} className="grid h-9 w-9 place-items-center rounded-xl text-ink-600" aria-label="Buscar">
               <Search className="h-[18px] w-[18px]" />
             </button>
@@ -209,9 +223,10 @@ function ShellInner({ children }: { children: ReactNode }) {
         {fab && (
           <div className="fixed inset-0 z-30 lg:hidden" onClick={() => setFab(false)}>
             <div className="absolute inset-0 bg-ink-950/40 backdrop-blur-[2px]" />
-            <div className="animate-fade-up absolute inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] grid gap-2 rounded-3xl bg-white p-2 shadow-lift">
+            <div className="animate-fade-up absolute inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] grid max-h-[calc(100dvh-8rem)] gap-1 overflow-y-auto rounded-3xl bg-white p-2 shadow-lift">
               <FabItem icon={<Calculator className="h-5 w-5" />} title="Orçamento solar" text="Calcular e gerar proposta" onClick={() => router.push("/propostas/nova")} />
               <FabItem icon={<PlugZap className="h-5 w-5" />} title="Orçamento S.A.V.E" text="Carregador de veículo elétrico" onClick={() => router.push("/propostas/nova?tipo=save")} />
+              <FabItem icon={<Flame className="h-5 w-5" />} title="Plano do dia" text="Missões para vender mais hoje" onClick={() => window.dispatchEvent(new Event("quark:briefing"))} />
               <FabItem icon={<Zap className="h-5 w-5" />} title="Orçamento rápido" text="Imagem pronta para o WhatsApp" onClick={() => router.push("/orcamento-rapido")} />
               <FabItem icon={<UserPlus className="h-5 w-5" />} title="Novo lead" text="Cadastrar um cliente" onClick={() => openLead()} />
               <FabItem icon={<ListTodo className="h-5 w-5" />} title="Nova tarefa" text="Agendar um follow-up" onClick={() => openTask()} />
@@ -222,6 +237,7 @@ function ShellInner({ children }: { children: ReactNode }) {
           </div>
         )}
 
+        <AvatarPicker open={avatarOpen} onClose={() => setAvatarOpen(false)} />
         <CommandPalette open={palette} onClose={() => setPalette(false)} onNewLead={() => openLead()} onNewTask={() => openTask()} />
         <LeadFormModal open={leadModal.open} lead={leadModal.lead} onCreated={leadModal.onCreated} onClose={() => setLeadModal({ open: false })} />
         <TaskFormModal open={taskModal.open} task={taskModal.task} leadId={taskModal.leadId} onClose={() => setTaskModal({ open: false })} />
