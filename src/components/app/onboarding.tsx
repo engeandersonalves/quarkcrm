@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CHARACTERS, CharacterArt, DEFAULT_CHARACTER, characterOf, presetId } from "../avatars";
+import { POSTERS, posterAvatar, posterOfAvatar, posterUrl } from "@/lib/cinema";
 import { renderCopy } from "@/lib/cadence";
 import { levelOf } from "@/lib/gamification";
 import { pickDaily, quotePool } from "@/lib/inspiration";
@@ -40,18 +41,22 @@ const store = {
 export function AvatarPicker({ open, onClose, firstTime = false }: { open: boolean; onClose: () => void; firstTime?: boolean }) {
   const { user, profile } = useApp();
   const current = profile?.avatar_url ?? null;
-  const [choice, setChoice] = useState<string>(current ?? `preset:${DEFAULT_CHARACTER}`);
+  const [choice, setChoice] = useState<string>(current ?? posterAvatar("wall-street"));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [tab, setTab] = useState<"cinema" | "personagens">("cinema");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (open) setChoice(current ?? `preset:${DEFAULT_CHARACTER}`);
+    if (!open) return;
+    setChoice(current ?? posterAvatar("wall-street"));
+    setTab(presetId(current) ? "personagens" : "cinema");
   }, [open, current]);
 
   if (!open) return null;
   const first = (profile?.full_name ?? "").split(" ")[0];
   const selected = characterOf(presetId(choice));
+  const poster = posterOfAvatar(choice);
 
   const save = async (value = choice) => {
     setSaving(true);
@@ -61,7 +66,7 @@ export function AvatarPicker({ open, onClose, firstTime = false }: { open: boole
       toast.error(/avatar_url/.test(error.message) ? "Rode novamente o supabase/schema.sql para liberar a foto de perfil." : error.message);
       return;
     }
-    toast.success(selected && presetId(value) ? `Agora você é ${selected.name}. ${selected.line}` : "Foto atualizada. Ficou show!");
+    toast.success(selected && presetId(value) ? `Agora você é ${selected.name}. ${selected.line}` : poster ? `Modo ${poster.title} ativado. 🎬` : "Foto atualizada. Ficou show!");
     onClose();
   };
 
@@ -112,15 +117,54 @@ export function AvatarPicker({ open, onClose, firstTime = false }: { open: boole
               <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
             </div>
             <div className="text-center sm:pt-6 sm:text-left">
-              <p className="font-display text-xl font-semibold">{selected ? selected.name : "Sua foto"}</p>
-              <p className="font-serif text-[15px] text-white/70 italic">“{selected ? selected.line : "Quem é visto, é lembrado."}”</p>
+              <p className="font-display text-xl font-semibold">{selected ? selected.name : poster ? poster.title : "Sua foto"}</p>
+              <p className="font-serif text-[15px] text-white/70 italic">“{selected ? selected.line : poster ? poster.tag : "Quem é visto, é lembrado."}”</p>
               <button onClick={() => fileRef.current?.click()} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold ring-1 ring-white/15 hover:bg-white/15">
                 <Camera className="h-3.5 w-3.5" /> Usar minha foto
               </button>
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-4 gap-2.5 sm:gap-3">
+          <div className="mt-6 flex gap-1 rounded-2xl bg-white/[0.06] p-1 ring-1 ring-white/10" role="tablist">
+            {(
+              [
+                ["cinema", "🎬 Cinema"],
+                ["personagens", "✨ Personagens"],
+              ] as const
+            ).map(([k, l]) => (
+              <button
+                key={k}
+                role="tab"
+                aria-selected={tab === k}
+                onClick={() => setTab(k)}
+                className={cx("h-10 flex-1 rounded-xl text-sm font-semibold transition", tab === k ? "bg-white text-[#1C1234]" : "text-white/60 hover:text-white")}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+
+          {tab === "cinema" ? (
+            <div className="mt-4 grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-3">
+              {POSTERS.map((p) => {
+                const on = choice === posterAvatar(p.id);
+                return (
+                  <button key={p.id} onClick={() => setChoice(posterAvatar(p.id))} className="group text-left" aria-pressed={on} aria-label={p.title}>
+                    <span className={cx("relative block aspect-[4/5] overflow-hidden rounded-2xl ring-2 transition", on ? "scale-[1.03] ring-[#F3EA3B]" : "ring-white/10 group-hover:ring-white/30")}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={posterUrl(p.id)} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                      {on && (
+                        <span className="absolute top-1.5 right-1.5 grid h-6 w-6 place-items-center rounded-full bg-[#F3EA3B] text-[#1C1234]">
+                          <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-4 grid grid-cols-4 gap-2.5 sm:gap-3">
             {CHARACTERS.map((c) => {
               const on = choice === `preset:${c.id}`;
               return (
@@ -138,6 +182,7 @@ export function AvatarPicker({ open, onClose, firstTime = false }: { open: boole
               );
             })}
           </div>
+          )}
 
           <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             {firstTime && (

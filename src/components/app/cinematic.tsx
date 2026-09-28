@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { POSTERS, posterUrl } from "@/lib/cinema";
 import { imageUrl } from "@/lib/inspiration";
 import { cx } from "../ui";
 
@@ -34,6 +35,28 @@ export function CinematicBackdrop({ src, className, dim = "strong" }: { src?: st
   );
 }
 
+/** Parede de pôsteres de cinema subindo e descendo em colunas, inclinada, ao fundo. */
+export function PosterWall({ className, offset = 0 }: { className?: string; offset?: number }) {
+  const cols = 6;
+  const per = Math.ceil(POSTERS.length / cols);
+  return (
+    <div className={cx("pointer-events-none absolute inset-0 overflow-hidden bg-[#07060F]", className)} aria-hidden>
+      <div className="absolute -inset-x-[20%] -inset-y-[30%] flex gap-4 opacity-70 [transform:rotate(-8deg)_scale(1.05)] sm:gap-5">
+        {Array.from({ length: cols }, (_, c) => {
+          const list = Array.from({ length: per }, (_, i) => POSTERS[(c * per + i + offset) % POSTERS.length]);
+          return (
+            <div key={c} className={cx("poster-col flex w-[34vw] shrink-0 flex-col gap-4 sm:w-[18vw] sm:gap-5 lg:w-[13vw]", c % 2 && "reverse")} style={{ ["--dur" as string]: `${70 + c * 9}s` }}>
+              {[...list, ...list].map((p, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={posterUrl(p.id)} alt="" loading={i < per ? "eager" : "lazy"} className="aspect-[4/5] w-full rounded-2xl object-cover shadow-2xl ring-1 ring-white/10" />
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 /** Skyline noturno em preto e ouro — usado como base e reserva das fotos. */
 export function SkylineArt() {

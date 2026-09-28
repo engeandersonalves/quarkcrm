@@ -6,9 +6,9 @@ import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CharacterArt } from "@/components/avatars";
 import { BrandLogo } from "@/components/app/brand";
-import { CinematicBackdrop } from "@/components/app/cinematic";
+import { PosterWall } from "@/components/app/cinematic";
 import { LEVELS } from "@/lib/gamification";
-import { DEFAULT_IMAGES, QUOTES, SALES_TIPS, pickDaily } from "@/lib/inspiration";
+import { QUOTES, SALES_TIPS, pickDaily } from "@/lib/inspiration";
 import { supabase } from "@/lib/supabase/client";
 import { cx } from "@/components/ui";
 
@@ -74,8 +74,9 @@ function Login() {
 
   return (
     <div className="relative min-h-dvh overflow-hidden bg-[#07060F] text-white">
-      <CinematicBackdrop src={pickDaily(DEFAULT_IMAGES, 2)} dim="strong" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#07060F]/40 via-[#07060F]/70 to-[#07060F]" />
+      <PosterWall />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_40%,rgba(7,6,15,0.55)_0%,rgba(7,6,15,0.88)_65%,#07060F_100%)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#07060F]/30 via-[#07060F]/55 to-[#07060F]" />
       <div className="ios-float pointer-events-none absolute -top-40 -left-32 h-[30rem] w-[30rem] rounded-full bg-[#5B34D6]/40 blur-[120px]" />
       <div className="ios-float pointer-events-none absolute -right-32 -bottom-40 h-[30rem] w-[30rem] rounded-full bg-[#9BD373]/20 blur-[120px] [animation-delay:-4s]" />
 
