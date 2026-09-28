@@ -37,11 +37,13 @@ import {
   NICHES,
   distanceKm,
   estimateConsumption,
+  geocodeRegion,
   googleEarthUrl,
   googleMapsUrl,
   instagramHandle,
   nicheOf,
   prospectScore,
+  searchOsm,
   tileOf,
   type Contacts,
   type Prospect,
@@ -299,28 +301,67 @@ export default function ProspeccaoPage() {
     return { byPhone, byName };
   }, [leads]);
 
-  const search = async (override?: { lat: number; lon: number }) => {
+  // Google Places ligado na Vercel? (sem chave, a busca vai direto do aparelho ao OpenStreetMap)
+  const [google, setGoogle] = useState(false);
+  const [stage, setStage] = useState("");
+  useEffect(() => {
+    fetch("/api/prospect/search")
+      .then((r) => r.json())
+      .then((j: { google?: boolean }) => setGoogle(!!j.google))
+      .catch(() => {});
+  }, []);
+
+  const serverSearch = async (body: object) => {
+    const res = await fetch("/api/prospect/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error ?? "Falha na busca");
+    return json as { provider: "osm" | "google"; center: Center; results: Prospect[] };
+  };
+
+  const search = async (override?: { lat: number; lon: number }, radius = radiusKm) => {
     const at = override ?? coords;
     if (!at && !region.trim()) return toast.error("Informe a cidade ou o bairro");
     setLoading(true);
     setError(null);
+    const body = { region: region.trim(), lat: at?.lat, lon: at?.lon, radiusKm: radius, niche };
     try {
-      const res = await fetch("/api/prospect/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ region: region.trim(), lat: at?.lat, lon: at?.lon, radiusKm, niche }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error ?? "Falha na busca");
-      setResult({ ...json, niche, radiusKm, at: Date.now() });
+      let out: { provider: "osm" | "google"; center: Center; results: Prospect[] } | null = null;
+      if (google) {
+        setStage("Consultando o Google…");
+        out = await serverSearch(body).catch(() => null);
+      }
+      if (!out) {
+        // 1º: direto do aparelho (vários servidores do OpenStreetMap em paralelo).
+        let notFound = false;
+        try {
+          setStage("Localizando a região…");
+          const center: Center | null = at ? { lat: at.lat, lon: at.lon, label: region.trim() || "Sua localização" } : await geocodeRegion(region);
+          if (!center) {
+            notFound = true;
+            throw new Error(`Não encontrei “${region.trim()}”. Tente “bairro, cidade”, ex.: Jatiúca, Maceió.`);
+          }
+          setStage(`Escaneando ${nicheOf(niche)?.label.toLowerCase()} em ${radius} km…`);
+          out = { provider: "osm", center, results: await searchOsm(niche, center, radius * 1000, { timeoutMs: 22000 }) };
+        } catch (e) {
+          if (notFound) throw e;
+          // 2º: pelo servidor, como última tentativa.
+          setStage("Tentando por outro caminho…");
+          out = await serverSearch(body).catch(() => {
+            throw e;
+          });
+        }
+      }
+      setRadiusKm(radius);
+      setResult({ ...out, niche, radiusKm: radius, at: Date.now() });
       setSelected(new Set());
       setActive(null);
-      if (!json.results.length) toast("Nenhum comércio encontrado", { description: "Aumente o raio ou troque o nicho." });
-      else toast.success(`${json.results.length} comércios no radar`);
+      if (!out.results.length) toast("Nenhum comércio encontrado", { description: "Aumente o raio ou troque o nicho." });
+      else toast.success(`${out.results.length} comércios no radar`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha na busca");
     } finally {
       setLoading(false);
+      setStage("");
     }
   };
 
@@ -633,12 +674,24 @@ export default function ProspeccaoPage() {
             <div className="radar-sweep absolute inset-0 rounded-full" />
           </div>
           <p className="mt-4 font-semibold text-ink-900">Escaneando {currentNiche.label.toLowerCase()}…</p>
-          <p className="text-sm text-ink-500">Cruzando mapa, horários e contatos em {radiusKm} km.</p>
+          <p className="text-sm text-ink-500">{stage || `Cruzando mapa, horários e contatos em ${radiusKm} km.`}</p>
         </div>
       )}
       {error && !loading && (
-        <div className="mt-6 rounded-2xl bg-rose-50 p-4 text-sm text-rose-700 ring-1 ring-rose-200">
-          <b>Não deu certo:</b> {error}
+        <div className="mt-6 flex flex-col gap-3 rounded-2xl bg-rose-50 p-4 text-sm text-rose-700 ring-1 ring-rose-200 sm:flex-row sm:items-center">
+          <p className="flex-1">
+            <b>Não deu certo:</b> {error}
+          </p>
+          <div className="flex gap-2">
+            {radiusKm > 1 && !/Não encontrei/.test(error) && (
+              <Button variant="secondary" size="sm" onClick={() => search(undefined, radiusKm >= 5 ? 3 : 1)}>
+                Tentar com {radiusKm >= 5 ? 3 : 1} km
+              </Button>
+            )}
+            <Button size="sm" onClick={() => search()}>
+              Tentar de novo
+            </Button>
+          </div>
         </div>
       )}
       {!result && !loading && !error && (
@@ -740,7 +793,16 @@ export default function ProspeccaoPage() {
           <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
             <div className={cx("grid content-start gap-3", view === "mapa" && "hidden lg:grid")}>
               {visible.length === 0 && (
-                <div className="rounded-2xl bg-white p-8 text-center text-sm text-ink-500 ring-1 ring-ink-200/70">Nenhum comércio com esses filtros. Tire um filtro ou aumente o raio.</div>
+                <div className="rounded-2xl bg-white p-8 text-center text-sm text-ink-500 ring-1 ring-ink-200/70">
+                  {rows.length ? "Nenhum comércio com esses filtros. Tire um filtro." : "Nenhum comércio desse nicho cadastrado no mapa nessa área."}
+                  {!rows.length && result.radiusKm < 10 && (
+                    <div className="mt-3">
+                      <Button size="sm" onClick={() => search(undefined, result.radiusKm < 3 ? 3 : result.radiusKm < 5 ? 5 : 10)}>
+                        Ampliar para {result.radiusKm < 3 ? 3 : result.radiusKm < 5 ? 5 : 10} km
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
               {visible.map((r) => (
                 <ProspectCard

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { NICHES, estimateConsumption, extractContacts, googleHoursPerWeek, googleToProspect, instagramHandle, nicheFromTags, osmHoursPerWeek, osmToProspect, overpassQuery, prospectScore, tileOf } from "./prospect.ts";
+import { NICHES, OVERPASS_MIRRORS, geocodeRegion, runOverpass, searchOsm, estimateConsumption, extractContacts, googleHoursPerWeek, googleToProspect, instagramHandle, nicheFromTags, osmHoursPerWeek, osmToProspect, overpassQuery, prospectScore, tileOf } from "./prospect.ts";
 
 test("lê horários do OpenStreetMap", () => {
   assert.equal(osmHoursPerWeek("24/7"), 168);
@@ -78,4 +78,51 @@ test("extrai contatos de um site", () => {
   assert.equal(c.phones[0], "+55 82 3333-4444");
   assert.equal(instagramHandle("@padariaboa"), "padariaboa");
   assert.equal(instagramHandle("https://instagram.com/padaria.boa"), "padaria.boa");
+});
+
+test("Overpass: usa o primeiro espelho que responder", async () => {
+  const real = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = (async (url: string) => {
+    calls.push(url);
+    if (url === OVERPASS_MIRRORS[0]) return new Response("busy", { status: 429 });
+    if (url === OVERPASS_MIRRORS[1]) return new Response(JSON.stringify({ elements: [{ type: "node", id: 1, lat: 1, lon: 1, tags: { name: "A", shop: "bakery" } }, { type: "way", id: 2, center: { lat: 1, lon: 1 }, tags: { name: "A", shop: "bakery" } }] }));
+    return new Promise(() => {});
+  }) as typeof fetch;
+  try {
+    const els = await runOverpass("q", { timeoutMs: 2000 });
+    assert.equal(els.length, 2);
+    assert.equal(calls.length, OVERPASS_MIRRORS.length);
+    // ponto e prédio do mesmo comércio viram um só
+    const list = await searchOsm("padaria", { lat: 1, lon: 1, label: "x" }, 1000, { timeoutMs: 2000 });
+    assert.equal(list.length, 1);
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test("Overpass: erro claro quando todos falham", async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = (async () => new Response("", { status: 504 })) as typeof fetch;
+  try {
+    await assert.rejects(runOverpass("q", { timeoutMs: 500 }), /congestionado/);
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test("geocodificação cai para o Photon", async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = (async (url: string) => {
+    if (url.includes("nominatim")) return new Response("", { status: 403 });
+    return new Response(JSON.stringify({ features: [{ geometry: { coordinates: [-35.7, -9.6] }, properties: { name: "Jatiúca", city: "Maceió", state: "Alagoas" } }] }));
+  }) as typeof fetch;
+  try {
+    const g = await geocodeRegion("Jatiúca, Maceió");
+    assert.deepEqual(g, { lat: -9.6, lon: -35.7, label: "Jatiúca, Maceió, Alagoas" });
+    globalThis.fetch = (async () => new Response("[]")) as unknown as typeof fetch;
+    assert.equal(await geocodeRegion("zzzz"), null);
+  } finally {
+    globalThis.fetch = real;
+  }
 });

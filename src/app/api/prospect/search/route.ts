@@ -1,33 +1,11 @@
 import { NextResponse } from "next/server";
-import { googleToProspect, nicheOf, osmToProspect, overpassQuery, type Prospect } from "@/lib/prospect";
+import { geocodeRegion, googleToProspect, nicheOf, searchOsm, type Prospect } from "@/lib/prospect";
 import { serverSupabase } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
 
-const UA = "QuarkCRM/1.0 (prospeccao; contato via app)";
-const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
-
-/** Cidade/bairro → coordenadas (OpenStreetMap Nominatim). */
-async function geocode(q: string) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${encodeURIComponent(q)}`;
-  const res = await fetch(url, { headers: { "User-Agent": UA, "Accept-Language": "pt-BR" }, signal: AbortSignal.timeout(10000) }).catch(() => null);
-  const data = res?.ok ? ((await res.json().catch(() => [])) as { lat: string; lon: string; display_name: string }[]) : [];
-  return data[0] ? { lat: Number(data[0].lat), lon: Number(data[0].lon), label: data[0].display_name } : null;
-}
-
-async function searchOsm(nicheId: string, lat: number, lon: number, radiusM: number) {
-  const niche = nicheOf(nicheId)!;
-  const body = new URLSearchParams({ data: overpassQuery(niche, lat, lon, radiusM) });
-  for (const endpoint of OVERPASS) {
-    const res = await fetch(endpoint, { method: "POST", body, headers: { "User-Agent": UA }, signal: AbortSignal.timeout(30000) }).catch(() => null);
-    if (!res?.ok) continue;
-    const json = (await res.json().catch(() => null)) as { elements?: Parameters<typeof osmToProspect>[0][] } | null;
-    if (!json?.elements) continue;
-    return json.elements.map((e) => osmToProspect(e, niche.id)).filter((p): p is Prospect => !!p);
-  }
-  throw new Error("O OpenStreetMap não respondeu agora. Tente de novo em instantes ou diminua o raio.");
-}
+const UA = { "User-Agent": "QuarkCRM/1.0 (prospeccao; contato via app)", "Accept-Language": "pt-BR" };
 
 async function searchGoogle(key: string, nicheId: string, region: string, lat: number, lon: number, radiusM: number) {
   const niche = nicheOf(nicheId)!;
@@ -73,6 +51,11 @@ async function searchGoogle(key: string, nicheId: string, region: string, lat: n
   return out;
 }
 
+/** O app faz a busca no OpenStreetMap direto do aparelho; aqui só diz se o Google está ligado. */
+export async function GET() {
+  return NextResponse.json({ google: !!process.env.GOOGLE_MAPS_API_KEY?.trim() });
+}
+
 /** Busca comércios de um nicho numa região (OpenStreetMap grátis ou Google Places, se configurado). */
 export async function POST(req: Request) {
   const sb = await serverSupabase();
@@ -90,13 +73,17 @@ export async function POST(req: Request) {
   let center = Number.isFinite(body.lat) && Number.isFinite(body.lon) ? { lat: Number(body.lat), lon: Number(body.lon), label: region || "Sua localização" } : null;
   if (!center) {
     if (!region) return NextResponse.json({ error: "Informe a cidade ou o bairro" }, { status: 400 });
-    center = await geocode(region);
+    try {
+      center = await geocodeRegion(region, { headers: UA });
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : "Falha ao localizar a região" }, { status: 502 });
+    }
     if (!center) return NextResponse.json({ error: `Não encontrei “${region}”. Tente “bairro, cidade”.` }, { status: 404 });
   }
 
   const key = process.env.GOOGLE_MAPS_API_KEY?.trim();
   try {
-    const results = key ? await searchGoogle(key, niche.id, region || center.label, center.lat, center.lon, radiusM) : await searchOsm(niche.id, center.lat, center.lon, radiusM);
+    const results = key ? await searchGoogle(key, niche.id, region || center.label, center.lat, center.lon, radiusM) : await searchOsm(niche.id, center, radiusM, { headers: UA, timeoutMs: 20000 });
     return NextResponse.json({ ok: true, provider: key ? "google" : "osm", center, results });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Falha na busca" }, { status: 502 });

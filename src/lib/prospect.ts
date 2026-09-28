@@ -76,7 +76,7 @@ export function nicheFromTags(tags: Record<string, string>): Niche | null {
 
 /* ------------------------------------------------------------ fontes de dados */
 
-type OsmElement = { type: string; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> };
+export type OsmElement = { type: string; id: number; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> };
 
 /** Converte um elemento do Overpass (OpenStreetMap) em comércio. */
 export function osmToProspect(el: OsmElement, fallbackNiche: string | null = null): Prospect | null {
@@ -156,13 +156,107 @@ export function googleToProspect(p: GooglePlace, niche: string | null): Prospect
   };
 }
 
+/* ------------------------------------------------ OpenStreetMap (sem chave) */
+
+/** Servidores públicos do Overpass: consultados em paralelo, vale o primeiro que responder. */
+export const OVERPASS_MIRRORS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+];
+
+type Opts = { timeoutMs?: number; headers?: Record<string, string> };
+
+/** Corrida entre os espelhos do Overpass (duas rodadas). Funciona no navegador e no servidor. */
+export async function runOverpass(query: string, { timeoutMs = 25000, headers }: Opts = {}): Promise<OsmElement[]> {
+  const body = `data=${encodeURIComponent(query)}`;
+  for (let round = 0; round < 2; round++) {
+    const ctrls = OVERPASS_MIRRORS.map(() => new AbortController());
+    const timer = setTimeout(() => ctrls.forEach((c) => c.abort()), timeoutMs);
+    try {
+      const elements = await Promise.any(
+        OVERPASS_MIRRORS.map(async (url, i) => {
+          const res = await fetch(url, { method: "POST", body, headers: { "Content-Type": "application/x-www-form-urlencoded", ...headers }, signal: ctrls[i].signal });
+          if (!res.ok) throw new Error(String(res.status));
+          const json = (await res.json()) as { elements?: OsmElement[] };
+          if (!Array.isArray(json.elements)) throw new Error("sem dados");
+          return json.elements;
+        }),
+      );
+      ctrls.forEach((c) => c.abort());
+      return elements;
+    } catch {
+      // todos falharam nesta rodada
+    } finally {
+      clearTimeout(timer);
+    }
+    if (round === 0) await new Promise((ok) => setTimeout(ok, 1200));
+  }
+  throw new Error("O mapa aberto (OpenStreetMap) está congestionado agora. Tente de novo em alguns segundos.");
+}
+
+export type GeoPoint = { lat: number; lon: number; label: string };
+
+/** Cidade/bairro → coordenadas: Nominatim e, se falhar, Photon (ambos OpenStreetMap, grátis). */
+export async function geocodeRegion(q: string, { timeoutMs = 9000, headers }: Opts = {}): Promise<GeoPoint | null> {
+  const query = q.trim();
+  if (!query) return null;
+  const tries = [
+    async () => {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&accept-language=pt-BR&q=${encodeURIComponent(query)}`, { headers, signal: AbortSignal.timeout(timeoutMs) });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = (await res.json()) as { lat: string; lon: string; display_name: string }[];
+      if (!data[0]) return null;
+      return { lat: Number(data[0].lat), lon: Number(data[0].lon), label: data[0].display_name };
+    },
+    async () => {
+      const res = await fetch(`https://photon.komoot.io/api/?limit=1&bbox=-74,-34,-34,6&q=${encodeURIComponent(query)}`, { headers, signal: AbortSignal.timeout(timeoutMs) });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = (await res.json()) as { features?: { geometry: { coordinates: [number, number] }; properties: Record<string, string> }[] };
+      const f = data.features?.[0];
+      if (!f) return null;
+      const pr = f.properties;
+      return { lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], label: [pr.name, pr.district, pr.city, pr.state].filter(Boolean).join(", ") };
+    },
+  ];
+  let notFound = false;
+  for (const t of tries) {
+    try {
+      const r = await t();
+      if (r) return r;
+      notFound = true;
+    } catch {}
+  }
+  if (notFound) return null;
+  throw new Error("Não consegui localizar a região agora. Tente de novo ou use “Perto de mim”.");
+}
+
+/** Busca completa no OpenStreetMap: localiza a região e lista os comércios do nicho. */
+export async function searchOsm(nicheId: string, center: GeoPoint, radiusM: number, opts: Opts = {}) {
+  const niche = nicheOf(nicheId);
+  if (!niche) throw new Error("Escolha um nicho");
+  const elements = await runOverpass(overpassQuery(niche, center.lat, center.lon, radiusM), opts);
+  const seen = new Set<string>();
+  return elements
+    .map((e) => osmToProspect(e, niche.id))
+    .filter((p): p is Prospect => {
+      if (!p) return false;
+      // O mesmo comércio às vezes aparece como ponto e como prédio.
+      const key = `${p.name.toLowerCase()}|${p.lat.toFixed(3)}|${p.lon.toFixed(3)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 /** Consulta Overpass: comércios do nicho num raio (m) em volta do ponto. */
 export function overpassQuery(niche: Niche, lat: number, lon: number, radiusM: number) {
   const parts = niche.osm.map((f) => {
     const [k, v] = f.split("=");
     return `nwr["${k}"="${v}"]["name"](around:${Math.round(radiusM)},${lat.toFixed(6)},${lon.toFixed(6)});`;
   });
-  return `[out:json][timeout:25];(${parts.join("")});out center tags 250;`;
+  return `[out:json][timeout:25];(${parts.join("")});out center tags 300;`;
 }
 
 /* ------------------------------------------------------------------ horários */
