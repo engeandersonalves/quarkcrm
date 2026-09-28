@@ -41,6 +41,7 @@ import {
   googleEarthUrl,
   googleMapsUrl,
   instagramHandle,
+  mergeProspects,
   nicheOf,
   prospectScore,
   searchOsm,
@@ -74,7 +75,7 @@ const TILE = (z: number, x: number, y: number) => `https://server.arcgisonline.c
 /** R$ compacto para os blocos pequenos (R$ 11,7 mil). */
 const brlShort = (v: number) => (v >= 10000 ? `R$ ${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil` : brl(v).replace(/,\d{2}$/, ""));
 const STATE_KEY = "quark.prospect.state";
-const RADII = [1, 3, 5, 10];
+const RADII = [1, 3, 5, 10, 20];
 type Sort = "potencial" | "distancia" | "nome";
 type Center = { lat: number; lon: number; label: string };
 type Result = { provider: "osm" | "google"; center: Center; results: Prospect[]; niche: string; radiusKm: number; at: number };
@@ -254,6 +255,7 @@ export default function ProspeccaoPage() {
   const [onlyLong, setOnlyLong] = useState(false);
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"lista" | "mapa">("lista");
+  const [shown, setShown] = useState(40);
   const tariff = settings.defaults.tariff ?? 0.95;
 
   // Retoma a última busca (útil ao voltar de um lead).
@@ -315,53 +317,114 @@ export default function ProspeccaoPage() {
     const res = await fetch("/api/prospect/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.error ?? "Falha na busca");
-    return json as { provider: "osm" | "google"; center: Center; results: Prospect[] };
+    return json as { provider: "osm" | "google"; center: Center; results: Prospect[]; requests?: number };
+  };
+
+  const [turbo, setTurbo] = useState(false);
+  const [googleHelp, setGoogleHelp] = useState(false);
+  const [auto, setAuto] = useState<{ done: number; total: number; found: number } | null>(null);
+  const runRef = useRef(0);
+
+  /** Lê o site de cada comércio (4 por vez) atrás de e-mail, Instagram, Facebook e WhatsApp. */
+  const autoEnrich = async (list: Prospect[], run: number) => {
+    const todo = list.filter((p) => p.website && !/instagram\.com|facebook\.com/i.test(p.website) && !(p.email && p.instagram)).slice(0, 80);
+    if (!todo.length) return;
+    let done = 0;
+    let found = 0;
+    setAuto({ done, total: todo.length, found });
+    const queue = [...todo];
+    await Promise.all(
+      Array.from({ length: 4 }, async () => {
+        while (queue.length && runRef.current === run) {
+          const p = queue.shift()!;
+          try {
+            const res = await fetch("/api/prospect/enrich", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: p.website }) });
+            const json = (await res.json().catch(() => ({}))) as { contacts?: Contacts };
+            const c = json.contacts;
+            if (runRef.current !== run) return;
+            if (c && (c.emails[0] || c.instagram || c.facebook || c.whatsapp || c.phones[0])) found++;
+            setEnriched((m) => ({
+              ...m,
+              [p.id]: c ? { email: c.emails[0] ?? null, instagram: instagramHandle(c.instagram), facebook: c.facebook, whatsapp: c.whatsapp, phone: c.phones[0] ?? null, done: true } : { ...m[p.id], done: true },
+            }));
+          } catch {}
+          done++;
+          if (runRef.current === run) setAuto({ done, total: todo.length, found });
+        }
+      }),
+    );
+    if (runRef.current === run) {
+      setAuto(null);
+      if (found) toast.success(`Contatos encontrados em ${found} site${found > 1 ? "s" : ""}`);
+    }
   };
 
   const search = async (override?: { lat: number; lon: number }, radius = radiusKm) => {
     const at = override ?? coords;
     if (!at && !region.trim()) return toast.error("Informe a cidade ou o bairro");
+    const run = ++runRef.current;
     setLoading(true);
     setError(null);
-    const body = { region: region.trim(), lat: at?.lat, lon: at?.lon, radiusKm: radius, niche };
-    try {
-      let out: { provider: "osm" | "google"; center: Center; results: Prospect[] } | null = null;
-      if (google) {
-        setStage("Consultando o Google…");
-        out = await serverSearch(body).catch(() => null);
+    setAuto(null);
+    const body = { region: region.trim(), lat: at?.lat, lon: at?.lon, radiusKm: radius, niche, turbo };
+    const label = nicheOf(niche)?.label.toLowerCase();
+
+    // OpenStreetMap direto do aparelho (vários servidores em paralelo).
+    let notFound = false;
+    const osmFromDevice = async (center?: Center) => {
+      setStage("Localizando a região…");
+      const c: Center | null = center ?? (at ? { lat: at.lat, lon: at.lon, label: region.trim() || "Sua localização" } : await geocodeRegion(region));
+      if (!c) {
+        notFound = true;
+        throw new Error(`Não encontrei “${region.trim()}”. Tente “bairro, cidade”, ex.: Jatiúca, Maceió.`);
       }
-      if (!out) {
-        // 1º: direto do aparelho (vários servidores do OpenStreetMap em paralelo).
-        let notFound = false;
+      setStage(`Escaneando ${label} em ${radius} km…`);
+      return { provider: "osm" as const, center: c, results: await searchOsm(niche, c, radius * 1000, { timeoutMs: 40000 }) };
+    };
+
+    try {
+      let out: { provider: "osm" | "google"; center: Center; results: Prospect[]; requests?: number } | null = null;
+      if (google) {
+        // Motor completo: Google (telefone, site, nota) + OpenStreetMap ao mesmo tempo, sem repetir.
+        setStage(`Varrendo o Google e o mapa aberto: ${label} em ${radius} km…`);
+        const [g, o] = await Promise.allSettled([serverSearch(body), osmFromDevice()]);
+        if (g.status === "fulfilled") {
+          const extra = o.status === "fulfilled" ? o.value.results : [];
+          out = { ...g.value, results: mergeProspects(g.value.results, extra) };
+        } else if (o.status === "fulfilled") {
+          out = o.value;
+          toast.error("O Google não respondeu; mostrando o mapa aberto.", { description: g.reason instanceof Error ? g.reason.message : undefined });
+        } else throw notFound ? o.reason : g.reason;
+      } else {
         try {
-          setStage("Localizando a região…");
-          const center: Center | null = at ? { lat: at.lat, lon: at.lon, label: region.trim() || "Sua localização" } : await geocodeRegion(region);
-          if (!center) {
-            notFound = true;
-            throw new Error(`Não encontrei “${region.trim()}”. Tente “bairro, cidade”, ex.: Jatiúca, Maceió.`);
-          }
-          setStage(`Escaneando ${nicheOf(niche)?.label.toLowerCase()} em ${radius} km…`);
-          out = { provider: "osm", center, results: await searchOsm(niche, center, radius * 1000, { timeoutMs: 22000 }) };
+          out = await osmFromDevice();
         } catch (e) {
           if (notFound) throw e;
-          // 2º: pelo servidor, como última tentativa.
+          // Última tentativa: pelo servidor.
           setStage("Tentando por outro caminho…");
-          out = await serverSearch(body).catch(() => {
+          out = await serverSearch({ ...body, engine: "osm" }).catch(() => {
             throw e;
           });
         }
       }
+      if (runRef.current !== run) return;
       setRadiusKm(radius);
       setResult({ ...out, niche, radiusKm: radius, at: Date.now() });
       setSelected(new Set());
       setActive(null);
+      setShown(40);
       if (!out.results.length) toast("Nenhum comércio encontrado", { description: "Aumente o raio ou troque o nicho." });
       else toast.success(`${out.results.length} comércios no radar`);
+      setLoading(false);
+      setStage("");
+      autoEnrich(out.results, run);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha na busca");
     } finally {
-      setLoading(false);
-      setStage("");
+      if (runRef.current === run) {
+        setLoading(false);
+        setStage("");
+      }
     }
   };
 
@@ -637,7 +700,45 @@ export default function ProspeccaoPage() {
                 {r} km
               </button>
             ))}
+            <span className="ml-auto" />
+            {google ? (
+              <>
+                <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#9BD373]/15 px-3 font-semibold text-[#9BD373] ring-1 ring-[#9BD373]/30">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#9BD373]" /> Google + mapa aberto
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setTurbo((v) => !v)}
+                  aria-pressed={turbo}
+                  title="Mais termos e mais quadrantes: traz muito mais comércios (usa mais consultas do Google)"
+                  className={cx("inline-flex h-8 items-center gap-1.5 rounded-full px-3 font-bold ring-1 transition", turbo ? "bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] text-[#1C1234] ring-transparent" : "bg-white/5 text-white/75 ring-white/15 hover:bg-white/10")}
+                >
+                  <Zap className="h-3.5 w-3.5" /> Turbo {turbo ? "ligado" : "desligado"}
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={() => setGoogleHelp((v) => !v)} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white/5 px-3 font-semibold text-white/80 ring-1 ring-white/15 hover:bg-white/10">
+                <Phone className="h-3.5 w-3.5 text-[#F3EA3B]" /> Trazer telefones do Google
+              </button>
+            )}
           </div>
+          {!google && googleHelp && (
+            <div className="rounded-2xl bg-[#F3EA3B]/10 p-4 text-[13px] leading-relaxed text-white/80 ring-1 ring-[#F3EA3B]/25">
+              <p className="font-semibold text-white">Ative o Google Places para vir telefone, site, nota e horário de quase todos os comércios:</p>
+              <ol className="mt-2 list-decimal space-y-1 pl-5">
+                <li>
+                  Em <b>console.cloud.google.com</b>, crie um projeto e ative a <b>Places API (New)</b> (pede um cartão; o Google dá uma cota mensal gratuita).
+                </li>
+                <li>
+                  Em <b>APIs e serviços → Credenciais</b>, crie uma <b>chave de API</b> e restrinja-a à Places API.
+                </li>
+                <li>
+                  Na <b>Vercel</b>: <b>Settings → Environment Variables</b>, crie <code className="rounded bg-white/10 px-1">GOOGLE_MAPS_API_KEY</code> com a chave e faça um novo deploy.
+                </li>
+              </ol>
+              <p className="mt-2 text-white/60">A chave fica só na Vercel. Nunca cole a chave em conversas. Enquanto isso, o app usa o mapa aberto (grátis) e lê os sites dos comércios atrás de e-mail e redes.</p>
+            </div>
+          )}
 
           <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
             <div className="flex gap-2 pb-1 sm:flex-wrap">
@@ -660,7 +761,15 @@ export default function ProspeccaoPage() {
           <p className="flex items-start gap-2 text-[12px] text-white/55">
             <Zap className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#F3EA3B]" />
             <span>
-              <b className="text-white/80">{currentNiche.label}</b> consomem em média ~{fmtNum(currentNiche.kwh)} kWh/mês: {currentNiche.pitch}.
+              {currentNiche.id === "todos" ? (
+                <>
+                  <b className="text-white/80">Todos os comércios</b> da área numa busca só. Cada um recebe o consumo do próprio nicho e os mais promissores vêm primeiro.
+                </>
+              ) : (
+                <>
+                  <b className="text-white/80">{currentNiche.label}</b> consomem em média ~{fmtNum(currentNiche.kwh)} kWh/mês: {currentNiche.pitch}.
+                </>
+              )}
             </span>
           </p>
         </form>
@@ -780,7 +889,7 @@ export default function ProspeccaoPage() {
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-xs text-ink-500">
             <span>
               {visible.length} de {rows.length} · fonte:{" "}
-              <b className="text-ink-700">{result.provider === "google" ? "Google Places" : "OpenStreetMap (grátis)"}</b> · {result.center.label.split(",").slice(0, 2).join(",")}
+              <b className="text-ink-700">{result.provider === "google" ? "Google Places + OpenStreetMap" : "OpenStreetMap (grátis)"}</b> · {result.center.label.split(",").slice(0, 2).join(",")}
             </span>
             <button type="button" className="font-semibold text-ink-700 underline-offset-2 hover:underline" onClick={() => setSelected(new Set(visible.filter((r) => !r.leadId).map((r) => r.p.id)))}>
               Selecionar novos
@@ -788,6 +897,11 @@ export default function ProspeccaoPage() {
             <button type="button" className="font-semibold text-ink-700 underline-offset-2 hover:underline" onClick={() => exportCsv(visible)}>
               Exportar CSV
             </button>
+            {auto && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F3EA3B]/20 px-2.5 py-1 font-semibold text-[#1C1234] ring-1 ring-[#e3d82a]/60">
+                <Loader2 className="h-3 w-3 animate-spin" /> Lendo sites atrás de e-mail e redes · {auto.done}/{auto.total} · {auto.found} com contato
+              </span>
+            )}
           </div>
 
           <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
@@ -804,7 +918,7 @@ export default function ProspeccaoPage() {
                   )}
                 </div>
               )}
-              {visible.map((r) => (
+              {visible.slice(0, shown).map((r) => (
                 <ProspectCard
                   key={r.p.id}
                   r={r}
@@ -820,6 +934,11 @@ export default function ProspeccaoPage() {
                   pitch={pitchFor(r)}
                 />
               ))}
+              {visible.length > shown && (
+                <button onClick={() => setShown((n) => n + 40)} className="glass rounded-2xl py-3.5 text-sm font-semibold text-ink-700 transition hover:bg-white">
+                  Mostrar mais {Math.min(40, visible.length - shown)} de {visible.length - shown} restantes
+                </button>
+              )}
             </div>
             <div className={cx("lg:block", view === "lista" && "hidden")}>
               <div className="h-[70vh] lg:sticky lg:top-20 lg:h-[calc(100vh-7rem)]">

@@ -207,7 +207,7 @@ export function Segmented<T extends string>({
           aria-selected={value === o.value}
           onClick={() => onChange(o.value)}
           className={cx(
-            "flex items-center justify-center gap-1.5 rounded-lg font-semibold transition-all",
+            "flex items-center justify-center gap-1.5 rounded-lg font-semibold whitespace-nowrap transition-all",
             size === "sm" ? "h-7 px-2.5 text-xs" : "h-8 px-3.5 text-[13px]",
             value === o.value ? "bg-white text-ink-900 shadow-[0_2px_10px_-2px_rgba(28,18,52,0.18)]" : "text-ink-500 hover:text-ink-800",
           )}

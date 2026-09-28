@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { NICHES, OVERPASS_MIRRORS, geocodeRegion, runOverpass, searchOsm, estimateConsumption, extractContacts, googleHoursPerWeek, googleToProspect, instagramHandle, nicheFromTags, osmHoursPerWeek, osmToProspect, overpassQuery, prospectScore, tileOf } from "./prospect.ts";
+import { NICHES, mergeProspects, OVERPASS_MIRRORS, geocodeRegion, runOverpass, searchOsm, estimateConsumption, extractContacts, googleHoursPerWeek, googleToProspect, instagramHandle, nicheFromTags, osmHoursPerWeek, osmToProspect, overpassQuery, prospectScore, tileOf } from "./prospect.ts";
 
 test("lê horários do OpenStreetMap", () => {
   assert.equal(osmHoursPerWeek("24/7"), 168);
@@ -62,7 +62,11 @@ test("converte OpenStreetMap e Google Places", () => {
   assert.equal(g.name, "Academia X");
   assert.equal(g.rating, 4.7);
   assert.equal(g.niche, "academia");
-  assert.match(overpassQuery(NICHES[1], -9.6, -35.7, 3000), /nwr\["shop"="bakery"\]\["name"\]\(around:3000/);
+  const padaria = NICHES.find((n) => n.id === "padaria")!;
+  assert.match(overpassQuery(padaria, -9.6, -35.7, 3000), /nwr\["shop"~"\^\(bakery\|pastry\|confectionery\)\$"\]\["name"\]\(around:3000/);
+  const todos = overpassQuery(NICHES.find((n) => n.id === "todos")!, -9.6, -35.7, 3000);
+  assert.match(todos, /"amenity"~"\^\([a-z_|]*restaurant/);
+  assert.match(todos, /timeout:50/);
 });
 
 test("extrai contatos de um site", () => {
@@ -125,4 +129,19 @@ test("geocodificação cai para o Photon", async () => {
   } finally {
     globalThis.fetch = real;
   }
+});
+
+test("junta Google e OpenStreetMap sem repetir", () => {
+  const base = { source: "osm" as const, niche: "padaria", address: null, city: null, email: null, website: null, instagram: null, facebook: null, whatsapp: null, hours: null, hoursWeek: null, rating: null, reviews: null, mapsUrl: null };
+  const g = [{ ...base, id: "g1", source: "google" as const, name: "Padaria Boa Vista", lat: -9.65, lon: -35.71, phone: "(82) 3333-4444" }];
+  const o = [
+    { ...base, id: "o1", name: "Padaria Boa Vista", lat: -9.6505, lon: -35.7102, phone: null, instagram: "padariaboavista", hoursWeek: 90 },
+    { ...base, id: "o2", name: "Outra", lat: -9.66, lon: -35.72, phone: "+55 82 3333-4444" },
+    { ...base, id: "o3", name: "Mercado Novo", lat: -9.7, lon: -35.8, phone: null },
+  ];
+  const m = mergeProspects(g, o);
+  assert.equal(m.length, 2);
+  assert.equal(m[0].instagram, "padariaboavista");
+  assert.equal(m[0].hoursWeek, 90);
+  assert.equal(m[1].id, "o3");
 });

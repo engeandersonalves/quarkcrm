@@ -55,25 +55,58 @@ export interface Stats {
   active_days: number;
 }
 
+export type BadgeTier = "bronze" | "prata" | "ouro" | "lenda";
+
 export interface Badge {
   id: string;
   title: string;
   text: string;
   icon: string;
+  tier?: BadgeTier;
   done: (s: Stats) => boolean;
   progress: (s: Stats) => [number, number];
 }
 
+const goal = (id: string, title: string, text: string, icon: string, tier: BadgeTier, key: keyof Stats, n: number): Badge => ({
+  id,
+  title,
+  text,
+  icon,
+  tier,
+  done: (s) => s[key] >= n,
+  progress: (s) => [Math.min(s[key], n), n],
+});
+
 export const BADGES: Badge[] = [
-  { id: "primeiro-lead", title: "Primeira ficha", text: "Cadastre o seu primeiro lead", icon: "🎯", done: (s) => s.leads >= 1, progress: (s) => [s.leads, 1] },
-  { id: "maquina", title: "Máquina de leads", text: "50 leads cadastrados", icon: "🧲", done: (s) => s.leads >= 50, progress: (s) => [s.leads, 50] },
-  { id: "implacavel", title: "Follow-up implacável", text: "100 follow-ups", icon: "📞", done: (s) => s.followups >= 100, progress: (s) => [s.followups, 100] },
-  { id: "caneta", title: "Me venda esta caneta", text: "Envie 10 propostas", icon: "🖊️", done: (s) => s.sent >= 10, progress: (s) => [s.sent, 10] },
-  { id: "primeiro-sangue", title: "Primeiro contrato", text: "Feche a sua primeira venda", icon: "🥂", done: (s) => s.sales >= 1, progress: (s) => [s.sales, 1] },
-  { id: "cafe", title: "Café é para quem fecha", text: "10 vendas fechadas", icon: "☕", done: (s) => s.sales >= 10, progress: (s) => [s.sales, 10] },
-  { id: "pregao", title: "Dono do pregão", text: "20 dias de app em uso", icon: "📈", done: (s) => s.active_days >= 20, progress: (s) => [s.active_days, 20] },
-  { id: "imperio", title: "Império", text: "Chegue a 6.000 XP", icon: "👑", done: (s) => s.total_xp >= 6000, progress: (s) => [s.total_xp, 6000] },
+  goal("primeiro-lead", "Primeira ficha", "Cadastre o seu primeiro lead", "🎯", "bronze", "leads", 1),
+  goal("dez-leads", "Rede aberta", "10 leads cadastrados", "🕸️", "bronze", "leads", 10),
+  goal("maquina", "Máquina de leads", "50 leads cadastrados", "🧲", "prata", "leads", 50),
+  goal("cacador", "Caçador de oportunidades", "150 leads cadastrados", "🏹", "ouro", "leads", 150),
+  goal("aquecendo", "Aquecendo", "10 follow-ups registrados", "🔥", "bronze", "followups", 10),
+  goal("implacavel", "Follow-up implacável", "100 follow-ups", "📞", "prata", "followups", 100),
+  goal("metralhadora", "Metralhadora", "500 follow-ups", "💬", "ouro", "followups", 500),
+  goal("primeira-proposta", "Primeira proposta", "Envie a sua primeira proposta", "📨", "bronze", "sent", 1),
+  goal("caneta", "Me venda esta caneta", "Envie 10 propostas", "🖊️", "prata", "sent", 10),
+  goal("fabrica", "Fábrica de propostas", "Envie 50 propostas", "🏭", "ouro", "sent", 50),
+  goal("primeiro-sangue", "Primeiro contrato", "Feche a sua primeira venda", "🥂", "bronze", "sales", 1),
+  goal("mao-de-ouro", "Mão de ouro", "5 vendas fechadas", "🤝", "prata", "sales", 5),
+  goal("cafe", "Café é para quem fecha", "10 vendas fechadas", "☕", "ouro", "sales", 10),
+  goal("lenda", "Lenda do solar", "30 vendas fechadas", "🏆", "lenda", "sales", 30),
+  goal("presenca", "Presença", "5 dias de app em uso", "📅", "bronze", "active_days", 5),
+  goal("pregao", "Dono do pregão", "20 dias de app em uso", "📈", "prata", "active_days", 20),
+  goal("inabalavel", "Inabalável", "60 dias de app em uso", "🗿", "ouro", "active_days", 60),
+  goal("foco", "Foco total", "10 horas de app em uso", "⏱️", "prata", "minutes", 600),
+  goal("tubarao", "Tubarão", "Chegue a 700 XP", "🦈", "prata", "total_xp", 700),
+  goal("lobo", "Lobo", "Chegue a 1.500 XP", "🐺", "ouro", "total_xp", 1500),
+  goal("imperio", "Império", "Chegue a 6.000 XP", "👑", "lenda", "total_xp", 6000),
 ];
+
+export const TIER_STYLE: Record<BadgeTier, { label: string; ring: string; bg: string; text: string }> = {
+  bronze: { label: "Bronze", ring: "ring-amber-700/30", bg: "from-amber-100 via-orange-50 to-amber-200", text: "text-amber-800" },
+  prata: { label: "Prata", ring: "ring-slate-400/40", bg: "from-slate-100 via-white to-slate-200", text: "text-slate-700" },
+  ouro: { label: "Ouro", ring: "ring-yellow-500/50", bg: "from-yellow-100 via-amber-50 to-yellow-300", text: "text-yellow-800" },
+  lenda: { label: "Lenda", ring: "ring-[#9BD373]/60", bg: "from-[#F3EA3B] via-[#9BD373] to-[#6CC690]", text: "text-[#1C1234]" },
+};
 
 /** Frases curtas que aparecem a cada conquista. */
 export const REWARD_LINES: Record<XpKind, string[]> = {

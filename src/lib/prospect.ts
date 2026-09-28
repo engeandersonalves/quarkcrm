@@ -36,36 +36,50 @@ export interface Niche {
   kwh: number;
   /** Filtros do OpenStreetMap (chave=valor). */
   osm: string[];
-  /** Termo de busca no Google. */
-  google: string;
+  /** Termos de busca no Google (o primeiro é o principal). */
+  google: string[];
   /** Argumento de venda (o que pesa na conta desse negócio). */
   pitch: string;
 }
 
-export const NICHES: Niche[] = [
-  { id: "supermercado", label: "Supermercados", emoji: "🛒", kwh: 7000, osm: ["shop=supermarket", "shop=convenience", "shop=greengrocer"], google: "supermercado", pitch: "câmaras frias e refrigeradores ligados 24h" },
-  { id: "padaria", label: "Padarias", emoji: "🥖", kwh: 3500, osm: ["shop=bakery", "shop=pastry"], google: "padaria", pitch: "fornos elétricos e refrigeração o dia inteiro" },
-  { id: "restaurante", label: "Restaurantes", emoji: "🍽️", kwh: 2800, osm: ["amenity=restaurant", "amenity=fast_food", "amenity=cafe", "amenity=bar"], google: "restaurante", pitch: "ar-condicionado, freezers e cozinha em horário de pico" },
-  { id: "academia", label: "Academias", emoji: "🏋️", kwh: 3200, osm: ["leisure=fitness_centre", "leisure=sports_centre"], google: "academia", pitch: "ar-condicionado, esteiras e iluminação por muitas horas" },
-  { id: "hotel", label: "Hotéis e pousadas", emoji: "🏨", kwh: 5000, osm: ["tourism=hotel", "tourism=guest_house", "tourism=hostel", "tourism=motel"], google: "hotel pousada", pitch: "ar-condicionado nos quartos e água quente 24h" },
-  { id: "posto", label: "Postos de combustível", emoji: "⛽", kwh: 3800, osm: ["amenity=fuel"], google: "posto de combustível", pitch: "bombas, conveniência e iluminação a noite toda" },
-  { id: "farmacia", label: "Farmácias", emoji: "💊", kwh: 1600, osm: ["amenity=pharmacy", "shop=chemist"], google: "farmácia", pitch: "ar-condicionado e refrigeração de medicamentos" },
-  { id: "clinica", label: "Clínicas e consultórios", emoji: "🩺", kwh: 1800, osm: ["amenity=clinic", "amenity=dentist", "amenity=doctors", "healthcare=clinic"], google: "clínica", pitch: "equipamentos, esterilização e climatização" },
-  { id: "escola", label: "Escolas", emoji: "🏫", kwh: 3000, osm: ["amenity=school", "amenity=kindergarten", "amenity=college"], google: "escola", pitch: "salas climatizadas e laboratórios de dia inteiro" },
-  { id: "oficina", label: "Oficinas mecânicas", emoji: "🔧", kwh: 1300, osm: ["shop=car_repair", "shop=tyres", "craft=electrician"], google: "oficina mecânica", pitch: "compressores, elevadores e ferramentas elétricas" },
-  { id: "acougue", label: "Açougues", emoji: "🥩", kwh: 3000, osm: ["shop=butcher", "shop=seafood"], google: "açougue", pitch: "câmara fria e balcões refrigerados 24h" },
-  { id: "sorveteria", label: "Sorveterias e açaí", emoji: "🍨", kwh: 2600, osm: ["amenity=ice_cream"], google: "sorveteria açaí", pitch: "freezers e máquinas de sorvete sem parar" },
-  { id: "lavanderia", label: "Lavanderias", emoji: "🧺", kwh: 3200, osm: ["shop=laundry", "shop=dry_cleaning"], google: "lavanderia", pitch: "lavadoras e secadoras industriais" },
-  { id: "varejo", label: "Lojas e varejo", emoji: "🛍️", kwh: 1000, osm: ["shop=clothes", "shop=shoes", "shop=hardware", "shop=furniture", "shop=electronics", "shop=department_store"], google: "loja", pitch: "vitrines iluminadas e ar-condicionado" },
-  { id: "industria", label: "Indústrias e galpões", emoji: "🏭", kwh: 15000, osm: ["building=industrial", "landuse=industrial", "man_made=works", "building=warehouse"], google: "indústria fábrica", pitch: "máquinas e motores em turnos longos" },
-  { id: "igreja", label: "Igrejas", emoji: "⛪", kwh: 900, osm: ["amenity=place_of_worship"], google: "igreja", pitch: "som, iluminação e ar-condicionado nos cultos" },
+const BASE_NICHES: Niche[] = [
+  { id: "supermercado", label: "Supermercados", emoji: "🛒", kwh: 7000, osm: ["shop=supermarket", "shop=convenience", "shop=greengrocer", "shop=wholesale", "shop=variety_store", "shop=frozen_food", "shop=general", "shop=beverages"], google: ["supermercado", "mercadinho", "atacarejo atacado", "hortifruti", "distribuidora de bebidas", "loja de conveniência"], pitch: "câmaras frias e refrigeradores ligados 24h" },
+  { id: "padaria", label: "Padarias", emoji: "🥖", kwh: 3500, osm: ["shop=bakery", "shop=pastry", "shop=confectionery"], google: ["padaria", "panificadora", "confeitaria"], pitch: "fornos elétricos e refrigeração o dia inteiro" },
+  { id: "restaurante", label: "Restaurantes", emoji: "🍽️", kwh: 2800, osm: ["amenity=restaurant", "amenity=fast_food", "amenity=cafe", "amenity=bar", "amenity=pub", "amenity=food_court", "shop=deli"], google: ["restaurante", "lanchonete", "pizzaria", "churrascaria", "hamburgueria", "bar"], pitch: "ar-condicionado, freezers e cozinha em horário de pico" },
+  { id: "academia", label: "Academias", emoji: "🏋️", kwh: 3200, osm: ["leisure=fitness_centre", "leisure=sports_centre", "leisure=sports_hall", "amenity=gym"], google: ["academia", "crossfit", "studio de pilates"], pitch: "ar-condicionado, esteiras e iluminação por muitas horas" },
+  { id: "hotel", label: "Hotéis e pousadas", emoji: "🏨", kwh: 5000, osm: ["tourism=hotel", "tourism=guest_house", "tourism=hostel", "tourism=motel", "tourism=apartment"], google: ["hotel", "pousada", "motel", "flat"], pitch: "ar-condicionado nos quartos e água quente 24h" },
+  { id: "posto", label: "Postos e lava-jatos", emoji: "⛽", kwh: 3800, osm: ["amenity=fuel", "amenity=car_wash"], google: ["posto de combustível", "lava jato"], pitch: "bombas, conveniência e iluminação a noite toda" },
+  { id: "farmacia", label: "Farmácias", emoji: "💊", kwh: 1600, osm: ["amenity=pharmacy", "shop=chemist", "shop=medical_supply"], google: ["farmácia", "drogaria"], pitch: "ar-condicionado e refrigeração de medicamentos" },
+  { id: "clinica", label: "Clínicas e laboratórios", emoji: "🩺", kwh: 1800, osm: ["amenity=clinic", "amenity=dentist", "amenity=doctors", "amenity=hospital", "amenity=veterinary", "healthcare=clinic", "healthcare=laboratory", "healthcare=dentist"], google: ["clínica", "consultório odontológico", "laboratório de análises", "clínica veterinária"], pitch: "equipamentos, esterilização e climatização" },
+  { id: "escola", label: "Escolas e faculdades", emoji: "🏫", kwh: 3000, osm: ["amenity=school", "amenity=kindergarten", "amenity=college", "amenity=university", "amenity=language_school", "amenity=driving_school"], google: ["escola particular", "colégio", "faculdade", "creche", "curso de idiomas"], pitch: "salas climatizadas e laboratórios de dia inteiro" },
+  { id: "oficina", label: "Oficinas e autopeças", emoji: "🔧", kwh: 1300, osm: ["shop=car_repair", "shop=tyres", "shop=car", "shop=motorcycle", "shop=car_parts", "craft=electrician", "craft=metal_construction", "craft=carpenter"], google: ["oficina mecânica", "autopeças", "serralheria", "marcenaria", "borracharia"], pitch: "compressores, elevadores e ferramentas elétricas" },
+  { id: "acougue", label: "Açougues e peixarias", emoji: "🥩", kwh: 3000, osm: ["shop=butcher", "shop=seafood", "shop=cheese", "shop=dairy"], google: ["açougue", "casa de carnes", "peixaria"], pitch: "câmara fria e balcões refrigerados 24h" },
+  { id: "sorveteria", label: "Sorveterias e açaí", emoji: "🍨", kwh: 2600, osm: ["amenity=ice_cream", "shop=ice_cream"], google: ["sorveteria", "açaí", "gelateria"], pitch: "freezers e máquinas de sorvete sem parar" },
+  { id: "lavanderia", label: "Lavanderias", emoji: "🧺", kwh: 3200, osm: ["shop=laundry", "shop=dry_cleaning"], google: ["lavanderia"], pitch: "lavadoras e secadoras industriais" },
+  { id: "varejo", label: "Lojas e varejo", emoji: "🛍️", kwh: 1000, osm: ["shop=clothes", "shop=shoes", "shop=hardware", "shop=furniture", "shop=electronics", "shop=department_store", "shop=mall", "shop=doityourself", "shop=appliance", "shop=mobile_phone", "shop=cosmetics", "shop=beauty", "shop=hairdresser", "shop=pet", "shop=optician", "shop=jewelry", "shop=sports", "shop=paint", "shop=building_materials", "shop=bed"], google: ["loja", "material de construção", "salão de beleza", "pet shop", "loja de móveis", "shopping"], pitch: "vitrines iluminadas e ar-condicionado" },
+  { id: "escritorio", label: "Escritórios e bancos", emoji: "💼", kwh: 1200, osm: ["office=company", "office=lawyer", "office=accountant", "office=estate_agent", "office=insurance", "office=coworking", "amenity=bank"], google: ["escritório de contabilidade", "escritório de advocacia", "imobiliária", "coworking"], pitch: "ar-condicionado e computadores o expediente todo" },
+  { id: "industria", label: "Indústrias e galpões", emoji: "🏭", kwh: 15000, osm: ["building=industrial", "landuse=industrial", "man_made=works", "building=warehouse"], google: ["indústria", "fábrica", "galpão logístico", "distribuidora"], pitch: "máquinas e motores em turnos longos" },
+  { id: "igreja", label: "Igrejas", emoji: "⛪", kwh: 900, osm: ["amenity=place_of_worship"], google: ["igreja"], pitch: "som, iluminação e ar-condicionado nos cultos" },
 ];
+
+/** "Todos os comércios": une os nichos numa busca só (cada resultado ganha o próprio nicho). */
+export const ALL_NICHE: Niche = {
+  id: "todos",
+  label: "Todos os comércios",
+  emoji: "🏪",
+  kwh: 2500,
+  osm: BASE_NICHES.filter((n) => n.id !== "igreja").flatMap((n) => n.osm),
+  google: [],
+  pitch: "equipamentos e ar-condicionado ligados o dia todo",
+};
+
+export const NICHES: Niche[] = [ALL_NICHE, ...BASE_NICHES];
 
 export const nicheOf = (id: string | null | undefined) => NICHES.find((n) => n.id === id) ?? null;
 
 /** Nicho a partir das tags do OpenStreetMap. */
 export function nicheFromTags(tags: Record<string, string>): Niche | null {
-  for (const n of NICHES) {
+  for (const n of BASE_NICHES) {
     for (const f of n.osm) {
       const [k, v] = f.split("=");
       if (tags[k] === v) return n;
@@ -250,13 +264,51 @@ export async function searchOsm(nicheId: string, center: GeoPoint, radiusM: numb
     });
 }
 
-/** Consulta Overpass: comércios do nicho num raio (m) em volta do ponto. */
+/** Consulta Overpass: comércios do nicho num raio (m) em volta do ponto (filtros agrupados por chave). */
 export function overpassQuery(niche: Niche, lat: number, lon: number, radiusM: number) {
-  const parts = niche.osm.map((f) => {
+  const byKey = new Map<string, string[]>();
+  for (const f of niche.osm) {
     const [k, v] = f.split("=");
-    return `nwr["${k}"="${v}"]["name"](around:${Math.round(radiusM)},${lat.toFixed(6)},${lon.toFixed(6)});`;
-  });
-  return `[out:json][timeout:25];(${parts.join("")});out center tags 300;`;
+    byKey.set(k, [...(byKey.get(k) ?? []), v]);
+  }
+  const around = `(around:${Math.round(radiusM)},${lat.toFixed(6)},${lon.toFixed(6)})`;
+  const parts = [...byKey].map(([k, vs]) => (vs.length === 1 ? `nwr["${k}"="${vs[0]}"]["name"]${around};` : `nwr["${k}"~"^(${vs.join("|")})$"]["name"]${around};`));
+  const timeout = radiusM > 6000 || niche.id === "todos" ? 50 : 30;
+  return `[out:json][timeout:${timeout}];(${parts.join("")});out center tags 2500;`;
+}
+
+const normName = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+
+/**
+ * Junta duas listas (ex.: Google + OpenStreetMap) sem repetir o mesmo comércio:
+ * mesmo telefone, ou nome parecido a menos de 150 m. A primeira lista tem prioridade
+ * e os campos vazios são completados pela segunda.
+ */
+export function mergeProspects(primary: Prospect[], extra: Prospect[]): Prospect[] {
+  const out = primary.map((p) => ({ ...p }));
+  const phone = (p: Prospect) => (p.phone ?? "").replace(/\D/g, "").slice(-8);
+  for (const e of extra) {
+    const en = normName(e.name);
+    const ep = phone(e);
+    const twin = out.find((p) => {
+      if (ep.length === 8 && phone(p) === ep) return true;
+      const pn = normName(p.name);
+      const close = distanceKm(p, e) < 0.15;
+      return close && (pn === en || (pn.length > 4 && en.length > 4 && (pn.includes(en) || en.includes(pn))));
+    });
+    if (!twin) {
+      out.push(e);
+      continue;
+    }
+    for (const k of ["phone", "email", "website", "instagram", "facebook", "whatsapp", "hours", "address", "city"] as const) if (!twin[k] && e[k]) twin[k] = e[k];
+    if (twin.hoursWeek == null) twin.hoursWeek = e.hoursWeek;
+  }
+  return out;
 }
 
 /* ------------------------------------------------------------------ horários */

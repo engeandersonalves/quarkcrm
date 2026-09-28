@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Clock, Crown, FileText, Flame, Handshake, Lock, Phone, Send, Trophy, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useApp } from "@/components/app/app-context";
@@ -133,7 +134,7 @@ export default function RankingPage() {
               if (!r) return <div key={i} />;
               const h = place === 1 ? "h-44 sm:h-52" : place === 2 ? "h-32 sm:h-40" : "h-24 sm:h-32";
               return (
-                <div key={r.user_id} className="flex flex-col items-center text-center">
+                <Link href={`/perfil/${r.user_id}`} key={r.user_id} className="flex flex-col items-center text-center transition hover:-translate-y-0.5">
                   <div className="relative mb-2">
                     {place === 1 && <Crown className="absolute -top-6 left-1/2 h-6 w-6 -translate-x-1/2 text-brand-yellow drop-shadow" />}
                     <div className={cx("rounded-full p-[3px]", place === 1 ? "bg-sun-gradient" : "bg-ink-200")}>
@@ -152,7 +153,7 @@ export default function RankingPage() {
                     <span className={cx("font-display font-bold", place === 1 ? "text-sun-gradient text-4xl" : "text-2xl text-white/80")}>{place}º</span>
                     <span className="tnum mt-1 text-sm font-semibold">{r.xp.toLocaleString("pt-BR")} XP</span>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -182,7 +183,7 @@ export default function RankingPage() {
                       <tr key={r.user_id} className={cx(r.user_id === user.id && "bg-sun-50/70")}>
                         <td className="px-5 py-3 font-display font-bold text-ink-400">{i < 3 ? ["🥇", "🥈", "🥉"][i] : `${i + 1}º`}</td>
                         <td className="px-3 py-3">
-                          <div className="flex items-center gap-3">
+                          <Link href={`/perfil/${r.user_id}`} className="flex items-center gap-3 hover:opacity-90">
                             <Avatar name={r.full_name ?? r.email} src={photo(r.user_id)} className="h-8 w-8 text-xs" />
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-ink-900">
@@ -193,7 +194,7 @@ export default function RankingPage() {
                                 Nível {levelOf(r.total_xp).level.n} · {levelOf(r.total_xp).level.title}
                               </p>
                             </div>
-                          </div>
+                          </Link>
                         </td>
                         <td className="px-3 py-3 text-right font-display text-base font-bold">{r.xp.toLocaleString("pt-BR")}</td>
                         <td className="px-3 py-3 text-right">{r.leads}</td>

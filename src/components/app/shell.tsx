@@ -162,7 +162,7 @@ function ShellInner({ children }: { children: ReactNode }) {
           onSearch={() => setPalette(true)}
           onNewLead={() => openLead()}
           onNewTask={() => openTask()}
-          onAvatar={() => setAvatarOpen(true)}
+          onAvatar={() => router.push(`/perfil/${user.id}`)}
           onSignOut={signOut}
         />
 
@@ -173,7 +173,7 @@ function ShellInner({ children }: { children: ReactNode }) {
           </Link>
           <div className="flex items-center gap-1">
             <XpChip />
-            <button onClick={() => setAvatarOpen(true)} className="ml-0.5 rounded-full" aria-label="Foto de perfil">
+            <button onClick={() => router.push(`/perfil/${user.id}`)} className="ml-0.5 rounded-full" aria-label="Meu perfil">
               <Avatar name={profile?.full_name ?? user.email} src={profile?.avatar_url} className="h-8 w-8 text-[10px]" />
             </button>
             <button onClick={() => setPalette(true)} className="grid h-9 w-9 place-items-center rounded-xl text-ink-600" aria-label="Buscar">
@@ -427,7 +427,7 @@ function Sidebar({
       {/* perfil */}
       <div className="relative shrink-0 border-t border-white/[0.06] bg-white/[0.02] p-3 backdrop-blur-xl">
         <div className={cx("flex items-center gap-3 rounded-2xl p-2", collapsed ? "flex-col" : "bg-white/[0.04] ring-1 ring-white/[0.06]")}>
-          <button onClick={onAvatar} className="relative shrink-0 rounded-full" title="Trocar foto de perfil">
+          <button onClick={onAvatar} className="relative shrink-0 rounded-full" title="Meu perfil">
             <span className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-[#F3EA3B] to-[#9BD373] opacity-80" />
             <Avatar name={profile?.full_name ?? user.email} src={profile?.avatar_url} className="relative h-10 w-10 ring-2 ring-[#0D0A1C]" />
             {streak > 1 && (
@@ -438,7 +438,7 @@ function Sidebar({
             )}
           </button>
           {!collapsed && (
-            <Link href="/ranking" className="min-w-0 flex-1" title="Ver a Arena">
+            <Link href={`/perfil/${user.id}`} className="min-w-0 flex-1" title="Meu perfil">
               <p className="truncate text-sm font-semibold text-white">{first}</p>
               {lvl ? (
                 <>

@@ -17,6 +17,11 @@ export interface Profile {
   active?: boolean;
   /** Foto enviada (URL) ou personagem ilustrado ("preset:lobo"). */
   avatar_url?: string | null;
+  /** Capa do perfil (pôster, foto enviada ou "gradient:<id>"). */
+  cover_url?: string | null;
+  /** Frase curta de apresentação. */
+  headline?: string | null;
+  bio?: string | null;
   created_at?: string;
 }
 

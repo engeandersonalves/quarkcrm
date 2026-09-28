@@ -952,13 +952,35 @@ drop policy if exists "team_all" on public.marketing_assets;
 create policy "team_all" on public.marketing_assets for all to authenticated using (public.is_member()) with check (public.is_member());
 
 -- -----------------------------------------------------------------------------
+-- Perfil: capa, frase de apresentação, bio e mural de atualizações
+-- -----------------------------------------------------------------------------
+alter table public.profiles add column if not exists cover_url text;
+alter table public.profiles add column if not exists headline text;
+alter table public.profiles add column if not exists bio text;
+
+create table if not exists public.profile_updates (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  content text not null check (char_length(content) between 1 and 1000),
+  created_at timestamptz not null default now()
+);
+create index if not exists profile_updates_user_idx on public.profile_updates (user_id, created_at desc);
+alter table public.profile_updates enable row level security;
+drop policy if exists "team_read" on public.profile_updates;
+create policy "team_read" on public.profile_updates for select to authenticated using (public.is_member());
+drop policy if exists "own_insert" on public.profile_updates;
+create policy "own_insert" on public.profile_updates for insert to authenticated with check (public.is_member() and user_id = auth.uid());
+drop policy if exists "own_delete" on public.profile_updates;
+create policy "own_delete" on public.profile_updates for delete to authenticated using (user_id = auth.uid() or public.is_admin());
+
+-- -----------------------------------------------------------------------------
 -- Tempo real
 -- -----------------------------------------------------------------------------
 do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers', 'marketing_assets'] loop
+    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers', 'marketing_assets', 'profile_updates'] loop
       if not exists (
         select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
       ) then
