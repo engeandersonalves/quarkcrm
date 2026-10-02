@@ -1,27 +1,6 @@
 "use client";
 
-import {
-  ArrowLeft,
-  Calculator,
-  CheckCircle2,
-  Eye,
-  FileSignature,
-  FileText,
-  Flame,
-  Loader2,
-  Mail,
-  MapPin,
-  MessageCircle,
-  MessageSquare,
-  Pencil,
-  Phone,
-  PhoneCall,
-  Plus,
-  PlugZap,
-  Send,
-  Trash2,
-  Zap,
-} from "lucide-react";
+import { ArrowLeft, Calculator, CheckCircle2, Eye, FileSignature, FileText, Flame, Loader2, Mail, MapPin, MessageCircle, MessageSquare, Pencil, Phone, PhoneCall, Plus, PlugZap, Send, Trash2, Zap, Receipt } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useState } from "react";
@@ -203,6 +182,11 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
             <Link href={`/documentos/novo?tipo=procuracao&lead=${lead.id}`}>
               <Button variant="secondary">
                 <FileSignature className="h-4 w-4" /> Procuração
+              </Button>
+            </Link>
+            <Link href={`/recibos?lead=${lead.id}`}>
+              <Button variant="secondary">
+                <Receipt className="h-4 w-4" /> Recibo
               </Button>
             </Link>
             {CHARGER_SEGMENTS.includes(seg) && (

@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
+import { BarChart3, CheckSquare, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator, Receipt } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -49,6 +49,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap },
       { href: "/documentos", label: "Documentos", icon: FileSignature, badge: "documents", hint: "aguardando assinatura" },
+      { href: "/recibos", label: "Recibos", icon: Receipt },
       { href: "/marketing", label: "Marketing", icon: Megaphone },
     ],
   },
@@ -237,6 +238,7 @@ function ShellInner({ children }: { children: ReactNode }) {
               <FabItem icon={<UserPlus className="h-5 w-5" />} title="Novo lead" text="Cadastrar um cliente" onClick={() => openLead()} />
               <FabItem icon={<ListTodo className="h-5 w-5" />} title="Nova tarefa" text="Agendar um follow-up" onClick={() => openTask()} />
               <FabItem icon={<Megaphone className="h-5 w-5" />} title="Marketing" text="Artes para Instagram e status" onClick={() => router.push("/marketing")} />
+              <FabItem icon={<Receipt className="h-5 w-5" />} title="Recibo" text="PDF com a assinatura da Quark" onClick={() => router.push("/recibos")} />
               <FabItem icon={<FileSignature className="h-5 w-5" />} title="Procuração ou contrato" text="Documentos com assinatura digital" onClick={() => router.push("/documentos")} />
               <FabItem icon={<Settings className="h-5 w-5" />} title="Configurações" text="Empresa, padrões e alertas" onClick={() => router.push("/configuracoes")} />
             </div>

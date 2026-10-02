@@ -2,7 +2,7 @@
 
 import { AtSign, BatteryCharging, Check, Clock, Download, Info, Mail, MapPin, MessageCircle, Phone, ShieldCheck, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
-import { mergeSettings } from "@/lib/defaults";
+import { DEFAULT_SIGNATURE, mergeSettings } from "@/lib/defaults";
 import { formatDate, formatPhone, whatsappUrl } from "@/lib/format";
 import { brl, fmtNum } from "@/lib/pricing";
 import { COMMON_SOCKET_KW, REF_BATTERY_KWH, chargeHours, fillCondition, mergeSave, saveCardInstallment, type SaveInputs } from "@/lib/save";
@@ -276,7 +276,11 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
           <section className="avoid-break px-6 py-14 sm:px-14">
             <p className="text-xs font-semibold tracking-[0.22em] text-[#2C7A52] uppercase">De acordo</p>
             <div className="mt-12 grid gap-12 sm:grid-cols-2">
-              <Signature name={s.tech_name || s.company_name} role={s.tech_name ? `Responsável técnico${s.tech_registry ? ` · ${s.tech_registry}` : ""}` : s.cnpj ? `CNPJ ${s.cnpj}` : "Contratada"} />
+              <Signature
+                name={s.company_name}
+                role={s.cnpj ? `Contratada · CNPJ ${s.cnpj}` : "Contratada"}
+                image={s.signature_url || DEFAULT_SIGNATURE}
+              />
               <Signature name={accepted?.by || data.lead.name} role="Contratante" />
             </div>
           </section>
@@ -446,9 +450,15 @@ function WarrantyBox({ value, unit, title, text }: { value: number; unit: string
   );
 }
 
-function Signature({ name, role }: { name: string; role: string }) {
+function Signature({ name, role, image }: { name: string; role: string; image?: string | null }) {
   return (
     <div className="pt-3">
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt={`Assinatura de ${name}`} className="mb-2 h-24 w-auto max-w-full object-contain object-left" />
+      ) : (
+        <div className="mb-2 h-24" />
+      )}
       <BrandRule className="mb-3 h-0.5" />
       <p className="font-semibold text-ink-900">{name}</p>
       <p className="text-sm text-ink-500">{role}</p>

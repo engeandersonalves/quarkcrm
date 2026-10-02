@@ -977,13 +977,36 @@ drop policy if exists "own_delete" on public.profile_updates;
 create policy "own_delete" on public.profile_updates for delete to authenticated using (user_id = auth.uid() or public.is_admin());
 
 -- -----------------------------------------------------------------------------
+-- Recibos emitidos (numeração sequencial e histórico)
+-- -----------------------------------------------------------------------------
+create table if not exists public.receipts (
+  id uuid primary key default gen_random_uuid(),
+  number bigint generated always as identity,
+  lead_id uuid references public.leads (id) on delete set null,
+  payer_name text not null,
+  payer_doc text,
+  amount numeric not null check (amount > 0),
+  description text not null,
+  method text,
+  installment text,
+  paid_at date not null default current_date,
+  city text,
+  created_by uuid references public.profiles (id) on delete set null default auth.uid(),
+  created_at timestamptz not null default now()
+);
+create index if not exists receipts_created_idx on public.receipts (created_at desc);
+alter table public.receipts enable row level security;
+drop policy if exists "team_all" on public.receipts;
+create policy "team_all" on public.receipts for all to authenticated using (public.is_member()) with check (public.is_member());
+
+-- -----------------------------------------------------------------------------
 -- Tempo real
 -- -----------------------------------------------------------------------------
 do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers', 'marketing_assets', 'profile_updates'] loop
+    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers', 'marketing_assets', 'profile_updates', 'receipts'] loop
       if not exists (
         select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
       ) then

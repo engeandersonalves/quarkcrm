@@ -2,6 +2,9 @@ import type { ProposalInputs } from "./pricing.ts";
 import type { SaveInputs } from "./save.ts";
 import { DEFAULT_CADENCE, mergeCadence, type CadencePrefs } from "./cadence.ts";
 
+/** Assinatura do responsável técnico da Quark (padrão de todos os documentos assinados pela empresa). */
+export const DEFAULT_SIGNATURE = "/brand/assinatura.png";
+
 export interface CompanySettings {
   company_name: string;
   legal_name: string;
@@ -18,6 +21,8 @@ export interface CompanySettings {
   seller_name: string;
   tech_name: string; // responsável técnico (assinatura das propostas)
   tech_registry: string; // registro profissional (CFT / CREA)
+  /** Assinatura padrão nos documentos assinados pela empresa (recibos, propostas S.A.V.E). PNG sem fundo. */
+  signature_url: string;
   notify_emails: string;
   warranty_modules_years: number;
   warranty_modules_performance_years: number;
@@ -201,6 +206,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   seller_name: "",
   tech_name: "",
   tech_registry: "",
+  signature_url: DEFAULT_SIGNATURE,
   notify_emails: "",
   warranty_modules_years: 12,
   warranty_modules_performance_years: 25,

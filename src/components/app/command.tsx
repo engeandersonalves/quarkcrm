@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CheckSquare, Crown, FileSignature, Megaphone, Zap, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users } from "lucide-react";
+import { BarChart3, CheckSquare, Crown, FileSignature, Megaphone, Zap, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users, Receipt } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { productOf } from "@/lib/constants";
@@ -76,6 +76,7 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
       { id: "p-docs", group: "Ir para", label: "Documentos (procurações e contratos)", icon: <FileSignature className="h-4 w-4" />, keywords: "documentos procuracao equatorial contrato aluguel locacao assinatura", run: go("/documentos") },
       { id: "a-brief", group: "Ações", label: "Plano do dia (missões)", icon: <Zap className="h-4 w-4" />, keywords: "plano do dia missoes sugestoes postar prospeccao", run: () => window.dispatchEvent(new Event("quark:briefing")) },
       { id: "a-profile", group: "Ações", label: "Meu perfil (capa, conquistas e mural)", icon: <Crown className="h-4 w-4" />, keywords: "perfil conquistas capa bio mural atualizacoes", run: go("/perfil") },
+      { id: "a-receipt", group: "Ações", label: "Gerar recibo (PDF com assinatura)", icon: <Receipt className="h-4 w-4" />, keywords: "recibo pagamento quitacao comprovante pdf", run: go("/recibos") },
       { id: "a-quick", group: "Ações", label: "Orçamento rápido (imagem/PDF)", icon: <Zap className="h-4 w-4" />, keywords: "orcamento rapido imagem png pdf whatsapp", run: go("/orcamento-rapido") },
       { id: "n-proc", group: "Ações", label: "Nova procuração (Equatorial)", icon: <FileSignature className="h-4 w-4" />, keywords: "procuracao equatorial assinatura", run: go("/documentos/novo?tipo=procuracao") },
       { id: "n-rent", group: "Ações", label: "Novo contrato de aluguel", icon: <FileSignature className="h-4 w-4" />, keywords: "contrato aluguel locacao locador locatario", run: go("/documentos/novo?tipo=aluguel") },

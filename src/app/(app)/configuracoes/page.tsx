@@ -12,7 +12,7 @@ import { TeamTab } from "@/components/app/team-tab";
 import { Button, Card, CardHeader, Field, ImageField, Input, MoneyInput, NumberInput, PageHeader, Segmented, Select, Switch, Textarea, cx } from "@/components/ui";
 import { ROOF_TYPES } from "@/lib/constants";
 import { mergeSave, type SaveInputs } from "@/lib/save";
-import { DEFAULT_INPUTS, toStoredSettings, type CompanySettings, type KitPreset, type ProposalSections, type RoofKey, type SplashMode } from "@/lib/defaults";
+import { DEFAULT_INPUTS, toStoredSettings, type CompanySettings, type KitPreset, type ProposalSections, type RoofKey, type SplashMode, DEFAULT_SIGNATURE } from "@/lib/defaults";
 import { imagePool, pickDaily, quotePool } from "@/lib/inspiration";
 import { brl, fmtNum, type AmountMode, type PriceComponent, type ProposalInputs } from "@/lib/pricing";
 import { DEFAULT_FAQ, DEFAULT_TIMELINE, SECTION_LABELS } from "@/lib/proposal-content";
@@ -129,6 +129,16 @@ export default function SettingsPage() {
                 <Field label="Endereço" className="sm:col-span-2"><Input value={form.address} onChange={(e) => set("address", e.target.value)} /></Field>
                 <Field label="Responsável técnico" hint="Assina as propostas S.A.V.E"><Input value={form.tech_name} onChange={(e) => set("tech_name", e.target.value)} placeholder="Eng. / Eletrotécnico Nome Sobrenome" /></Field>
                 <Field label="Registro profissional"><Input value={form.tech_registry} onChange={(e) => set("tech_registry", e.target.value)} placeholder="CFT / CREA nº" /></Field>
+                <Field label="Assinatura padrão" hint="Vai nos recibos e nas propostas S.A.V.E. Use PNG sem fundo." className="sm:col-span-2">
+                  <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+                    <ImageField value={form.signature_url} onChange={(v) => set("signature_url", v || DEFAULT_SIGNATURE)} folder="assinaturas" aspect="aspect-[5/2]" label="Trocar assinatura" />
+                    {form.signature_url !== DEFAULT_SIGNATURE && (
+                      <Button variant="ghost" size="sm" onClick={() => set("signature_url", DEFAULT_SIGNATURE)}>
+                        Voltar para a padrão
+                      </Button>
+                    )}
+                  </div>
+                </Field>
                 <Field label="URL do logotipo" hint="PNG ou SVG com fundo transparente" className="sm:col-span-2">
                   <Input value={form.logo_url} onChange={(e) => set("logo_url", e.target.value)} placeholder="https://…/logo.png" />
                 </Field>
