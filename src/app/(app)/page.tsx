@@ -1,6 +1,6 @@
 "use client";
 
-import { Calculator, CheckCircle2, Radar, ChevronRight, Eye, FileText, Flame, Lightbulb, Target, TrendingUp, Users, Zap } from "lucide-react";
+import { Calculator, CheckCircle2, ChevronRight, Eye, FileText, Flame, Lightbulb, Target, TrendingUp, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useApp } from "@/components/app/app-context";
@@ -66,23 +66,6 @@ export default function Dashboard() {
   return (
     <div className="animate-fade-up">
       <HeroBanner greet={greet} firstName={firstName} wonMonth={m?.wonMonth ?? 0} deals={m?.wonMonthCount ?? 0} onNewLead={() => openLead()} />
-
-      <Link
-        href="/prospeccao"
-        className="group relative mb-4 flex items-center gap-4 overflow-hidden rounded-2xl bg-[#07060F] p-4 text-white shadow-soft ring-1 ring-white/10 transition hover:ring-[#F3EA3B]/50 sm:p-5"
-      >
-        <div className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-[#6CC690]/25 blur-3xl" />
-        <span className="relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[#1C1234] ring-1 ring-white/15">
-          <span className="radar-sweep absolute inset-0 rounded-full" />
-          <Radar className="relative h-5 w-5 text-[#F3EA3B]" />
-        </span>
-        <div className="relative min-w-0 flex-1">
-          <p className="text-[10px] font-bold tracking-[0.18em] text-[#F3EA3B] uppercase">Novo · Prospecção ativa</p>
-          <p className="truncate font-semibold">Ache comércios que gastam muita luz perto de você</p>
-          <p className="hidden truncate text-sm text-white/60 sm:block">Foto do telhado, consumo estimado, telefone, e-mail e redes sociais.</p>
-        </div>
-        <ChevronRight className="relative h-5 w-5 shrink-0 text-white/60 transition group-hover:translate-x-0.5 group-hover:text-white" />
-      </Link>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -219,7 +202,7 @@ export default function Dashboard() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{p.lead?.name}</p>
                     <p className="truncate text-xs text-ink-500">
-                      #{p.number} · {p.view_count ? `vista ${p.view_count}× · ${relativeTime(p.viewed_at)}` : relativeTime(p.updated_at)}
+                      #{p.number} · {p.view_count ? `vista ${p.view_count}× · ${relativeTime(p.last_viewed_at ?? p.viewed_at)}` : relativeTime(p.updated_at)}
                     </p>
                   </div>
                   <div className="text-right">

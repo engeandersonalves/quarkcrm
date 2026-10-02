@@ -368,12 +368,6 @@
   background: rgb(255 255 255 / 0.22);
 }
 
-/* Prospecção ativa — radar */
-@keyframes radar-sweep { to { transform: rotate(360deg); } }
-.radar-sweep { animation: radar-sweep 3.2s linear infinite; background: conic-gradient(from 0deg, rgba(243, 234, 59, 0.38), rgba(243, 234, 59, 0) 28%); }
-@keyframes radar-ping { 0% { transform: scale(0.4); opacity: 0.9; } 100% { transform: scale(2.4); opacity: 0; } }
-.radar-ping { animation: radar-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite; }
-
 /* Parede de pôsteres (login) */
 @keyframes poster-up { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -50%, 0); } }
 .poster-col { animation: poster-up var(--dur, 60s) linear infinite; will-change: transform; }
@@ -422,7 +416,7 @@ a:focus-visible, button:focus-visible, [role="tab"]:focus-visible { outline: 2px
 
 /* Transição suave entre telas */
 @keyframes page-in { from { opacity: 0; transform: translate3d(0, 8px, 0); } to { opacity: 1; transform: none; } }
-.page-in { animation: page-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.page-in { animation: page-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 @media (prefers-reduced-motion: reduce) { .page-in, .skeleton { animation: none; } }
 
 /* Notificações (toasts) em vidro */

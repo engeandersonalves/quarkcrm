@@ -101,10 +101,10 @@ function Login() {
             )}
           </div>
 
-          {/* Escada do sucesso: os níveis da Arena */}
+          {/* Escada do sucesso: os níveis */}
           <div className="mt-8 hidden max-w-xl lg:block">
             <p className="mb-3 flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] text-white/50 uppercase">
-              <Trophy className="h-3.5 w-3.5 text-[#F3EA3B]" /> Sua escalada na Arena
+              <Trophy className="h-3.5 w-3.5 text-[#F3EA3B]" /> Sua escalada de níveis
             </p>
             <div className="flex items-end gap-1.5">
               {LEVELS.map((l, i) => (

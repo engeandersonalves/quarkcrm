@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, Crown, Radar, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
+import { BarChart3, CheckSquare, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -20,6 +20,7 @@ import { TaskFormModal } from "./task-form";
 import { Avatar, cx } from "../ui";
 import { AvatarPicker, OpeningFlow } from "./onboarding";
 import { useNavBadges, type NavBadges } from "./nav-badges";
+import { useProposalViewAlerts } from "./view-alerts";
 
 type NavKey = "tasks" | "leads" | "proposals" | "documents";
 interface NavItem {
@@ -46,7 +47,6 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Ferramentas",
     items: [
-      { href: "/prospeccao", label: "Prospecção", icon: Radar },
       { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap },
       { href: "/documentos", label: "Documentos", icon: FileSignature, badge: "documents", hint: "aguardando assinatura" },
       { href: "/marketing", label: "Marketing", icon: Megaphone },
@@ -55,9 +55,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Desempenho",
     items: [
-      { href: "/equipe", label: "Equipe", icon: Crown, admin: true },
       { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
-      { href: "/ranking", label: "Arena", icon: Trophy },
     ],
   },
 ];
@@ -142,6 +140,7 @@ function ShellInner({ children }: { children: ReactNode }) {
   void search;
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const badges = useNavBadges(user.id);
+  useProposalViewAlerts();
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
     try {
@@ -231,8 +230,6 @@ function ShellInner({ children }: { children: ReactNode }) {
           <div className="fixed inset-0 z-30 lg:hidden" onClick={() => setFab(false)}>
             <div className="absolute inset-0 bg-ink-950/40 backdrop-blur-[2px]" />
             <div className="animate-fade-up absolute inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] grid max-h-[calc(100dvh-8rem)] gap-1 overflow-y-auto rounded-3xl bg-white/85 p-2 shadow-lift ring-1 ring-white/70 backdrop-blur-2xl">
-              <FabItem icon={<Radar className="h-5 w-5" />} title="Prospecção ativa · novo" text="Comércios da região com contatos" onClick={() => router.push("/prospeccao")} />
-              {profile?.role === "admin" && <FabItem icon={<Crown className="h-5 w-5" />} title="Central da equipe" text="Ações e tarefas de cada pessoa" onClick={() => router.push("/equipe")} />}
               <FabItem icon={<Calculator className="h-5 w-5" />} title="Orçamento solar" text="Calcular e gerar proposta" onClick={() => router.push("/propostas/nova")} />
               <FabItem icon={<PlugZap className="h-5 w-5" />} title="Orçamento S.A.V.E" text="Carregador de veículo elétrico" onClick={() => router.push("/propostas/nova?tipo=save")} />
               <FabItem icon={<Flame className="h-5 w-5" />} title="Plano do dia" text="Missões para vender mais hoje" onClick={() => window.dispatchEvent(new Event("quark:briefing"))} />
@@ -510,7 +507,7 @@ function XpChip() {
   if (xp == null) return null;
   const { level } = levelOf(xp);
   return (
-    <Link href="/ranking" className="flex h-8 items-center gap-1.5 rounded-full bg-ink-900 px-2.5 text-[11px] font-bold text-white" aria-label={`Nível ${level.n}: ${level.title}`}>
+    <Link href="/perfil" className="flex h-8 items-center gap-1.5 rounded-full bg-ink-900 px-2.5 text-[11px] font-bold text-white" aria-label={`Nível ${level.n}: ${level.title}`}>
       <Trophy className="h-3.5 w-3.5 text-brand-yellow" />
       <span className="text-sun-gradient">{level.title}</span>
       {streak > 1 && (

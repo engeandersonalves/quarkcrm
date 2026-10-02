@@ -39,6 +39,14 @@ export interface CompanySettings {
   integrations: IntegrationPrefs;
   /** Cadência de follow-up por etapa do funil (privado). */
   cadence: CadencePrefs;
+  /** Pastas do Google Drive que alimentam o banco de conteúdo do Marketing. */
+  marketing_drive: DriveFolder[];
+}
+
+export interface DriveFolder {
+  id: string;
+  url: string;
+  name: string;
 }
 
 export interface IntegrationPrefs {
@@ -172,6 +180,7 @@ export const DEFAULT_INPUTS: ProposalInputs = {
 };
 
 export const DEFAULT_SETTINGS: CompanySettings = {
+  marketing_drive: [],
   company_name: "Quark Energia",
   legal_name: "",
   cnpj: "",
@@ -256,6 +265,7 @@ export function mergeSettings(s: Partial<CompanySettings> | null | undefined): C
     capture: { ...DEFAULT_CAPTURE, ...((s?.capture ?? {}) as Partial<CapturePrefs>) },
     integrations: { ...DEFAULT_SETTINGS.integrations, ...((s?.integrations ?? {}) as Partial<IntegrationPrefs>) },
     cadence: mergeCadence(s?.cadence),
+    marketing_drive: Array.isArray(s?.marketing_drive) ? s.marketing_drive : [],
     proposal: {
       ...DEFAULT_SETTINGS.proposal,
       ...proposal,

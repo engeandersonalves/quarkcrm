@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { ViewStatus } from "@/components/proposal/view-status";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -263,6 +264,7 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
                 "Preencha os dados e salve para gerar a proposta"
               )}
             </p>
+            {proposal && <ViewStatus id={proposal.id} className="mt-1.5" />}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

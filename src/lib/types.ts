@@ -71,6 +71,8 @@ export interface Proposal {
   valid_until: string | null;
   sent_at: string | null;
   viewed_at: string | null;
+  /** Última vez que o cliente abriu o link. */
+  last_viewed_at?: string | null;
   view_count: number;
   accepted_at: string | null;
   accepted_by: string | null;

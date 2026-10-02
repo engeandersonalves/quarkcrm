@@ -93,7 +93,7 @@ export function AvatarPicker({ open, onClose, firstTime = false }: { open: boole
           </button>
           <p className="text-[11px] font-bold tracking-[0.2em] text-[#9BD373] uppercase">{firstTime ? "Primeiro passo" : "Seu personagem"}</p>
           <h2 className="mt-2 font-display text-[28px] leading-tight font-semibold">{firstTime ? `${first ? `${first}, q` : "Q"}uem vai dominar o mercado hoje?` : "Escolha sua foto de perfil"}</h2>
-          <p className="mt-1 text-sm text-white/60">Envie sua foto ou escolha um personagem. Ele aparece no ranking da Arena e para toda a equipe.</p>
+          <p className="mt-1 text-sm text-white/60">Envie sua foto ou escolha um personagem. Ele aparece no seu perfil e para toda a equipe.</p>
 
           <div className="mt-6 flex flex-col items-center gap-5 sm:flex-row sm:items-start">
             {/* Prévia grande */}
@@ -557,16 +557,6 @@ export function DailyBriefing({ open, onClose }: { open: boolean; onClose: () =>
                       <Copy className="h-4 w-4" /> Copiar link
                     </Action>
                   </div>
-                  <Link
-                    href="/prospeccao"
-                    onClick={() => {
-                      mark("prospect");
-                      onClose();
-                    }}
-                    className="mt-2 flex h-11 items-center justify-center gap-2 rounded-xl bg-white/10 px-3 text-sm font-semibold ring-1 ring-white/15 hover:bg-white/15"
-                  >
-                    <Target className="h-4 w-4 text-[#F3EA3B]" /> Radar: ache 5 comércios perto de você <ChevronRight className="h-4 w-4" />
-                  </Link>
                 </>
               )}
             </Mission>

@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Check, Copy, CopyPlus, ExternalLink, FileText, Loader2, MessageCircle, Percent, PlugZap, Plus, Receipt, Trash2, User, Wallet, Wrench, X } from "lucide-react";
 import Link from "next/link";
+import { ViewStatus } from "@/components/proposal/view-status";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -180,6 +181,7 @@ export function SaveEditor({ proposal, initialLeadId }: { proposal?: Proposal; i
                 "Sistema de Abastecimento de Veículo Elétrico"
               )}
             </p>
+            {proposal && <ViewStatus id={proposal.id} className="mt-1.5" />}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -296,6 +296,8 @@ begin
 end;
 $$;
 
+alter table public.proposals add column if not exists last_viewed_at timestamptz;
+
 create or replace function public.track_proposal_view(p_token text)
 returns jsonb
 language plpgsql
@@ -308,6 +310,7 @@ begin
   update public.proposals
      set view_count = view_count + 1,
          viewed_at = coalesce(viewed_at, now()),
+         last_viewed_at = now(),
          status = case when status = 'enviada' then 'visualizada' else status end
    where public_token = p_token
   returning id, number, lead_id, view_count into rec;

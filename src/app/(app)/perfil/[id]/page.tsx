@@ -123,7 +123,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   if (!person) {
     return (
       <div className="glass mx-auto max-w-lg rounded-3xl">
-        <Empty icon={<Crown className="h-6 w-6" />} title="Perfil não encontrado" text="Essa pessoa não faz parte da equipe ou o acesso foi bloqueado." action={<Link href="/equipe"><Button size="sm">Ver equipe</Button></Link>} />
+        <Empty icon={<Crown className="h-6 w-6" />} title="Perfil não encontrado" text="Essa pessoa não faz parte da equipe ou o acesso foi bloqueado." action={<Link href="/"><Button size="sm">Voltar ao painel</Button></Link>} />
       </div>
     );
   }
@@ -172,11 +172,6 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
                   <span className="inline-flex items-center gap-1 font-semibold text-ink-700">
                     <Trophy className="h-3.5 w-3.5 text-[#c7be40]" /> Nível {lvl.level.n} · {lvl.level.title}
                   </span>
-                  {data?.rank && (
-                    <span>
-                      {data.rank}º de {data.teamSize} no ranking
-                    </span>
-                  )}
                   {heat.streak > 1 && (
                     <span className="inline-flex items-center gap-1 font-semibold text-orange-600">
                       <Flame className="h-3.5 w-3.5" /> {heat.streak} dias seguidos

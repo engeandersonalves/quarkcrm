@@ -8,7 +8,7 @@ export const FIXED_INVERTER_BRAND = "Sungrow";
 export const FIXED_INVERTER_IMAGE = "https://br.sungrowpower.com/upload/6383252987764629807241080.png";
 
 /** Domínios de imagem servidos pelo nosso próprio endereço (evita bloqueio ao gerar PNG/PDF). */
-export const PROXY_IMAGE_HOSTS = ["vteximg.com.br", "vtexassets.com", "sungrowpower.com"];
+export const PROXY_IMAGE_HOSTS = ["vteximg.com.br", "vtexassets.com", "sungrowpower.com", "lh3.googleusercontent.com"];
 
 export function isProxyHost(url: string) {
   try {

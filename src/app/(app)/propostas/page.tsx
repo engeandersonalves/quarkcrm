@@ -215,7 +215,7 @@ function Proposals() {
                     {proposalSummary(p)} · {formatDate(p.created_at)}
                     {p.view_count > 0 && (
                       <span className="ml-2 inline-flex items-center gap-1 text-violet-600">
-                        <Eye className="h-3 w-3" /> {p.view_count}× · {relativeTime(p.viewed_at)}
+                        <Eye className="h-3 w-3" /> {p.view_count}× · {relativeTime(p.last_viewed_at ?? p.viewed_at)}
                       </span>
                     )}
                   </p>
