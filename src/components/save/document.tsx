@@ -9,6 +9,7 @@ import { COMMON_SOCKET_KW, REF_BATTERY_KWH, chargeHours, fillCondition, mergeSav
 import { Button } from "../ui";
 import { AcceptModal, Brand, BrandFooter, BrandRule, CTA_STYLE, CoverKpi, LeafMark, Explain, PayOption, Photo, Section, SectionTitle, type PublicProposal } from "../proposal/document";
 import { SaveDiagram, WallboxRender } from "../proposal/renders";
+import { ChargeSimulator } from "./charge-sim";
 
 /** Foto padrão da capa (recarga de veículo elétrico). Troque em Configurações → Proposta. */
 const DEFAULT_SAVE_COVER = "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=2000&q=75";
@@ -218,6 +219,17 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
               total segurança. O carregador continua pronto para modelos mais novos e para outros veículos da casa ou da empresa.
             </Explain>
           </Section>
+
+          {/* ===================================================== SIMULADOR */}
+          <section className="no-print px-6 py-14 sm:px-14 sm:py-16">
+            <SectionTitle num="⚡" kicker="Experimente" title="Simulador de recarga" />
+            <p className="mt-3 max-w-2xl leading-relaxed text-ink-600">
+              Veja o seu carregador em ação, em time-lapse. No <b>modo desafio</b>, se algo der errado, aperte o botão vermelho de emergência o mais rápido que puder.
+            </p>
+            <div className="mt-8">
+              <ChargeSimulator powerKw={i.chargerPowerKw} batteryKwh={REF_BATTERY_KWH} emergencyIncluded={i.includeEmergency} />
+            </div>
+          </section>
 
           {/* ================================================= INVESTIMENTO */}
           <section className="print-break relative overflow-hidden px-6 py-14 text-white sm:px-14 sm:py-16" style={{ background: NAVY }}>
