@@ -20,6 +20,17 @@ function sanitize(raw: unknown): PublicCompany {
     const u = str(roofRaw[k]);
     if (u && /^https?:\/\//.test(u)) roofImages[k] = u;
   }
+  const url = (v: unknown) => {
+    const u = str(v);
+    return u && /^https?:\/\//.test(u) ? u : null;
+  };
+  const svcRaw = (cap.serviceImages && typeof cap.serviceImages === "object" ? cap.serviceImages : {}) as Record<string, unknown>;
+  const serviceImages: Record<string, string> = {};
+  for (const k of ["solar", "save", "eletroposto", "manutencao", "gestao"]) {
+    const u = url(svcRaw[k]);
+    if (u) serviceImages[k] = u;
+  }
+  const gallery = (Array.isArray(r.gallery) ? r.gallery : []).map(url).filter((u): u is string => !!u).slice(0, 12);
   const payments = (Array.isArray(cap.payments) ? cap.payments : [])
     .map((p) => (p && typeof p === "object" ? { title: str((p as Record<string, unknown>).title) ?? "", text: str((p as Record<string, unknown>).text) ?? "" } : null))
     .filter((p): p is { title: string; text: string } => !!p && !!p.title);
@@ -29,6 +40,8 @@ function sanitize(raw: unknown): PublicCompany {
     instagram: str(r.instagram),
     city: str(r.city),
     tech_name: str(r.tech_name),
+    about: str(r.about),
+    gallery,
     warranty_modules_performance_years: num(r.warranty_modules_performance_years),
     tariff: num(r.tariff),
     sunHours: num(r.sunHours),
@@ -38,6 +51,8 @@ function sanitize(raw: unknown): PublicCompany {
     gaId: /^G-[A-Z0-9]{4,15}$/i.test(String(r.gaId ?? "").trim()) ? String(r.gaId).trim().toUpperCase() : null,
     capture: {
       roofImages,
+      heroImage: url(cap.heroImage) ?? undefined,
+      serviceImages,
       paymentTitle: str(cap.paymentTitle) ?? DEFAULT_CAPTURE.paymentTitle,
       payments: payments.length ? payments : DEFAULT_CAPTURE.payments,
     },

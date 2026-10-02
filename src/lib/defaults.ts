@@ -59,6 +59,10 @@ export type RoofKey = "ceramic" | "fiber" | "metal" | "slab" | "ground";
 
 export interface CapturePrefs {
   roofImages: Partial<Record<RoofKey, string>>;
+  /** Landing page: foto principal (opcional; sem foto usa a ilustração). */
+  heroImage?: string;
+  /** Landing page: foto de cada serviço (solar, save, eletroposto, manutencao, gestao). */
+  serviceImages?: Partial<Record<string, string>>;
   paymentTitle: string;
   payments: { title: string; text: string }[];
 }

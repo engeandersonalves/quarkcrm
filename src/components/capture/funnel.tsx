@@ -59,6 +59,9 @@ export interface PublicCompany {
   fioBTariff?: number | null;
   publicLighting?: number | null;
   capture?: Partial<CapturePrefs> | null;
+  about?: string | null;
+  /** Fotos de obras realizadas (galeria da proposta). */
+  gallery?: string[];
   metaPixelId?: string | null;
   gaId?: string | null;
 }
@@ -153,12 +156,13 @@ function useCountUp(target: number, ms = 1400) {
   return v;
 }
 
-export function CaptureFunnel({ company }: { company: PublicCompany }) {
+export function CaptureFunnel({ company, inline = false, initialSegment, onStepChange }: { company: PublicCompany; inline?: boolean; initialSegment?: Segment | null; onStepChange?: () => void }) {
   const params = useSearchParams();
-  const embed = params.get("embed") === "1";
+  // inline: dentro da landing page (sem fundo próprio, sem rodapé e sem ocupar a tela toda)
+  const embed = inline || params.get("embed") === "1";
   const source = params.get("origem") || params.get("utm_source") || "Site";
   const startedAt = useRef(Date.now());
-  const initial = params.get("interesse") as Segment | null;
+  const initial = (initialSegment ?? params.get("interesse")) as Segment | null;
 
   const capture: CapturePrefs = {
     roofImages: company.capture?.roofImages ?? {},
@@ -194,7 +198,8 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
     setDir(d);
     setStep(to);
     // Sempre dentro do clique: o retorno de scrollTo nunca pode virar "limpeza" de efeito do React.
-    window.scrollTo(0, 0);
+    if (inline) onStepChange?.();
+    else window.scrollTo(0, 0);
   };
   const next = () => go(flow[Math.min(flow.length - 1, idx + 1)]);
   const back = () => go(flow[Math.max(0, idx - 1)], "pop");
@@ -289,7 +294,7 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
   );
 
   return (
-    <div className={cx("notranslate ios-font relative min-h-dvh overflow-x-hidden text-white", embed ? "bg-transparent" : "bg-[#0E0A1C]")}>
+    <div className={cx("notranslate ios-font relative overflow-x-hidden text-white", !inline && "min-h-dvh", embed ? "bg-transparent" : "bg-[#0E0A1C]")}>
       {!embed && (
         <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
           <div className="ios-float absolute -top-32 -left-24 h-80 w-80 rounded-full bg-[#5B34D6]/40 blur-[110px]" />
@@ -298,8 +303,8 @@ export function CaptureFunnel({ company }: { company: PublicCompany }) {
         </div>
       )}
 
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-[440px] flex-col">
-        <nav className="sticky top-0 z-20 border-b border-white/5 bg-[#0E0A1C]/70 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-2xl backdrop-saturate-150">
+      <div className={cx("relative mx-auto flex w-full max-w-[440px] flex-col", inline ? "min-h-[640px]" : "min-h-dvh")}>
+        <nav className={cx("z-20 border-b border-white/5 bg-[#0E0A1C]/70 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-2xl backdrop-saturate-150", inline ? "relative" : "sticky top-0")}>
           <div className="grid h-11 grid-cols-[1fr_auto_1fr] items-center">
             <div>
               {showBack && (

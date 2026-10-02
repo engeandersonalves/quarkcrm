@@ -358,6 +358,35 @@ export default function SettingsPage() {
           )}
           {tab === "captura" && (
             <Card>
+              <CardHeader icon={<ImageIcon className="h-[18px] w-[18px]" />} title="Fotos da página (landing)" subtitle="Opcional: troque as ilustrações por fotos das suas obras. Sem foto, a página usa as ilustrações da marca. A galeria de obras usa as fotos de Configurações → Proposta." />
+              <div className="grid grid-cols-2 gap-3 px-5 pb-5 sm:grid-cols-3">
+                {(
+                  [
+                    ["hero", "Foto principal (topo)"],
+                    ["solar", "Energia solar"],
+                    ["save", "Carregador veicular"],
+                    ["eletroposto", "Eletroposto"],
+                    ["manutencao", "Limpeza e manutenção"],
+                    ["gestao", "Gestão energética"],
+                  ] as [string, string][]
+                ).map(([k, label]) => (
+                  <Field key={k} label={label}>
+                    <ImageField
+                      value={(k === "hero" ? form.capture.heroImage : form.capture.serviceImages?.[k]) ?? ""}
+                      onChange={(v) =>
+                        set("capture", k === "hero" ? { ...form.capture, heroImage: v } : { ...form.capture, serviceImages: { ...(form.capture.serviceImages ?? {}), [k]: v } })
+                      }
+                      folder="landing"
+                      aspect="aspect-[4/3]"
+                      label="Enviar foto"
+                    />
+                  </Field>
+                ))}
+              </div>
+            </Card>
+          )}
+          {tab === "captura" && (
+            <Card>
               <CardHeader icon={<ImageIcon className="h-[18px] w-[18px]" />} title="Fotos dos telhados" subtitle="Use fotos das suas obras: passam muito mais confiança. Sem foto, usamos uma imagem padrão." />
               <div className="grid grid-cols-2 gap-3 px-5 pb-5 sm:grid-cols-5">
                 {(
