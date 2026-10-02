@@ -459,3 +459,29 @@ a:focus-visible, button:focus-visible, [role="tab"]:focus-visible { outline: 2px
   .lp-spin, .lp-blink, .lp-flow, .lp-charge, .lp-sweep, .lp-drop, .lp-grow, .lp-float, .lp-marquee, .lp-shine::after { animation: none; }
   [data-reveal] { opacity: 1; transform: none; transition: none; }
 }
+
+/* ---------------------------------------------------------- Landing cinematográfica */
+@keyframes cs-rise { from { transform: translate3d(0, 150px, 0); } to { transform: none; } }
+.cs-rise { animation: cs-rise 6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes cs-rays { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+.cs-rays { animation: cs-rays 18s ease-in-out infinite; }
+@keyframes cs-stars { from { opacity: 1; } to { opacity: 0.15; } }
+.cs-stars { animation: cs-stars 7s ease-out both; }
+@keyframes cs-dust { 0% { transform: translate3d(0, 0, 0); opacity: 0; } 20% { opacity: 0.6; } 100% { transform: translate3d(40px, -120px, 0); opacity: 0; } }
+.cs-dust { animation: cs-dust 11s linear infinite; }
+@keyframes cs-kenburns { from { transform: scale(1.08); } to { transform: scale(1); } }
+.cs-kenburns { animation: cs-kenburns 14s cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: 66% 70%; }
+@keyframes cs-letterbox { from { transform: scaleY(1); } to { transform: scaleY(0); } }
+.cs-bar { animation: cs-letterbox 1.6s cubic-bezier(0.7, 0, 0.2, 1) 0.2s both; }
+@keyframes cs-title { from { opacity: 0; transform: translate3d(0, 30px, 0); filter: blur(10px); letter-spacing: 0.02em; } to { opacity: 1; transform: none; filter: blur(0); } }
+.cs-title { animation: cs-title 1.4s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: var(--d, 0.6s); }
+@keyframes cs-scroll { 0% { transform: scaleY(0); transform-origin: top; } 45% { transform: scaleY(1); transform-origin: top; } 55% { transform: scaleY(1); transform-origin: bottom; } 100% { transform: scaleY(0); transform-origin: bottom; } }
+.cs-scroll { animation: cs-scroll 2.4s ease-in-out infinite; }
+.cs-grain { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+@keyframes cs-grain { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-3%, 2%); } 50% { transform: translate(2%, -3%); } 75% { transform: translate(-2%, -1%); } }
+.cs-grain-move { animation: cs-grain 0.9s steps(4) infinite; }
+.cs-outline { -webkit-text-stroke: 1px rgb(255 255 255 / 0.22); color: transparent; }
+@media (prefers-reduced-motion: reduce) {
+  .cs-rise, .cs-rays, .cs-stars, .cs-dust, .cs-kenburns, .cs-bar, .cs-title, .cs-scroll, .cs-grain-move { animation: none; }
+  .cs-bar { transform: scaleY(0); }
+}

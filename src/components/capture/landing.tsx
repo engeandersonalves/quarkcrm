@@ -1,139 +1,124 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import {
-  ArrowRight,
-  BadgeCheck,
-  BatteryCharging,
-  BarChart3,
-  Check,
-  ChevronDown,
-  ClipboardCheck,
-  Cpu,
-  Droplets,
-  FileSignature,
-  HardHat,
-  HeartHandshake,
-  MapPin,
-  MessageCircle,
-  PlugZap,
-  ShieldCheck,
-  Smartphone,
-  Sun,
-  Wrench,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, BarChart3, BatteryCharging, Check, ChevronDown, Droplets, MessageCircle, PlugZap, ShieldCheck, Sun, Wrench, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cx } from "@/components/ui";
 import { whatsappUrl } from "@/lib/format";
-import { brl, fmtNum } from "@/lib/pricing";
-import { FIXED_INVERTER_BRAND, FIXED_INVERTER_IMAGE, FIXED_MODULE_IMAGE, productImg } from "@/lib/product-images";
+import { brl } from "@/lib/pricing";
 import { quickEstimate } from "@/lib/quick-estimate";
 import type { Segment } from "@/lib/types";
+import { SunriseScene } from "./cinematic-scene";
 import { CaptureFunnel, type PublicCompany } from "./funnel";
-import { CleaningArt, EvChargerArt, ManagementArt, SolarHouseArt, StationArt } from "./landing-art";
 
-/* ------------------------------------------------------------------ conteúdo */
+/* ===================================================================== copy */
 
-interface Service {
+interface Poster {
   seg: Segment;
-  name: string;
-  tagline: string;
-  text: string;
-  bullets: string[];
-  stat: { value: string; label: string };
-  icon: ReactNode;
-  color: string;
-  Art: (p: { className?: string }) => ReactNode;
+  n: string;
+  kicker: string;
+  title: string;
+  accent: string;
+  promise: string;
+  details: string[];
+  cta: string;
+  icon: (p: { className?: string }) => ReactNode;
+  grade: string;
+  glow: string;
 }
 
-const SERVICES: Service[] = [
+const POSTERS: Poster[] = [
   {
     seg: "solar",
-    name: "Energia solar",
-    tagline: "Gere a sua própria energia e pague só a taxa mínima.",
-    text: "Projetamos o sistema certo para o seu consumo, cuidamos de toda a burocracia com a distribuidora e instalamos com equipe própria. O sol passa a pagar a sua conta de luz por mais de 25 anos.",
-    bullets: ["Estudo a partir da sua conta de luz", "Projeto de engenharia e homologação na distribuidora", "Placas e inversor de primeira linha", "Monitoramento da geração pelo celular"],
-    stat: { value: "até 95%", label: "de economia na conta" },
-    icon: <Sun className="h-5 w-5" />,
-    color: "from-[#F3EA3B] to-[#F3A33B]",
-    Art: SolarHouseArt,
+    n: "01",
+    kicker: "Solar",
+    title: "Sua própria",
+    accent: "usina.",
+    promise: "O telhado que hoje só esquenta passa a pagar a sua conta de luz. Todo santo dia.",
+    details: ["Estudo feito a partir da sua conta", "Projeto, homologação e instalação inclusos", "Placas e inversor de primeira linha", "Geração acompanhada pelo celular"],
+    cta: "Calcular minha usina",
+    icon: Sun,
+    grade: "from-[#3b1a08] via-[#1a0d10] to-[#07060F]",
+    glow: "bg-[#ff9a3c]",
   },
   {
     seg: "save",
-    name: "Carregador para carro elétrico",
-    tagline: "Abasteça em casa, enquanto dorme, por uma fração da gasolina.",
-    text: "O S.A.V.E é o carregador instalado e pronto para uso: avaliamos a sua instalação elétrica, dimensionamos o circuito com toda a proteção e entregamos funcionando. Com energia solar, a recarga sai praticamente de graça.",
-    bullets: ["Wallbox de 7 a 22 kW, monofásico ou trifásico", "Circuito exclusivo com proteções", "Instalação por eletrotécnico responsável", "Compatível com todos os carros elétricos e híbridos plug-in"],
-    stat: { value: "até 4x", label: "mais barato que gasolina" },
-    icon: <PlugZap className="h-5 w-5" />,
-    color: "from-[#7CC4FF] to-[#2F7BF6]",
-    Art: EvChargerArt,
+    n: "02",
+    kicker: "Carregador",
+    title: "Abasteça",
+    accent: "dormindo.",
+    promise: "O posto agora fica na sua garagem. E a recarga custa uma fração do que você gastaria com gasolina.",
+    details: ["Wallbox de 7 a 22 kW instalado e pronto", "Circuito exclusivo com todas as proteções", "Funciona com qualquer carro elétrico", "Com solar, a recarga sai quase de graça"],
+    cta: "Simular o carregador",
+    icon: PlugZap,
+    grade: "from-[#071a3b] via-[#0b0f24] to-[#07060F]",
+    glow: "bg-[#2F7BF6]",
   },
   {
     seg: "eletroposto",
-    name: "Eletroposto de carga rápida",
-    tagline: "Transforme o seu estacionamento numa nova fonte de receita.",
-    text: "Para postos, hotéis, restaurantes, mercados e shoppings: estudamos o fluxo do seu negócio, dimensionamos a potência e entregamos o eletroposto operando, com a opção de gerar a própria energia com placas na cobertura.",
-    bullets: ["Estudo de viabilidade e retorno", "Carregadores rápidos em corrente contínua", "Cobertura solar opcional", "Atrai clientes que ficam mais tempo no seu negócio"],
-    stat: { value: "nova", label: "fonte de receita" },
-    icon: <BatteryCharging className="h-5 w-5" />,
-    color: "from-[#8FE3B0] to-[#1FA36A]",
-    Art: StationArt,
+    n: "03",
+    kicker: "Eletroposto",
+    title: "Vagas que",
+    accent: "faturam.",
+    promise: "Quem carrega o carro fica mais tempo, consome mais e volta. Transforme vagas paradas em receita.",
+    details: ["Estudo de viabilidade e retorno", "Carregadores rápidos em corrente contínua", "Cobertura solar opcional", "Ideal para postos, hotéis, mercados e restaurantes"],
+    cta: "Simular o eletroposto",
+    icon: BatteryCharging,
+    grade: "from-[#06281c] via-[#08130f] to-[#07060F]",
+    glow: "bg-[#1FA36A]",
   },
   {
     seg: "manutencao",
-    name: "Limpeza e manutenção de usina",
-    tagline: "Placa suja gera menos. Recupere o que você está perdendo.",
-    text: "Poeira, fuligem e fezes de pássaros reduzem a geração sem você perceber. Fazemos a limpeza técnica com produtos adequados e uma inspeção completa do sistema, das placas ao inversor.",
-    bullets: ["Limpeza que não risca nem perde a garantia", "Inspeção de conexões, estrutura e inversor", "Relatório com fotos de antes e depois", "Planos semestrais e anuais"],
-    stat: { value: "até 25%", label: "de geração recuperada" },
-    icon: <Droplets className="h-5 w-5" />,
-    color: "from-[#7DE3F0] to-[#1A9FC0]",
-    Art: CleaningArt,
+    n: "04",
+    kicker: "Manutenção",
+    title: "Placa suja é",
+    accent: "dinheiro no lixo.",
+    promise: "Poeira e fuligem roubam geração em silêncio. A gente devolve cada kWh que a sujeira estava levando.",
+    details: ["Limpeza técnica que não risca as placas", "Inspeção completa do sistema", "Relatório com fotos de antes e depois", "Planos semestrais e anuais"],
+    cta: "Simular a manutenção",
+    icon: Droplets,
+    grade: "from-[#062430] via-[#08121a] to-[#07060F]",
+    glow: "bg-[#1A9FC0]",
   },
   {
     seg: "gestao",
-    name: "Gestão energética",
-    tagline: "Seus créditos de energia trabalhando do jeito certo.",
-    text: "Cuidamos da parte chata: troca de titularidade, rateio dos créditos entre imóveis, revisão das contas e acompanhamento mensal para garantir que nenhum kWh gerado seja desperdiçado.",
-    bullets: ["Troca de titularidade junto à distribuidora", "Rateio de créditos entre imóveis", "Revisão de contas e cobranças indevidas", "Relatório mensal de geração e consumo"],
-    stat: { value: "todo mês", label: "acompanhamento dos créditos" },
-    icon: <BarChart3 className="h-5 w-5" />,
-    color: "from-[#FF9DB8] to-[#E0457B]",
-    Art: ManagementArt,
+    n: "05",
+    kicker: "Gestão",
+    title: "Cada crédito",
+    accent: "no lugar certo.",
+    promise: "Titularidade, rateio entre imóveis e revisão de contas. A burocracia é nossa, a economia é sua.",
+    details: ["Troca de titularidade na distribuidora", "Rateio de créditos entre imóveis", "Revisão de contas e cobranças indevidas", "Relatório mensal de geração e consumo"],
+    cta: "Simular a gestão",
+    icon: BarChart3,
+    grade: "from-[#2b0a26] via-[#140816] to-[#07060F]",
+    glow: "bg-[#E0457B]",
   },
 ];
 
+const BEATS = [
+  { n: "01", title: "De dia, o seu telhado vira uma usina.", text: "As placas transformam luz em energia para a sua casa ou empresa. O que você não usa na hora segue para a rede." },
+  { n: "02", title: "O que sobra vira crédito.", text: "Cada kWh excedente fica guardado na distribuidora por até 60 meses. É energia no banco." },
+  { n: "03", title: "À noite, você usa o que guardou.", text: "No fim do mês, a conta chega com os créditos abatidos. E você paga só o mínimo obrigatório." },
+];
+
 const STEPS = [
-  { icon: <Smartphone className="h-5 w-5" />, title: "Simulação grátis", text: "Em 1 minuto você vê a economia, o tamanho do sistema e o retorno." },
-  { icon: <HardHat className="h-5 w-5" />, title: "Visita técnica", text: "Nosso técnico avalia o telhado e a parte elétrica, sem custo." },
-  { icon: <FileSignature className="h-5 w-5" />, title: "Projeto e homologação", text: "Fazemos o projeto e cuidamos de toda a burocracia com a distribuidora." },
-  { icon: <Zap className="h-5 w-5" />, title: "Instalação e economia", text: "Instalamos, ligamos o sistema e você acompanha a geração pelo app." },
+  { n: "01", title: "Simulação", text: "60 segundos para descobrir quanto você economiza. Sem cadastro chato." },
+  { n: "02", title: "Visita técnica", text: "Um técnico avalia o telhado e a parte elétrica. Sem custo e sem compromisso." },
+  { n: "03", title: "Projeto e homologação", text: "Engenharia, documentação e aprovação na distribuidora. Tudo por nossa conta." },
+  { n: "04", title: "Ligação", text: "Sistema instalado, ligado e monitorado pelo seu celular. Agora é só economizar." },
 ];
 
-const DIFFERENTIALS = [
-  { icon: <Cpu className="h-5 w-5" />, title: "Equipamentos premium", text: "Placas de alta eficiência e inversores de marcas reconhecidas, com certificação." },
-  { icon: <ClipboardCheck className="h-5 w-5" />, title: "Engenharia própria", text: "Projeto feito para o seu imóvel e assinado por responsável técnico." },
-  { icon: <ShieldCheck className="h-5 w-5" />, title: "Garantias de verdade", text: "Garantia dos equipamentos, da instalação e da performance das placas." },
-  { icon: <FileSignature className="h-5 w-5" />, title: "Tudo digital", text: "Proposta online, procuração e contrato assinados pelo celular." },
-  { icon: <Wrench className="h-5 w-5" />, title: "Pós-venda de perto", text: "Acompanhamos a geração e cuidamos da limpeza e manutenção." },
-  { icon: <HeartHandshake className="h-5 w-5" />, title: "Atendimento local", text: "Equipe da região, que conhece a distribuidora e responde rápido." },
+const OBJECTIONS = [
+  ["E se chover ou ficar nublado?", "O sistema é dimensionado pela média do ano. O que sobra nos dias de sol forte vira crédito e cobre os dias nublados."],
+  ["E se eu me mudar?", "Os créditos podem abater a conta de outro imóvel no seu nome, na mesma distribuidora. E o sistema pode ser desmontado e reinstalado."],
+  ["E se der algum problema?", "Os equipamentos têm garantia de fábrica, a instalação tem garantia, e a geração é acompanhada pelo app. Você não fica sozinho."],
+  ["E se eu não tiver o dinheiro agora?", "Dá para financiar. Em muitos casos, a parcela fica perto do valor que você já paga de luz. A diferença é que ela um dia acaba."],
+  ["Vou zerar a minha conta?", "Sempre fica um valor mínimo: a taxa de disponibilidade, a iluminação pública e parte do uso da rede (Fio B). Mas a maior parte da conta desaparece."],
+  ["E se a regra mudar?", "A Lei 14.300 trouxe regras claras para quem gera a própria energia, com uma transição definida. A simulação já considera o que muda."],
 ];
 
-const FAQ = [
-  ["Energia solar funciona em dia nublado ou de chuva?", "Funciona, com geração menor. O sistema é dimensionado pela média do ano: nos dias de sol forte ele gera mais do que você consome e o excedente vira crédito na distribuidora, que compensa os dias de pouca geração."],
-  ["O que acontece com a energia que eu não uso na hora?", "Ela vai para a rede e vira crédito em kWh na sua conta, válido por 60 meses. À noite e em dias nublados você usa esses créditos."],
-  ["Vou zerar a conta de luz?", "A conta cai bastante, mas sempre fica um valor mínimo: a taxa de disponibilidade, a iluminação pública e, pela Lei 14.300, uma parte do uso da rede (Fio B). A simulação já considera tudo isso."],
-  ["Em quanto tempo o sistema se paga?", "Depende da sua conta e da forma de pagamento, mas costuma se pagar em poucos anos. Depois disso, a economia vira lucro por mais de duas décadas. Na simulação você vê o retorno estimado para o seu caso."],
-  ["Posso usar os créditos em outro imóvel?", "Sim. Pelo autoconsumo remoto, os créditos podem abater a conta de outro imóvel no mesmo CPF ou CNPJ, na mesma distribuidora. Cuidamos desse rateio na gestão energética."],
-  ["Precisa de manutenção?", "Pouca. Basicamente limpeza periódica das placas e uma inspeção do sistema. Oferecemos planos de limpeza e manutenção para manter a geração no máximo."],
-  ["Dá para parcelar?", "Sim. Trabalhamos com pagamento à vista com desconto, cartão de crédito e financiamento, em que a parcela muitas vezes fica parecida com a conta que você já paga hoje."],
-];
+/* =============================================================== utilidades */
 
-/* ------------------------------------------------------------------ utilidades */
-
-/** Revela elementos com [data-reveal] quando entram na tela. */
 function useReveal() {
   useEffect(() => {
     const els = [...document.querySelectorAll<HTMLElement>("[data-reveal]")];
@@ -149,47 +134,50 @@ function useReveal() {
             io.unobserve(e.target);
           }
         }),
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.08 },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0.1 },
     );
     els.forEach((e) => io.observe(e));
     return () => io.disconnect();
   }, []);
 }
 
-function CountUp({ to, prefix = "", suffix = "", decimals = 0 }: { to: number; prefix?: string; suffix?: string; decimals?: number }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const [v, setV] = useState(0);
+/** Número que corre até o valor (anima sempre que o valor muda). */
+function Rolling({ value, format }: { value: number; format: (v: number) => string }) {
+  const [v, setV] = useState(value);
+  const from = useRef(value);
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    const start = from.current;
+    const t0 = performance.now();
     let raf = 0;
-    const io = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting) return;
-      io.disconnect();
-      const t0 = performance.now();
-      const tick = (t: number) => {
-        const p = Math.min(1, (t - t0) / 1400);
-        setV(to * (1 - Math.pow(1 - p, 3)));
-        if (p < 1) raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
-    });
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      cancelAnimationFrame(raf);
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / 700);
+      const next = start + (value - start) * (1 - Math.pow(1 - p, 3));
+      setV(next);
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else from.current = value;
     };
-  }, [to]);
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      from.current = value;
+    };
+  }, [value]);
+  return <span className="tabular-nums">{format(v)}</span>;
+}
+
+const Serif = ({ children, className }: { children: ReactNode; className?: string }) => <span className={cx("font-serif font-normal italic", className)}>{children}</span>;
+
+function Chapter({ n, label, className }: { n: string; label: string; className?: string }) {
   return (
-    <span ref={ref} className="tabular-nums">
-      {prefix}
-      {v.toLocaleString("pt-BR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
-      {suffix}
-    </span>
+    <p data-reveal className={cx("flex items-center gap-3 text-[11px] font-semibold tracking-[0.32em] text-white/45 uppercase", className)}>
+      <span className="text-[#F3EA3B]">{n}</span>
+      <span className="h-px w-10 bg-white/25" />
+      {label}
+    </p>
   );
 }
 
-/* ------------------------------------------------------------------ página */
+/* =================================================================== página */
 
 export function CaptureLanding({ company, initialSegment }: { company: PublicCompany; initialSegment?: Segment | null }) {
   useReveal();
@@ -199,26 +187,36 @@ export function CaptureLanding({ company, initialSegment }: { company: PublicCom
   const capture = company.capture ?? {};
   const payments = capture.payments ?? [];
   const gallery = company.gallery ?? [];
+
+  const [bill, setBill] = useState(600);
   const [preset, setPreset] = useState<Segment | null>(initialSegment ?? null);
+  const [presetBill, setPresetBill] = useState<number | undefined>(undefined);
   const [funnelKey, setFunnelKey] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  const [simVisible, setSimVisible] = useState(false);
+  const [openPoster, setOpenPoster] = useState<Segment | null>(null);
   const simRef = useRef<HTMLElement>(null);
 
-  // Exemplo do cartão do topo: conta de R$ 600 com os parâmetros da empresa.
-  const example = useMemo(
+  const est = useMemo(
     () =>
       quickEstimate({
-        bill: 600,
+        bill,
         tariff: Number(company.tariff) || undefined,
         sunHours: Number(company.sunHours) || undefined,
         fioBTariff: company.fioBTariff != null ? Number(company.fioBTariff) : undefined,
         publicLighting: company.publicLighting != null ? Number(company.publicLighting) : undefined,
       }),
-    [company.tariff, company.sunHours, company.fioBTariff, company.publicLighting],
+    [bill, company.tariff, company.sunHours, company.fioBTariff, company.publicLighting],
   );
+  const paid25 = bill * 12 * 25;
+  const pctOff = Math.round(est.savingsPct <= 1 ? est.savingsPct * 100 : est.savingsPct);
 
-  // A barra fixa do celular some enquanto o simulador está na tela.
-  const [simVisible, setSimVisible] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   useEffect(() => {
     const el = simRef.current;
     if (!el) return;
@@ -227,34 +225,26 @@ export function CaptureLanding({ company, initialSegment }: { company: PublicCom
     return () => io.disconnect();
   }, []);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  // Link com ?interesse=… vai direto para o simulador.
-  useEffect(() => {
-    if (initialSegment)
-      setTimeout(() => {
-        const target = window.innerWidth < 1024 ? simRef.current?.querySelector<HTMLElement>("[data-funnel]") : simRef.current;
-        if (target) window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
-      }, 300);
-  }, [initialSegment]);
-
-  const toSim = useCallback((seg?: Segment) => {
-    if (seg) {
-      setPreset(seg);
-      setFunnelKey((k) => k + 1);
-    }
-    // No celular vai direto para o simulador; no computador mostra a seção inteira.
+  const scrollToSim = useCallback(() => {
     requestAnimationFrame(() => {
       const target = window.innerWidth < 1024 ? simRef.current?.querySelector<HTMLElement>("[data-funnel]") : simRef.current;
-      if (!target) return;
-      window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
+      if (target) window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 80, behavior: "smooth" });
     });
   }, []);
+  const toSim = useCallback(
+    (seg?: Segment, withBill?: number) => {
+      if (seg) {
+        setPreset(seg);
+        setPresetBill(withBill);
+        setFunnelKey((k) => k + 1);
+      }
+      scrollToSim();
+    },
+    [scrollToSim],
+  );
+  useEffect(() => {
+    if (initialSegment) setTimeout(scrollToSim, 400);
+  }, [initialSegment, scrollToSim]);
   const funnelTop = useCallback(() => {
     const el = simRef.current?.querySelector<HTMLElement>("[data-funnel]");
     if (!el) return;
@@ -262,244 +252,327 @@ export function CaptureLanding({ company, initialSegment }: { company: PublicCom
     if (Math.abs(window.scrollY - top) > 120) window.scrollTo({ top, behavior: "smooth" });
   }, []);
 
-  const wa = company.whatsapp ? whatsappUrl(company.whatsapp, `Olá! Vim pelo site da ${brand} e quero saber mais sobre energia solar.`) : null;
-  const nav = [
-    ["Serviços", "#servicos"],
-    ["Como funciona", "#como-funciona"],
-    ...(gallery.length ? [["Obras", "#obras"]] : []),
-    ["Dúvidas", "#duvidas"],
-  ];
+  const wa = company.whatsapp ? whatsappUrl(company.whatsapp, `Olá! Vim pelo site da ${brand} e quero entender quanto eu economizo com energia solar.`) : null;
 
   return (
-    <div className="notranslate min-h-dvh overflow-x-clip bg-[#07060F] font-sans text-white antialiased">
+    <div className="notranslate relative min-h-dvh overflow-x-clip bg-[#050409] font-sans text-white antialiased selection:bg-[#F3EA3B] selection:text-[#1C1234]">
+      {/* granulado de película sobre a página inteira */}
+      <div aria-hidden className="pointer-events-none fixed -inset-[10%] z-[60] opacity-[0.07] mix-blend-overlay">
+        <div className="cs-grain cs-grain-move h-full w-full" />
+      </div>
+
       {/* ------------------------------------------------ navegação */}
-      <header className={cx("fixed inset-x-0 top-0 z-40 transition-all duration-300", scrolled ? "bg-[#07060F]/75 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.8)] ring-1 ring-white/5 backdrop-blur-2xl" : "bg-transparent")}>
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:h-[72px] sm:px-6">
+      <header className={cx("fixed inset-x-0 top-0 z-50 transition-all duration-500", scrolled ? "bg-[#050409]/70 backdrop-blur-2xl" : "bg-transparent")}>
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-5 sm:h-20 sm:px-8">
           <a href="#topo" aria-label={brand}>
             <img src="/brand/logo-h-white.png" alt={brand} className="h-8 w-auto sm:h-9" />
           </a>
-          <nav className="hidden items-center gap-7 text-sm text-white/70 md:flex">
-            {nav.map(([l, h]) => (
-              <a key={h} href={h} className="transition hover:text-white">
-                {l}
-              </a>
-            ))}
+          <nav className="hidden items-center gap-8 text-[13px] tracking-wide text-white/60 md:flex">
+            <a href="#custo" className="transition hover:text-white">Quanto você perde</a>
+            <a href="#servicos" className="transition hover:text-white">Serviços</a>
+            <a href="#como-funciona" className="transition hover:text-white">Como funciona</a>
+            <a href="#duvidas" className="transition hover:text-white">Dúvidas</a>
           </nav>
-          <button onClick={() => toSim()} className="lp-shine relative overflow-hidden rounded-full bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] px-4 py-2 text-sm font-bold text-[#1C1234] shadow-[0_8px_24px_-8px_rgba(243,234,59,0.7)] transition hover:brightness-105 sm:px-5 sm:py-2.5">
+          <button onClick={() => toSim()} className="rounded-full bg-white px-5 py-2.5 text-[13px] font-semibold text-[#050409] transition hover:bg-[#F3EA3B]">
             Simular grátis
           </button>
         </div>
       </header>
 
-      {/* ------------------------------------------------ hero */}
-      <section id="topo" className="relative overflow-hidden pt-28 pb-16 sm:pt-36 sm:pb-24">
-        <div className="lp-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]" />
-        <div className="pointer-events-none absolute -top-40 -left-32 h-[34rem] w-[34rem] rounded-full bg-[#5B34D6]/40 blur-[130px]" />
-        <div className="pointer-events-none absolute top-20 -right-40 h-[30rem] w-[30rem] rounded-full bg-[#9BD373]/20 blur-[130px]" />
-        <div className="pointer-events-none absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-[#F3EA3B]/10 blur-[110px]" />
+      {/* ================================================= CENA 1 · abertura */}
+      <section id="topo" className="relative flex min-h-[100svh] items-end overflow-hidden">
+        <div className="cs-kenburns absolute inset-0">
+          {capture.heroImage ? (
+            <img src={capture.heroImage} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <SunriseScene className="absolute top-0 left-0 aspect-[16/9] h-full w-auto max-w-none [transform:translateX(calc(-66%_+_74vw))] md:static md:aspect-auto md:w-full md:[transform:none]" />
+          )}
+        </div>
+        {capture.heroImage && <div className="absolute inset-0 bg-gradient-to-t from-[#050409] via-[#050409]/40 to-[#050409]/30" />}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(5,4,9,0.75)_100%)]" />
+        {/* tarjas de cinema que abrem na entrada */}
+        <div className="cs-bar pointer-events-none absolute inset-x-0 top-0 z-10 h-1/2 origin-top bg-[#050409]" />
+        <div className="cs-bar pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/2 origin-bottom bg-[#050409]" />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-[1.05fr_1fr]">
-          <div>
-            <p data-reveal className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-[12px] font-semibold text-[#F3EA3B] ring-1 ring-white/10 backdrop-blur">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#9BD373] opacity-70" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#9BD373]" />
+        <div className="relative z-20 mx-auto w-full max-w-7xl px-5 pt-32 pb-20 sm:px-8 sm:pb-28">
+          <p className="cs-title text-[11px] font-semibold tracking-[0.4em] text-white/60 uppercase" style={{ ["--d" as string]: "1.1s" }}>
+            {brand}
+            {city ? ` · ${city}` : ""}
+          </p>
+          <h1 className="mt-6 max-w-5xl font-display text-[46px] leading-[0.95] font-semibold tracking-[-0.03em] sm:text-[84px] lg:text-[112px]">
+            <span className="cs-title block" style={{ ["--d" as string]: "1.3s" }}>
+              Pare de alugar
+            </span>
+            <span className="cs-title block" style={{ ["--d" as string]: "1.5s" }}>
+              energia.{" "}
+              <Serif className="bg-gradient-to-r from-[#FFE9A3] via-[#F3EA3B] to-[#9BD373] bg-clip-text pr-2 text-transparent">Gere a sua.</Serif>
+            </span>
+          </h1>
+          <p className="cs-title mt-7 max-w-xl text-[17px] leading-relaxed text-white/70 sm:text-lg" style={{ ["--d" as string]: "1.8s" }}>
+            Todo mês, uma parte do seu dinheiro vai embora com a conta de luz e nunca mais volta. Com a {brand}, o sol que já bate no seu telhado passa a pagar essa conta por mais de {warranty} anos.
+          </p>
+          <div className="cs-title mt-9 flex flex-col gap-3 sm:flex-row sm:items-center" style={{ ["--d" as string]: "2s" }}>
+            <a href="#custo" className="group inline-flex h-14 items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] pr-2 pl-7 text-[15px] font-bold text-[#1C1234] shadow-[0_20px_50px_-15px_rgba(243,234,59,0.6)] transition hover:brightness-105">
+              Calcular quanto eu economizo
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-[#1C1234] text-[#F3EA3B] transition group-hover:translate-x-0.5">
+                <ArrowRight className="h-4 w-4" />
               </span>
-              Energia solar{city ? ` em ${city}` : ""} · simulação gratuita
-            </p>
-            <h1 data-reveal style={{ ["--d" as string]: "0.08s" }} className="mt-5 font-display text-[40px] leading-[1.02] font-semibold tracking-tight sm:text-6xl lg:text-[68px]">
-              Sua conta de luz pode cair{" "}
-              <span className="bg-gradient-to-r from-[#F3EA3B] via-[#c8e05a] to-[#6CC690] bg-clip-text text-transparent">até 95%</span>.
-            </h1>
-            <p data-reveal style={{ ["--d" as string]: "0.16s" }} className="mt-5 max-w-xl text-base leading-relaxed text-white/65 sm:text-lg">
-              Energia solar, carregador para carro elétrico, eletroposto, limpeza de usinas e gestão de créditos. Do projeto à instalação, a {brand} cuida de tudo para você parar de pagar caro na luz.
-            </p>
-            <div data-reveal style={{ ["--d" as string]: "0.24s" }} className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <button onClick={() => toSim("solar")} className="group lp-shine relative inline-flex h-14 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] px-7 text-[16px] font-bold text-[#1C1234] shadow-[0_18px_40px_-14px_rgba(243,234,59,0.75)] transition hover:brightness-105">
-                Simular minha economia <ArrowRight className="h-5 w-5 transition group-hover:translate-x-0.5" />
-              </button>
-              {wa && (
-                <a href={wa} target="_blank" rel="noreferrer" className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-white/[0.07] px-6 text-[15px] font-semibold ring-1 ring-white/15 backdrop-blur transition hover:bg-white/[0.12]">
-                  <MessageCircle className="h-5 w-5 text-[#25D366]" /> Falar no WhatsApp
-                </a>
-              )}
-            </div>
-            <div data-reveal style={{ ["--d" as string]: "0.32s" }} className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-white/60">
-              {["Homologação com a distribuidora", `Garantia de performance de ${warranty} anos`, payments[2]?.title || "Financiamento facilitado"].map((t) => (
-                <span key={t} className="inline-flex items-center gap-1.5">
-                  <BadgeCheck className="h-4 w-4 text-[#9BD373]" /> {t}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Visual */}
-          <div data-reveal style={{ ["--d" as string]: "0.2s" }} className="relative mx-auto w-full max-w-[540px]">
-            <div className="absolute -inset-6 rounded-[44px] bg-gradient-to-br from-[#F3EA3B]/25 via-transparent to-[#6CC690]/25 blur-2xl" />
-            <div className="relative overflow-hidden rounded-[32px] ring-1 ring-white/15 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.9)]">
-              {capture.heroImage ? <img src={capture.heroImage} alt={`Obra da ${brand}`} className="aspect-[4/3] w-full object-cover" /> : <SolarHouseArt className="block aspect-[4/3] w-full" />}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#07060F]/50 via-transparent to-transparent" />
-            </div>
-            <div className="lp-float absolute -bottom-6 -left-3 rounded-2xl bg-white/90 p-3.5 text-[#1C1234] shadow-2xl ring-1 ring-white backdrop-blur-xl sm:-left-8 sm:p-4">
-              <p className="text-[11px] font-semibold text-ink-500">Conta de R$ 600 vira</p>
-              <p className="font-display text-2xl font-bold">{brl(example.billAfter, 0)}</p>
-              <p className="text-[11px] font-semibold text-emerald-600">−{Math.round(example.savingsPct <= 1 ? example.savingsPct * 100 : example.savingsPct)}% todo mês</p>
-            </div>
-            <div className="lp-float absolute -top-5 -right-2 rounded-2xl bg-[#1C1234]/85 p-3.5 shadow-2xl ring-1 ring-white/15 backdrop-blur-xl [animation-delay:-3s] sm:-right-6 sm:p-4">
-              <p className="text-[11px] font-semibold text-white/55">Economia por ano</p>
-              <p className="font-display text-2xl font-bold text-[#F3EA3B]">{brl(example.annualSavings, 0)}</p>
-              <p className="text-[11px] text-white/55">{fmtNum(example.kwp, 1)} kWp · {example.modules} placas</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------ faixa de números */}
-      <section className="relative border-y border-white/5 bg-white/[0.02]">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-10 sm:px-6 lg:grid-cols-4">
-          {[
-            { v: <CountUp to={95} prefix="até " suffix="%" />, l: "de economia na conta de luz" },
-            { v: <CountUp to={warranty} suffix=" anos" />, l: "de garantia de performance das placas" },
-            { v: <CountUp to={Math.round(example.annualSavings)} prefix="R$ " />, l: "de economia por ano numa conta de R$ 600" },
-            { v: <CountUp to={1} suffix=" minuto" />, l: "para simular a sua economia" },
-          ].map((x, i) => (
-            <div key={i} data-reveal style={{ ["--d" as string]: `${i * 0.08}s` }} className="text-center lg:text-left">
-              <p className="bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] bg-clip-text font-display text-3xl font-semibold text-transparent sm:text-4xl">{x.v}</p>
-              <p className="mt-1 text-sm text-white/55">{x.l}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ------------------------------------------------ serviços */}
-      <section id="servicos" className="relative scroll-mt-20 py-20 sm:py-28">
-        <div className="pointer-events-none absolute top-1/3 -left-40 h-96 w-96 rounded-full bg-[#5B34D6]/25 blur-[130px]" />
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-          <SectionTitle kicker="Nossos serviços" title="Uma empresa, cinco formas de economizar" sub="Escolha o que faz sentido para você. Cada serviço tem uma simulação própria, com os números do seu caso." />
-
-          <div className="mt-12 flex snap-x gap-2 overflow-x-auto pb-2 [scrollbar-width:none] sm:flex-wrap sm:justify-center [&::-webkit-scrollbar]:hidden">
-            {SERVICES.map((s) => (
-              <a key={s.seg} href={`#svc-${s.seg}`} className="inline-flex shrink-0 snap-start items-center gap-2 rounded-full bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white/80 ring-1 ring-white/10 transition hover:bg-white/[0.1]">
-                <span className={cx("grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br text-[#1C1234] [&_svg]:h-3.5 [&_svg]:w-3.5", s.color)}>{s.icon}</span>
-                {s.name}
+            </a>
+            {wa && (
+              <a href={wa} target="_blank" rel="noreferrer" className="inline-flex h-14 items-center justify-center gap-2 rounded-full px-6 text-[15px] font-semibold text-white/85 ring-1 ring-white/25 backdrop-blur transition hover:bg-white/10">
+                <MessageCircle className="h-5 w-5" /> Falar com um especialista
               </a>
-            ))}
+            )}
           </div>
+          <p className="cs-title mt-8 text-[12px] tracking-wide text-white/45" style={{ ["--d" as string]: "2.2s" }}>
+            Simulação em 60 segundos · Sem compromisso · Projeto e homologação inclusos
+          </p>
+        </div>
 
-          <div className="mt-14 space-y-20 sm:space-y-28">
-            {SERVICES.map((s, i) => (
-              <article id={`svc-${s.seg}`} key={s.seg} className={cx("grid scroll-mt-28 items-center gap-10 lg:grid-cols-2 lg:gap-16", i % 2 === 1 && "lg:[&>*:first-child]:order-2")}>
-                <div data-reveal className="relative">
-                  <div className={cx("absolute -inset-4 rounded-[40px] bg-gradient-to-br opacity-25 blur-2xl", s.color)} />
-                  <div className="relative overflow-hidden rounded-[30px] ring-1 ring-white/10 shadow-[0_30px_70px_-30px_rgba(0,0,0,0.9)]">
-                    {capture.serviceImages?.[s.seg] ? <img src={capture.serviceImages[s.seg]} alt={s.name} loading="lazy" className="aspect-[4/3] w-full object-cover" /> : <s.Art className="block aspect-[4/3] w-full" />}
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#07060F]/60 via-transparent to-transparent" />
-                    <div className="absolute bottom-4 left-4 rounded-2xl bg-white/90 px-4 py-2.5 text-[#1C1234] shadow-xl backdrop-blur">
-                      <p className="font-display text-xl leading-none font-bold">{s.stat.value}</p>
-                      <p className="mt-0.5 text-[11px] font-semibold text-ink-500">{s.stat.label}</p>
-                    </div>
+        <a href="#custo" aria-label="Rolar" className="absolute bottom-6 left-1/2 z-20 hidden -translate-x-1/2 flex-col items-center gap-2 text-[10px] tracking-[0.3em] text-white/40 uppercase sm:flex">
+          Role
+          <span className="relative h-10 w-px overflow-hidden bg-white/15">
+            <span className="cs-scroll absolute inset-0 bg-white/70" />
+          </span>
+        </a>
+      </section>
+
+      {/* ================================================= CENA 2 · o custo invisível */}
+      <section id="custo" className="relative scroll-mt-16 py-24 sm:py-36">
+        <div className="pointer-events-none absolute top-0 left-1/2 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <Chapter n="01" label="O custo invisível" />
+          <h2 data-reveal className="mt-6 max-w-4xl font-display text-[36px] leading-[1.02] font-semibold tracking-[-0.025em] sm:text-6xl">
+            Uma conta de luz parece pequena. <Serif className="text-white/55">Até você somar.</Serif>
+          </h2>
+
+          <div className="mt-14 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
+            {/* lado escuro: o que você perde */}
+            <div data-reveal className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#1a0b14] to-[#0b0710] p-7 ring-1 ring-white/10 sm:p-10">
+              <div className="pointer-events-none absolute -top-24 -right-16 h-72 w-72 rounded-full bg-[#ff4d4d]/10 blur-3xl" />
+              <label htmlFor="lp-bill" className="text-sm text-white/55">
+                Quanto vem a sua conta de luz por mês?
+              </label>
+              <p className="mt-2 font-display text-5xl font-semibold tracking-tight sm:text-6xl">
+                <Rolling value={bill} format={(v) => brl(Math.round(v / 10) * 10, 0)} />
+              </p>
+              <input
+                id="lp-bill"
+                type="range"
+                min={150}
+                max={5000}
+                step={50}
+                value={bill}
+                onChange={(e) => setBill(Number(e.target.value))}
+                className="anam-range mt-6 w-full"
+                style={{ ["--fill" as string]: `${((bill - 150) / (5000 - 150)) * 100}%` }}
+              />
+              <div className="mt-1 flex justify-between text-[11px] text-white/35">
+                <span>R$ 150</span>
+                <span>R$ 5.000</span>
+              </div>
+              <div className="mt-10 border-t border-white/10 pt-8">
+                <p className="text-sm text-white/55">Em 25 anos, você entrega à distribuidora</p>
+                <p className="mt-1 font-display text-[44px] leading-none font-semibold tracking-tight text-[#ff7a6b] sm:text-[64px]">
+                  <Rolling value={paid25} format={(v) => brl(v, 0)} />
+                </p>
+                <p className="mt-3 text-[13px] text-white/40">E isso sem contar os reajustes da tarifa, que acontecem todo ano.</p>
+              </div>
+            </div>
+
+            {/* lado claro: o que fica com você */}
+            <div data-reveal style={{ ["--d" as string]: "0.12s" }} className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#F3EA3B] via-[#d6e563] to-[#6CC690] p-7 text-[#1C1234] sm:p-10">
+              <div className="pointer-events-none absolute -bottom-24 -left-10 h-72 w-72 rounded-full bg-white/40 blur-3xl" />
+              <p className="relative text-[11px] font-bold tracking-[0.28em] uppercase opacity-60">Com energia solar</p>
+              <div className="relative mt-6 grid gap-7">
+                <div>
+                  <p className="text-sm opacity-70">A sua conta cai para cerca de</p>
+                  <p className="font-display text-5xl font-semibold tracking-tight">
+                    <Rolling value={est.billAfter} format={(v) => brl(v, 0)} />
+                    <span className="text-xl font-medium opacity-60"> /mês</span>
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm opacity-70">No seu bolso, por ano</p>
+                    <p className="font-display text-3xl font-semibold">
+                      <Rolling value={est.annualSavings} format={(v) => brl(v, 0)} />
+                    </p>
                   </div>
-                  {s.seg === "solar" && (
-                    <div className="absolute -right-2 -bottom-8 hidden gap-2 sm:flex">
-                      {[
-                        { src: FIXED_MODULE_IMAGE, label: "Placas bifaciais" },
-                        { src: FIXED_INVERTER_IMAGE, label: `Inversor ${FIXED_INVERTER_BRAND}` },
-                      ].map((p) => (
-                        <div key={p.label} className="lp-float w-28 rounded-2xl bg-white/95 p-2 text-center shadow-2xl ring-1 ring-white">
-                          <img src={productImg(p.src)} alt={p.label} loading="lazy" className="mx-auto h-20 w-full object-contain" />
-                          <p className="mt-1 text-[10px] font-bold text-[#1C1234]">{p.label}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div>
+                    <p className="text-sm opacity-70">Redução na conta</p>
+                    <p className="font-display text-3xl font-semibold">{pctOff}%</p>
+                  </div>
                 </div>
-                <div data-reveal style={{ ["--d" as string]: "0.1s" }}>
-                  <span className={cx("inline-grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br text-[#1C1234] shadow-lg", s.color)}>{s.icon}</span>
-                  <h3 className="mt-5 font-display text-3xl font-semibold tracking-tight sm:text-4xl">{s.name}</h3>
-                  <p className="mt-2 text-lg text-[#F3EA3B]/90">{s.tagline}</p>
-                  <p className="mt-4 leading-relaxed text-white/60">{s.text}</p>
-                  <ul className="mt-6 grid gap-2.5 sm:grid-cols-2">
-                    {s.bullets.map((b) => (
-                      <li key={b} className="flex items-start gap-2.5 text-sm text-white/80">
-                        <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#9BD373]/20 text-[#9BD373]">
-                          <Check className="h-3 w-3" strokeWidth={3} />
-                        </span>
-                        {b}
-                      </li>
-                    ))}
-                  </ul>
-                  <button onClick={() => toSim(s.seg)} className="group mt-8 inline-flex h-12 items-center gap-2 rounded-2xl bg-white px-6 text-[15px] font-bold text-[#1C1234] shadow-[0_14px_30px_-14px_rgba(255,255,255,0.5)] transition hover:bg-[#F3EA3B]">
-                    Simular {s.seg === "solar" ? "energia solar" : s.name.toLowerCase()} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
-                  </button>
+                <div className="rounded-2xl bg-[#1C1234]/90 p-5 text-white">
+                  <p className="text-sm text-white/60">Economia estimada em 25 anos</p>
+                  <p className="font-display text-4xl font-semibold text-[#F3EA3B]">
+                    <Rolling value={est.savings25y} format={(v) => brl(v, 0)} />
+                  </p>
                 </div>
-              </article>
-            ))}
+              </div>
+              <button onClick={() => toSim("solar", bill)} className="group relative mt-8 inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#1C1234] text-[15px] font-bold text-white transition hover:bg-[#2a1d4d]">
+                Quero o estudo completo da minha conta <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+              </button>
+              <p className="relative mt-3 text-center text-[11px] opacity-60">Estimativa com a tarifa da sua região. O estudo completo considera o seu telhado e o seu consumo real.</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ------------------------------------------------ como funciona */}
-      <section id="como-funciona" className="relative scroll-mt-20 overflow-hidden bg-gradient-to-b from-[#0E0A1C] to-[#07060F] py-20 sm:py-28">
-        <div className="pointer-events-none absolute -right-32 top-10 h-96 w-96 rounded-full bg-[#9BD373]/15 blur-[130px]" />
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-          <SectionTitle kicker="Como funciona" title="Do primeiro contato à conta baixa" sub="Você acompanha cada etapa pelo celular. A burocracia fica com a gente." />
-          <div className="relative mt-14 grid gap-5 md:grid-cols-4">
-            <div className="absolute top-7 right-[12%] left-[12%] hidden h-px bg-gradient-to-r from-[#F3EA3B]/0 via-[#F3EA3B]/50 to-[#6CC690]/0 md:block" />
-            {STEPS.map((s, i) => (
-              <div key={s.title} data-reveal style={{ ["--d" as string]: `${i * 0.1}s` }} className="relative rounded-3xl bg-white/[0.04] p-6 ring-1 ring-white/10 backdrop-blur md:bg-transparent md:p-0 md:text-center md:ring-0">
-                <span className="relative inline-grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-[#2a1d4d] to-[#1C1234] text-[#F3EA3B] shadow-[0_14px_30px_-12px_rgba(91,52,214,0.8)] ring-1 ring-white/15">
-                  {s.icon}
-                  <span className="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-[#F3EA3B] to-[#9BD373] text-[11px] font-bold text-[#1C1234]">{i + 1}</span>
-                </span>
-                <h3 className="mt-4 font-display text-lg font-semibold">{s.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-white/55">{s.text}</p>
+      {/* ================================================= CENA 3 · a virada */}
+      <section className="relative overflow-hidden py-24 sm:py-36">
+        <div className="pointer-events-none absolute top-1/3 -left-40 h-[36rem] w-[36rem] rounded-full bg-[#5B34D6]/20 blur-[150px]" />
+        <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
+          <Chapter n="02" label="A virada" />
+          <h2 data-reveal className="mt-6 max-w-4xl font-display text-[36px] leading-[1.02] font-semibold tracking-[-0.025em] sm:text-6xl">
+            O sol nasce todos os dias. <Serif className="bg-gradient-to-r from-[#FFE9A3] to-[#F3EA3B] bg-clip-text text-transparent">A questão é para quem ele trabalha.</Serif>
+          </h2>
+          <div className="mt-16 grid gap-px overflow-hidden rounded-[32px] bg-white/10 ring-1 ring-white/10 md:grid-cols-3">
+            {BEATS.map((b, i) => (
+              <div key={b.n} data-reveal style={{ ["--d" as string]: `${i * 0.12}s` }} className="relative bg-[#08070e] p-8 sm:p-10">
+                <p className="cs-outline font-display text-[88px] leading-none font-bold sm:text-[110px]">{b.n}</p>
+                <h3 className="mt-4 font-display text-2xl leading-tight font-semibold">{b.title}</h3>
+                <p className="mt-3 leading-relaxed text-white/55">{b.text}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ------------------------------------------------ simulador */}
-      <section id="simulador" ref={simRef} className="relative scroll-mt-16 overflow-hidden py-20 sm:py-28">
-        <div className="pointer-events-none absolute top-1/4 left-1/4 h-[30rem] w-[30rem] rounded-full bg-[#5B34D6]/30 blur-[140px]" />
-        <div className="pointer-events-none absolute right-10 bottom-0 h-80 w-80 rounded-full bg-[#F3EA3B]/10 blur-[120px]" />
-        <div className="relative mx-auto grid max-w-6xl items-start gap-12 px-4 sm:px-6 lg:grid-cols-[1fr_440px]">
-          <div className="lg:sticky lg:top-28">
-            <SectionTitle align="left" kicker="Simulação gratuita" title="Veja os seus números em 1 minuto" sub="Responda poucas perguntas e receba na hora a economia, o tamanho do sistema e as formas de pagamento. Sem compromisso." />
-            <ul className="mt-8 grid gap-3">
-              {["Cálculo com a tarifa e as regras atuais da distribuidora", "Resultado na tela e por e-mail", "Um especialista te chama só se você quiser"].map((t) => (
+      {/* ================================================= CENA 4 · serviços (pôsteres) */}
+      <section id="servicos" className="relative scroll-mt-16 py-24 sm:py-36">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <Chapter n="03" label="Em cartaz" />
+              <h2 data-reveal className="mt-6 max-w-3xl font-display text-[36px] leading-[1.02] font-semibold tracking-[-0.025em] sm:text-6xl">
+                Cinco jeitos de <Serif className="text-[#F3EA3B]">nunca mais</Serif> pagar caro pela energia.
+              </h2>
+            </div>
+            <p data-reveal className="max-w-sm text-white/55">Toque em um cartaz para ver o que está incluso. Cada serviço tem a sua própria simulação.</p>
+          </div>
+        </div>
+        <div className="mt-14 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-6 [scrollbar-width:none] sm:px-8 lg:mx-auto lg:grid lg:max-w-7xl lg:grid-cols-5 lg:overflow-visible [&::-webkit-scrollbar]:hidden">
+          {POSTERS.map((p, i) => {
+            const open = openPoster === p.seg;
+            const photo = capture.serviceImages?.[p.seg];
+            return (
+              <article
+                key={p.seg}
+                data-reveal
+                style={{ ["--d" as string]: `${i * 0.08}s` }}
+                onClick={() => setOpenPoster(open ? null : p.seg)}
+                className={cx("group relative aspect-[2/3] w-[78vw] max-w-[320px] shrink-0 cursor-pointer snap-center overflow-hidden rounded-[26px] ring-1 ring-white/10 transition duration-500 sm:w-[46vw] lg:w-auto lg:max-w-none", open ? "ring-[#F3EA3B]/60" : "hover:-translate-y-1.5 hover:ring-white/30")}
+              >
+                <div className={cx("absolute inset-0 bg-gradient-to-b", p.grade)} />
+                {photo && <img src={photo} alt={p.kicker} loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-70 mix-blend-luminosity transition duration-700 group-hover:scale-105" />}
+                <div className={cx("absolute -top-16 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full opacity-40 blur-[70px] transition duration-700 group-hover:opacity-70", p.glow)} />
+                {!photo && <p.icon className="absolute top-[18%] left-1/2 h-40 w-40 -translate-x-1/2 text-white/[0.07] transition duration-700 group-hover:scale-110 group-hover:text-white/[0.12]" />}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#050409] via-[#050409]/50 to-transparent" />
+
+                <div className="relative flex h-full flex-col p-6">
+                  <div className="flex items-center justify-between text-[10px] font-semibold tracking-[0.3em] text-white/50 uppercase">
+                    <span>Nº {p.n}</span>
+                    <span>{p.kicker}</span>
+                  </div>
+                  <div className="mt-auto">
+                    <h3 className="font-display text-[28px] leading-[1.02] font-semibold tracking-tight break-words lg:text-[25px] xl:text-[28px]">
+                      {p.title} <Serif className="block text-[#F3EA3B]">{p.accent}</Serif>
+                    </h3>
+                    <p className={cx("mt-3 text-[13px] leading-relaxed text-white/65 transition-all duration-500", open ? "line-clamp-none" : "line-clamp-3")}>{p.promise}</p>
+                    <div className={cx("grid transition-all duration-500", open ? "mt-4 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
+                      <ul className="space-y-1.5 overflow-hidden">
+                        {p.details.map((d) => (
+                          <li key={d} className="flex gap-2 text-[12.5px] text-white/80">
+                            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9BD373]" strokeWidth={3} /> {d}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toSim(p.seg);
+                      }}
+                      className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white/10 text-[13px] font-semibold ring-1 ring-white/20 backdrop-blur transition hover:bg-white hover:text-[#050409]"
+                    >
+                      {p.cta} <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ================================================= CENA 5 · como funciona */}
+      <section id="como-funciona" className="relative scroll-mt-16 border-y border-white/[0.06] bg-[#08070e] py-24 sm:py-32">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <Chapter n="04" label="Como funciona" />
+          <h2 data-reveal className="mt-6 max-w-3xl font-display text-[36px] leading-[1.02] font-semibold tracking-[-0.025em] sm:text-6xl">
+            Você decide. <Serif className="text-white/55">A gente resolve o resto.</Serif>
+          </h2>
+          <ol className="mt-16 grid gap-10 md:grid-cols-4 md:gap-6">
+            {STEPS.map((s, i) => (
+              <li key={s.n} data-reveal style={{ ["--d" as string]: `${i * 0.1}s` }} className="relative">
+                <div className="flex items-center gap-4">
+                  <span className="font-serif text-5xl text-[#F3EA3B] italic">{s.n}</span>
+                  {i < STEPS.length - 1 && <span className="hidden h-px flex-1 bg-gradient-to-r from-white/30 to-transparent md:block" />}
+                </div>
+                <h3 className="mt-4 font-display text-xl font-semibold">{s.title}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-white/55">{s.text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* ================================================= CENA 6 · simulador */}
+      <section id="simulador" ref={simRef} className="relative scroll-mt-16 overflow-hidden py-24 sm:py-36">
+        <div className="pointer-events-none absolute top-10 left-[15%] h-[34rem] w-[34rem] rounded-full bg-[#ff9a3c]/10 blur-[150px]" />
+        <div className="pointer-events-none absolute right-[10%] bottom-0 h-[28rem] w-[28rem] rounded-full bg-[#5B34D6]/25 blur-[140px]" />
+        <div className="relative mx-auto grid max-w-7xl items-start gap-14 px-5 sm:px-8 lg:grid-cols-[1fr_440px]">
+          <div className="lg:sticky lg:top-32">
+            <Chapter n="05" label="O seu estudo" />
+            <h2 data-reveal className="mt-6 font-display text-[36px] leading-[1.02] font-semibold tracking-[-0.025em] sm:text-6xl">
+              Em 60 segundos, você sabe <Serif className="bg-gradient-to-r from-[#FFE9A3] to-[#9BD373] bg-clip-text text-transparent">exatamente</Serif> quanto vai economizar.
+            </h2>
+            <p data-reveal className="mt-6 max-w-lg text-lg leading-relaxed text-white/60">
+              Sem planilha, sem visita, sem vendedor insistente. Você responde poucas perguntas e vê na hora o tamanho do sistema, a economia e as formas de pagamento.
+            </p>
+            <ul data-reveal className="mt-8 space-y-3">
+              {["Cálculo com a tarifa e as regras atuais da distribuidora", "Resultado na tela e no seu e-mail", "Um especialista só te chama se você quiser"].map((t) => (
                 <li key={t} className="flex items-center gap-3 text-white/75">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-[#F3EA3B] to-[#9BD373] text-[#1C1234]">
-                    <Check className="h-4 w-4" strokeWidth={3} />
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#9BD373]/20 text-[#9BD373]">
+                    <Check className="h-3.5 w-3.5" strokeWidth={3} />
                   </span>
                   {t}
                 </li>
               ))}
             </ul>
-            {wa && (
-              <a href={wa} target="_blank" rel="noreferrer" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[#9BD373] hover:underline">
-                <MessageCircle className="h-4 w-4" /> Prefere conversar? Chame no WhatsApp
-              </a>
-            )}
           </div>
           <div data-funnel className="relative">
-            <div className="absolute -inset-3 rounded-[46px] bg-gradient-to-br from-[#F3EA3B]/30 via-[#5B34D6]/20 to-[#6CC690]/30 blur-xl" />
-            <div className="relative overflow-hidden rounded-[38px] bg-[#0E0A1C] ring-1 ring-white/15 shadow-[0_40px_90px_-30px_rgba(0,0,0,0.95)]">
-              <CaptureFunnel key={funnelKey} company={company} inline initialSegment={preset} onStepChange={funnelTop} />
+            <div className="absolute -inset-4 rounded-[48px] bg-gradient-to-br from-[#F3EA3B]/25 via-[#ff9a3c]/10 to-[#5B34D6]/30 blur-2xl" />
+            <div className="relative overflow-hidden rounded-[38px] bg-[#0E0A1C] ring-1 ring-white/15 shadow-[0_50px_100px_-30px_rgba(0,0,0,1)]">
+              <CaptureFunnel key={funnelKey} company={company} inline initialSegment={preset} initialBill={presetBill} onStepChange={funnelTop} />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ------------------------------------------------ obras */}
+      {/* ================================================= obras (película) */}
       {gallery.length > 0 && (
-        <section id="obras" className="relative scroll-mt-20 py-20 sm:py-24">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <SectionTitle kicker="Obras entregues" title="Projetos que já estão gerando economia" />
-            <div className="mt-12 columns-2 gap-3 sm:gap-4 lg:columns-3">
-              {gallery.map((src, i) => (
-                <div key={src} data-reveal style={{ ["--d" as string]: `${(i % 3) * 0.08}s` }} className="group mb-3 break-inside-avoid overflow-hidden rounded-3xl ring-1 ring-white/10 sm:mb-4">
-                  <img src={src} alt={`Obra ${i + 1} da ${brand}`} loading="lazy" className="w-full transition duration-700 group-hover:scale-105" />
+        <section className="relative overflow-hidden py-20">
+          <div className="mx-auto max-w-7xl px-5 sm:px-8">
+            <Chapter n="—" label="Bastidores · obras entregues" />
+          </div>
+          <div className="mt-10 bg-black py-4">
+            <div className="flex w-max gap-3 lp-marquee">
+              {[...gallery, ...gallery].map((src, i) => (
+                <div key={i} className="relative h-56 w-80 shrink-0 overflow-hidden rounded-md sm:h-72 sm:w-[26rem]">
+                  <img src={src} alt={`Obra ${(i % gallery.length) + 1}`} loading="lazy" className="h-full w-full object-cover" />
                 </div>
               ))}
             </div>
@@ -507,112 +580,133 @@ export function CaptureLanding({ company, initialSegment }: { company: PublicCom
         </section>
       )}
 
-      {/* ------------------------------------------------ diferenciais */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#07060F] to-[#0E0A1C] py-20 sm:py-28">
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
-          <SectionTitle kicker={`Por que a ${brand}`} title="Feito para durar 25 anos" />
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {DIFFERENTIALS.map((d, i) => (
-              <div key={d.title} data-reveal style={{ ["--d" as string]: `${(i % 3) * 0.08}s` }} className="group relative overflow-hidden rounded-3xl bg-white/[0.04] p-6 ring-1 ring-white/10 backdrop-blur transition duration-300 hover:-translate-y-1 hover:bg-white/[0.07]">
-                <div className="pointer-events-none absolute -top-12 -right-10 h-32 w-32 rounded-full bg-[#9BD373]/0 blur-2xl transition group-hover:bg-[#9BD373]/20" />
-                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-[#F3EA3B] to-[#9BD373] text-[#1C1234]">{d.icon}</span>
-                <h3 className="mt-4 font-display text-lg font-semibold">{d.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-white/55">{d.text}</p>
-              </div>
+      {/* ================================================= CENA 7 · objeções */}
+      <section id="duvidas" className="relative scroll-mt-16 py-24 sm:py-36">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <Chapter n="06" label="E se…?" />
+          <h2 data-reveal className="mt-6 max-w-3xl font-display text-[36px] leading-[1.02] font-semibold tracking-[-0.025em] sm:text-6xl">
+            As perguntas que todo mundo faz <Serif className="text-white/55">antes de decidir.</Serif>
+          </h2>
+          <div className="mt-14 grid gap-3 md:grid-cols-2">
+            {OBJECTIONS.map(([q, a], i) => (
+              <Objection key={q} q={q} a={a} delay={(i % 2) * 0.08} />
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ================================================= CENA 8 · oferta */}
+      <section className="relative overflow-hidden py-24 sm:py-32">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <div className="grid items-end gap-10 lg:grid-cols-[1.2fr_1fr]">
+            <div>
+              <Chapter n="07" label="Pagamento" />
+              <h2 data-reveal className="mt-6 font-display text-[36px] leading-[1.02] font-semibold tracking-[-0.025em] sm:text-6xl">
+                Troque a conta de luz por uma parcela <Serif className="text-[#F3EA3B]">que um dia acaba.</Serif>
+              </h2>
+            </div>
+            <p data-reveal className="text-lg leading-relaxed text-white/60">
+              Em muitos casos, o financiamento cabe no valor que você já gasta com energia todo mês. A diferença: a parcela tem fim. A conta de luz, não.
+            </p>
+          </div>
+          {payments.length > 0 && (
+            <div className="mt-14 grid gap-4 md:grid-cols-3">
+              {payments.map((p, i) => {
+                const best = i === payments.length - 1;
+                return (
+                  <div key={p.title} data-reveal style={{ ["--d" as string]: `${i * 0.08}s` }} className={cx("relative overflow-hidden rounded-[28px] p-8 ring-1", best ? "bg-gradient-to-br from-[#F3EA3B] to-[#9BD373] text-[#1C1234] ring-transparent" : "bg-white/[0.04] ring-white/10")}>
+                    <p className={cx("text-[11px] font-bold tracking-[0.28em] uppercase", best ? "opacity-60" : "text-white/40")}>Opção {i + 1}</p>
+                    <p className="mt-4 font-display text-2xl font-semibold">{p.title}</p>
+                    <p className={cx("mt-2", best ? "opacity-75" : "text-white/55")}>{p.text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* garantia */}
+          <div data-reveal className="mt-6 grid items-center gap-8 overflow-hidden rounded-[28px] bg-white/[0.03] p-8 ring-1 ring-white/10 sm:p-10 lg:grid-cols-[auto_1fr]">
+            <div className="flex items-baseline gap-3">
+              <span className="font-display text-[88px] leading-none font-bold tracking-tight sm:text-[120px]">{warranty}</span>
+              <span className="font-serif text-2xl text-[#F3EA3B] italic">anos</span>
+            </div>
+            <div>
+              <p className="font-display text-2xl font-semibold">de garantia de performance nas placas.</p>
+              <div className="mt-5 grid gap-3 text-[14px] text-white/60 sm:grid-cols-2">
+                {[
+                  [<ShieldCheck key="s" className="h-4 w-4" />, "Equipamentos de primeira linha, com certificação"],
+                  [<Wrench key="w" className="h-4 w-4" />, "Projeto assinado por responsável técnico"],
+                  [<Zap key="z" className="h-4 w-4" />, "Homologação na distribuidora por nossa conta"],
+                  [<MessageCircle key="m" className="h-4 w-4" />, "Pós-venda de perto, com equipe da região"],
+                ].map(([icon, t]) => (
+                  <p key={String(t)} className="flex items-center gap-2.5">
+                    <span className="text-[#9BD373]">{icon}</span> {t}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
           {company.about && (
-            <p data-reveal className="mx-auto mt-12 max-w-3xl text-center text-[17px] leading-relaxed text-white/65 italic">
+            <p data-reveal className="mx-auto mt-14 max-w-3xl text-center font-serif text-xl leading-relaxed text-white/60 italic">
               “{company.about}”
             </p>
           )}
         </div>
       </section>
 
-      {/* ------------------------------------------------ pagamento */}
-      {payments.length > 0 && (
-        <section className="relative py-20 sm:py-24">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <SectionTitle kicker="Formas de pagamento" title={capture.paymentTitle || "Condições que cabem no seu bolso"} />
-            <div className="mt-12 grid gap-4 md:grid-cols-3">
-              {payments.map((p, i) => (
-                <div key={p.title} data-reveal style={{ ["--d" as string]: `${i * 0.08}s` }} className={cx("relative overflow-hidden rounded-3xl p-7 ring-1", i === payments.length - 1 ? "bg-gradient-to-br from-[#2a1d4d] to-[#1C1234] ring-[#F3EA3B]/40" : "bg-white/[0.04] ring-white/10")}>
-                  {i === payments.length - 1 && <span className="absolute top-4 right-4 rounded-full bg-[#F3EA3B] px-2.5 py-0.5 text-[10px] font-bold text-[#1C1234]">Mais escolhido</span>}
-                  <p className="font-display text-2xl font-semibold">{p.title}</p>
-                  <p className="mt-2 text-white/60">{p.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ------------------------------------------------ dúvidas */}
-      <section id="duvidas" className="relative scroll-mt-20 py-20 sm:py-24">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <SectionTitle kicker="Dúvidas frequentes" title="Tudo o que perguntam antes de instalar" />
-          <div className="mt-10 space-y-3">
-            {FAQ.map(([q, a], i) => (
-              <Faq key={q} q={q} a={a} delay={i * 0.04} />
-            ))}
+      {/* ================================================= CENA FINAL */}
+      <section className="relative flex min-h-[86svh] items-center overflow-hidden">
+        <div className="absolute inset-0">
+          <SunriseScene className="h-full w-full" rise={false} />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050409] via-[#050409]/40 to-[#050409]/80" />
+        <div className="relative mx-auto w-full max-w-5xl px-5 py-24 text-center sm:px-8">
+          <p data-reveal className="text-[11px] font-semibold tracking-[0.4em] text-white/55 uppercase">Fim? Não. Começo.</p>
+          <h2 data-reveal className="mt-6 font-display text-[40px] leading-[0.98] font-semibold tracking-[-0.03em] sm:text-7xl">
+            Amanhã o sol nasce de novo.
+            <Serif className="mt-2 block bg-gradient-to-r from-[#FFE9A3] via-[#F3EA3B] to-[#9BD373] bg-clip-text text-transparent">Ele vai trabalhar para você ou para a distribuidora?</Serif>
+          </h2>
+          <div data-reveal className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <button onClick={() => toSim("solar", bill)} className="group inline-flex h-14 items-center gap-3 rounded-full bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] pr-2 pl-7 text-[15px] font-bold text-[#1C1234] shadow-[0_20px_50px_-15px_rgba(243,234,59,0.6)]">
+              Fazer minha simulação grátis
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-[#1C1234] text-[#F3EA3B] transition group-hover:translate-x-0.5">
+                <ArrowRight className="h-4 w-4" />
+              </span>
+            </button>
+            {wa && (
+              <a href={wa} target="_blank" rel="noreferrer" className="inline-flex h-14 items-center gap-2 rounded-full px-6 text-[15px] font-semibold text-white/85 ring-1 ring-white/25 backdrop-blur hover:bg-white/10">
+                <MessageCircle className="h-5 w-5" /> Prefiro conversar no WhatsApp
+              </a>
+            )}
           </div>
         </div>
       </section>
 
-      {/* ------------------------------------------------ chamada final */}
-      <section className="relative px-4 pb-20 sm:px-6">
-        <div data-reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[36px] bg-gradient-to-br from-[#F3EA3B] via-[#c8e05a] to-[#6CC690] p-8 text-[#1C1234] sm:p-14">
-          <div className="pointer-events-none absolute -top-20 -right-20 h-72 w-72 rounded-full bg-white/40 blur-3xl" />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-5xl">Pronto para parar de pagar caro na luz?</h2>
-              <p className="mt-3 max-w-xl text-[#1C1234]/70">Faça a simulação agora. Leva 1 minuto e você já sai com os números do seu caso.</p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button onClick={() => toSim("solar")} className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#1C1234] px-7 text-[16px] font-bold text-white shadow-xl transition hover:bg-[#2a1d4d]">
-                Simular agora <ArrowRight className="h-5 w-5" />
-              </button>
-              {wa && (
-                <a href={wa} target="_blank" rel="noreferrer" className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-white/70 px-6 text-[15px] font-bold backdrop-blur transition hover:bg-white">
-                  <MessageCircle className="h-5 w-5 text-[#128C7E]" /> WhatsApp
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------ rodapé */}
-      <footer className="border-t border-white/5 py-10 pb-28 sm:pb-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-center text-sm text-white/45 sm:flex-row sm:px-6 sm:text-left">
+      <footer className="border-t border-white/[0.06] py-10 pb-28 sm:pb-10">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-5 text-center text-[13px] text-white/40 sm:flex-row sm:px-8 sm:text-left">
           <img src="/brand/logo-h-white.png" alt={brand} className="h-8 w-auto opacity-80" />
           <p>
             {brand}
-            {city && (
-              <>
-                {" · "}
-                <MapPin className="inline h-3.5 w-3.5" /> {city}
-              </>
-            )}
+            {city ? ` · ${city}` : ""}
             {company.instagram ? ` · @${String(company.instagram).replace(/^@/, "")}` : ""}
-            {company.tech_name ? ` · Resp. técnico: ${company.tech_name}` : ""}
+            {company.tech_name ? ` · Responsável técnico: ${company.tech_name}` : ""}
           </p>
         </div>
       </footer>
 
-      {/* ------------------------------------------------ atalhos fixos no celular */}
-      <div className={cx("fixed inset-x-3 bottom-3 z-40 flex gap-2 transition-all duration-300 sm:hidden", scrolled && !simVisible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-6 opacity-0")}>
-        <button onClick={() => toSim()} className="flex h-13 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] py-3.5 text-[15px] font-bold text-[#1C1234] shadow-[0_14px_30px_-10px_rgba(243,234,59,0.7)]">
+      {/* atalhos fixos no celular */}
+      <div className={cx("fixed inset-x-3 bottom-3 z-50 flex gap-2 transition-all duration-500 sm:hidden", scrolled && !simVisible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-8 opacity-0")}>
+        <button onClick={() => toSim()} className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] py-4 text-[15px] font-bold text-[#1C1234] shadow-[0_14px_30px_-10px_rgba(243,234,59,0.7)]">
           Simular grátis <ArrowRight className="h-4 w-4" />
         </button>
         {wa && (
-          <a href={wa} target="_blank" rel="noreferrer" aria-label="WhatsApp" className="grid w-14 place-items-center rounded-2xl bg-[#25D366] text-white shadow-[0_14px_30px_-10px_rgba(37,211,102,0.7)]">
+          <a href={wa} target="_blank" rel="noreferrer" aria-label="WhatsApp" className="grid w-14 place-items-center rounded-full bg-[#25D366] text-white shadow-[0_14px_30px_-10px_rgba(37,211,102,0.7)]">
             <MessageCircle className="h-6 w-6" />
           </a>
         )}
       </div>
       {wa && (
-        <a href={wa} target="_blank" rel="noreferrer" aria-label="WhatsApp" className="fixed right-6 bottom-6 z-40 hidden h-14 w-14 place-items-center rounded-full bg-[#25D366] text-white shadow-[0_14px_30px_-10px_rgba(37,211,102,0.8)] transition hover:scale-105 sm:grid">
+        <a href={wa} target="_blank" rel="noreferrer" aria-label="WhatsApp" className="fixed right-6 bottom-6 z-50 hidden h-14 w-14 place-items-center rounded-full bg-[#25D366] text-white shadow-[0_14px_30px_-10px_rgba(37,211,102,0.8)] transition hover:scale-105 sm:grid">
           <MessageCircle className="h-7 w-7" />
         </a>
       )}
@@ -620,27 +714,17 @@ export function CaptureLanding({ company, initialSegment }: { company: PublicCom
   );
 }
 
-function SectionTitle({ kicker, title, sub, align = "center" }: { kicker: string; title: string; sub?: string; align?: "center" | "left" }) {
-  return (
-    <div data-reveal className={cx("max-w-3xl", align === "center" && "mx-auto text-center")}>
-      <p className="bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] bg-clip-text text-xs font-bold tracking-[0.22em] text-transparent uppercase">{kicker}</p>
-      <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-[44px] sm:leading-[1.08]">{title}</h2>
-      {sub && <p className="mt-4 text-white/60 sm:text-lg">{sub}</p>}
-    </div>
-  );
-}
-
-function Faq({ q, a, delay }: { q: string; a: string; delay: number }) {
+function Objection({ q, a, delay }: { q: string; a: string; delay: number }) {
   const [open, setOpen] = useState(false);
   return (
-    <div data-reveal style={{ ["--d" as string]: `${delay}s` }} className={cx("overflow-hidden rounded-2xl ring-1 transition", open ? "bg-white/[0.07] ring-[#9BD373]/40" : "bg-white/[0.03] ring-white/10")}>
-      <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
-        <span className="font-semibold">{q}</span>
-        <ChevronDown className={cx("h-5 w-5 shrink-0 text-[#9BD373] transition duration-300", open && "rotate-180")} />
+    <div data-reveal style={{ ["--d" as string]: `${delay}s` }} className={cx("rounded-[22px] ring-1 transition duration-300", open ? "bg-white/[0.06] ring-[#F3EA3B]/40" : "bg-white/[0.025] ring-white/10 hover:bg-white/[0.045]")}>
+      <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left">
+        <span className="font-display text-lg font-semibold">{q}</span>
+        <ChevronDown className={cx("h-5 w-5 shrink-0 text-[#F3EA3B] transition duration-300", open && "rotate-180")} />
       </button>
       <div className={cx("grid transition-all duration-300", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
         <div className="overflow-hidden">
-          <p className="px-5 pb-5 text-sm leading-relaxed text-white/65">{a}</p>
+          <p className="px-6 pb-6 leading-relaxed text-white/60">{a}</p>
         </div>
       </div>
     </div>

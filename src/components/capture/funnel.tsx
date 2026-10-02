@@ -156,7 +156,7 @@ function useCountUp(target: number, ms = 1400) {
   return v;
 }
 
-export function CaptureFunnel({ company, inline = false, initialSegment, onStepChange }: { company: PublicCompany; inline?: boolean; initialSegment?: Segment | null; onStepChange?: () => void }) {
+export function CaptureFunnel({ company, inline = false, initialSegment, initialBill, onStepChange }: { company: PublicCompany; inline?: boolean; initialSegment?: Segment | null; initialBill?: number; onStepChange?: () => void }) {
   const params = useSearchParams();
   // inline: dentro da landing page (sem fundo próprio, sem rodapé e sem ocupar a tela toda)
   const embed = inline || params.get("embed") === "1";
@@ -175,7 +175,7 @@ export function CaptureFunnel({ company, inline = false, initialSegment, onStepC
   const [step, setStep] = useState<StepId>(initial && FLOWS[initial] ? FLOWS[initial][1] : "interesse");
   const [dir, setDir] = useState<"push" | "pop">("push");
   // Respostas
-  const [bill, setBill] = useState(600);
+  const [bill, setBill] = useState(initialBill && initialBill > 0 ? initialBill : 600);
   const [roof, setRoof] = useState("");
   const [km, setKm] = useState(1500);
   const [kml, setKml] = useState(10);
