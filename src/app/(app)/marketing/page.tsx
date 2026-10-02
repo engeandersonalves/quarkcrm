@@ -203,6 +203,8 @@ export default function MarketingPage() {
       }}
     >
       <PageHeader
+        icon={<Megaphone />}
+        eyebrow="Ferramentas"
         title="Marketing"
         subtitle="Suas artes num só lugar: baixe no tamanho certo e poste no Instagram ou no status em segundos"
         actions={

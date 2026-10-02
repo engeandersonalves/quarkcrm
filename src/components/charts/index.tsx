@@ -72,7 +72,7 @@ export function BarChart({
             >
               <div
                 className="w-full max-w-[34px] rounded-t-[4px] transition-all duration-500"
-                style={{ height: Math.max(d.value > 0 ? 3 : 0, h), background: color, opacity: hover == null || hover === i ? 1 : 0.45 }}
+                style={{ height: Math.max(d.value > 0 ? 3 : 0, h), background: `linear-gradient(180deg, ${color}b3 0%, ${color} 70%)`, boxShadow: hover === i ? `0 8px 20px -8px ${color}` : undefined, opacity: hover == null || hover === i ? 1 : 0.45 }}
               />
               {i === best && d.value > 0 && hover == null && (
                 <span className="tnum absolute text-[10px] font-semibold whitespace-nowrap text-ink-700" style={{ bottom: h + 4 }}>
@@ -251,7 +251,7 @@ export function Funnel({ steps, color = SERIES[0] }: { steps: { label: string; c
               <div className="relative h-8 flex-1">
                 <div
                   className="absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-[6px] transition-all duration-700"
-                  style={{ width: `${Math.max(4, (s.count / max) * 100)}%`, background: color, opacity: 1 - i * (0.6 / Math.max(1, steps.length - 1)) }}
+                  style={{ width: `${Math.max(4, (s.count / max) * 100)}%`, background: `linear-gradient(90deg, ${color}, ${color}c7)`, opacity: 1 - i * (0.6 / Math.max(1, steps.length - 1)) }}
                 />
                 <span className="tnum absolute inset-0 grid place-items-center text-[13px] font-semibold text-white mix-blend-normal" style={{ textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>
                   {s.count}

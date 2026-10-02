@@ -154,6 +154,8 @@ export default function TasksPage() {
   return (
     <div className="animate-fade-up mx-auto max-w-6xl">
       <PageHeader
+        icon={<CheckSquare />}
+        eyebrow="Vendas"
         title="Tarefas e follow-ups"
         subtitle={`${view.pending} pendente${view.pending === 1 ? "" : "s"} · cadência automática ${cadenceOn ? "ligada" : "desligada"} · o responsável recebe alerta por e-mail`}
         actions={

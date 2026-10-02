@@ -85,6 +85,8 @@ function Proposals() {
   return (
     <div className="animate-fade-up">
       <PageHeader
+        icon={<FileText />}
+        eyebrow="Vendas"
         title={product === "save" ? "Propostas S.A.V.E" : product === "solar" ? "Propostas solares" : "Propostas"}
         subtitle={product === "save" ? "Sistemas de abastecimento de veículo elétrico" : "Todos os orçamentos gerados, com status de envio e visualização"}
         actions={

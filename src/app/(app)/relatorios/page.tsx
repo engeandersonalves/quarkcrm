@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeDollarSign, CalendarClock, Download, FileBarChart, Handshake, Printer, Sparkles, Target, TrendingUp, Trophy, Users } from "lucide-react";
+import { BadgeDollarSign, CalendarClock, Download, FileBarChart, Handshake, Printer, Sparkles, Target, TrendingUp, Trophy, Users, BarChart3 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useApp } from "@/components/app/app-context";
 import { AreaChart, BarChart, DeltaBadge, Donut, Funnel, SERIES, topWithOther } from "@/components/charts";
@@ -71,6 +71,8 @@ export default function ReportsPage() {
   return (
     <div className="animate-fade-up print:text-black">
       <PageHeader
+        icon={<BarChart3 />}
+        eyebrow="Desempenho"
         title="Relatórios"
         subtitle={`${range.label} · comparado ao período anterior`}
         actions={

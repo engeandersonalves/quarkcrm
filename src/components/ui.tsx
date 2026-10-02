@@ -19,7 +19,7 @@ type Size = "sm" | "md" | "lg" | "icon";
 
 const variants: Record<Variant, string> = {
   primary: "bg-gradient-to-br from-[#3a2a6b] via-ink-900 to-ink-950 text-white ring-1 ring-white/10 shadow-[0_10px_28px_-12px_rgba(28,18,52,0.75)] hover:brightness-125",
-  sun: "bg-sun-gradient text-ink-950 shadow-glow hover:brightness-105",
+  sun: "bg-sun-gradient text-ink-950 shadow-glow ring-1 ring-white/40 hover:brightness-105 hover:shadow-[0_14px_36px_-10px_rgba(155,211,115,0.75)]",
   secondary: "bg-white/70 text-ink-800 ring-1 ring-ink-900/10 backdrop-blur-md hover:bg-white shadow-soft",
   outline: "bg-white/30 text-ink-700 ring-1 ring-ink-900/10 backdrop-blur-md hover:bg-white/80",
   ghost: "text-ink-600 hover:bg-ink-900/[0.06] hover:text-ink-900",
@@ -63,7 +63,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 /* ------------------------------------------------------------------ Inputs */
 
 const fieldBase =
-  "w-full rounded-xl bg-white/80 px-3.5 text-[15px] sm:text-sm text-ink-900 ring-1 ring-ink-900/10 shadow-[inset_0_1px_2px_rgba(28,18,52,0.04)] backdrop-blur-sm placeholder:text-ink-400 transition focus:bg-white focus:outline-none focus:ring-2 focus:ring-sun-500 disabled:bg-ink-50/70 disabled:text-ink-500";
+  "w-full rounded-xl bg-white/80 px-3.5 text-[15px] sm:text-sm text-ink-900 ring-1 ring-ink-900/10 shadow-[inset_0_1px_2px_rgba(28,18,52,0.04)] placeholder:text-ink-400 transition hover:ring-ink-900/20 focus:bg-white focus:shadow-[0_0_0_4px_rgba(127,203,134,0.18)] focus:outline-none focus:ring-2 focus:ring-sun-500 disabled:bg-ink-50/70 disabled:text-ink-500";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...rest }, ref) {
   return <input ref={ref} className={cx(fieldBase, "h-11 sm:h-10", className)} {...rest} />;
@@ -244,12 +244,35 @@ export function CardHeader({ title, subtitle, action, icon }: { title: ReactNode
   );
 }
 
-export function PageHeader({ title, subtitle, actions }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  subtitle,
+  actions,
+  icon,
+  eyebrow,
+}: {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+  /** Ícone da página (aparece num selo em degradê). */
+  icon?: ReactNode;
+  /** Seção do app, acima do título (ex.: "Vendas"). */
+  eyebrow?: string;
+}) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <h1 className="bg-gradient-to-br from-ink-950 via-ink-900 to-[#4a3590] bg-clip-text pb-0.5 font-display text-2xl font-semibold tracking-tight text-transparent sm:text-[28px]">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-ink-500">{subtitle}</p>}
+    <div className="relative mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex min-w-0 items-center gap-3.5">
+        {icon && (
+          <span className="relative hidden h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#2a1d4d] via-ink-900 to-ink-950 text-[#F3EA3B] shadow-[0_10px_28px_-10px_rgba(28,18,52,0.7)] ring-1 ring-white/10 sm:grid [&_svg]:h-[22px] [&_svg]:w-[22px]">
+            <span className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/15 to-transparent" />
+            {icon}
+          </span>
+        )}
+        <div className="min-w-0">
+          {eyebrow && <p className="mb-0.5 bg-gradient-to-r from-[#8fbf3a] to-[#3f9c6a] bg-clip-text text-[11px] font-bold tracking-[0.18em] text-transparent uppercase">{eyebrow}</p>}
+          <h1 className="bg-gradient-to-br from-ink-950 via-ink-900 to-[#4a3590] bg-clip-text pb-0.5 font-display text-2xl font-semibold tracking-tight text-transparent sm:text-[28px]">{title}</h1>
+          {subtitle && <p className="mt-0.5 text-sm text-ink-500">{subtitle}</p>}
+        </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -298,7 +321,7 @@ export function Empty({ icon, title, text, action }: { icon: ReactNode; title: s
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cx("animate-pulse rounded-xl bg-ink-900/[0.06]", className)} />;
+  return <div className={cx("skeleton rounded-xl", className)} />;
 }
 
 /* ------------------------------------------------------------------- Modal */

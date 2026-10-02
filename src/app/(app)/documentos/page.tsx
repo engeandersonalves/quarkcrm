@@ -33,6 +33,8 @@ export default function DocumentsPage() {
   return (
     <div className="animate-fade-up mx-auto max-w-5xl">
       <PageHeader
+        icon={<FileSignature />}
+        eyebrow="Ferramentas"
         title="Documentos"
         subtitle="Procurações e contratos com assinatura eletrônica pelo celular"
         actions={

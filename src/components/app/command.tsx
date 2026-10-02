@@ -147,9 +147,10 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
   let lastGroup = "";
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center p-3 pt-[10vh] sm:p-6 sm:pt-[14vh]" role="dialog" aria-modal="true" aria-label="Busca rápida">
-      <div className="absolute inset-0 bg-ink-950/50" onClick={onClose} />
-      <div className="animate-fade-up relative w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-lift ring-1 ring-ink-200">
-        <div className="flex items-center gap-3 border-b border-ink-100 px-4">
+      <div className="absolute inset-0 bg-ink-950/45 backdrop-blur-sm" onClick={onClose} />
+      <div className="animate-fade-up relative w-full max-w-xl overflow-hidden rounded-3xl bg-white/85 shadow-lift ring-1 ring-white/70 backdrop-blur-2xl">
+        <div className="h-1 bg-gradient-to-r from-[#F3EA3B] via-[#9BD373] to-[#6CC690]" />
+        <div className="flex items-center gap-3 border-b border-ink-900/[0.06] px-4">
           <Search className="h-5 w-5 shrink-0 text-ink-400" />
           <input
             ref={inputRef}
@@ -173,7 +174,7 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
                   data-idx={i}
                   onMouseMove={() => setActive(i)}
                   onClick={() => run(it)}
-                  className={cx("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left", i === active ? "bg-sun-50 text-ink-900" : "text-ink-700")}
+                  className={cx("flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left", i === active ? "bg-gradient-to-r from-sun-50 to-white/40 text-ink-900 ring-1 ring-sun-200/70" : "text-ink-700")}
                 >
                   <span className={cx("grid h-8 w-8 shrink-0 place-items-center rounded-lg", i === active ? "bg-sun-gradient text-ink-900" : "bg-ink-100 text-ink-500")}>{it.icon}</span>
                   <span className="min-w-0 flex-1">
@@ -186,10 +187,14 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
             );
           })}
         </div>
-        <div className="hidden items-center gap-4 border-t border-ink-100 px-4 py-2.5 text-[11px] text-ink-400 sm:flex">
+        <div className="hidden items-center gap-3 border-t border-ink-900/[0.06] px-4 py-2.5 text-[11px] text-ink-400 sm:flex">
           <span>↑↓ navegar</span>
           <span>Enter abrir</span>
-          <span className="ml-auto">Ctrl/⌘ + K em qualquer tela</span>
+          <span className="ml-auto flex items-center gap-2">
+            Atalhos: <kbd className="rounded bg-ink-900/[0.06] px-1.5 font-semibold text-ink-600">/</kbd> busca
+            <kbd className="rounded bg-ink-900/[0.06] px-1.5 font-semibold text-ink-600">N</kbd> lead
+            <kbd className="rounded bg-ink-900/[0.06] px-1.5 font-semibold text-ink-600">T</kbd> tarefa
+          </span>
         </div>
       </div>
     </div>

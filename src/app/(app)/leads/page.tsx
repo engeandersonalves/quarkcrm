@@ -86,6 +86,8 @@ function Leads() {
   return (
     <div className="animate-fade-up">
       <PageHeader
+        icon={<Users />}
+        eyebrow="Vendas"
         title="Leads"
         subtitle={data ? `${data.length} ${data.length === 1 ? "cliente" : "clientes"} no funil` : " "}
         actions={
@@ -200,6 +202,17 @@ function leadValue(l: LeadRow) {
   return best || Number(l.estimated_value ?? 0);
 }
 
+/** Cor de cada etapa do funil (faixa no topo da coluna). */
+const STAGE_BAR: Record<string, string> = {
+  novo: "from-sky-400 to-cyan-400",
+  contato: "from-indigo-400 to-violet-400",
+  visita: "from-violet-400 to-fuchsia-400",
+  proposta: "from-amber-300 to-yellow-400",
+  negociacao: "from-orange-400 to-amber-400",
+  ganho: "from-[#9BD373] to-[#6CC690]",
+  perdido: "from-rose-400 to-pink-400",
+};
+
 function Kanban({ leads, onMove }: { leads: LeadRow[]; onMove: (id: string, s: LeadStatus) => void }) {
   const [over, setOver] = useState<string | null>(null);
   return (
@@ -222,23 +235,25 @@ function Kanban({ leads, onMove }: { leads: LeadRow[]; onMove: (id: string, s: L
               if (id) onMove(id, s.id);
             }}
             className={cx(
-              "flex w-[82vw] max-w-[300px] shrink-0 snap-start flex-col rounded-3xl bg-ink-100/70 p-2 transition sm:w-[290px]",
-              over === s.id && "bg-sun-100/70 ring-2 ring-sun-400",
+              "relative flex w-[82vw] max-w-[300px] shrink-0 snap-start flex-col overflow-hidden rounded-3xl bg-white/35 p-2 ring-1 ring-white/70 backdrop-blur-md transition sm:w-[290px]",
+              over === s.id && "scale-[1.01] bg-sun-100/60 ring-2 ring-sun-400",
             )}
           >
-            <div className="flex items-center justify-between px-3 pt-2 pb-3">
+            <div className={cx("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", STAGE_BAR[s.id])} />
+            <div className={cx("pointer-events-none absolute -top-10 left-1/2 h-20 w-40 -translate-x-1/2 rounded-full bg-gradient-to-r opacity-20 blur-2xl", STAGE_BAR[s.id])} />
+            <div className="relative flex items-center justify-between px-3 pt-2.5 pb-3">
               <div className="flex items-center gap-2">
-                <span className={cx("h-2 w-2 rounded-full", s.dot)} />
+                <span className={cx("h-2.5 w-2.5 rounded-full ring-4 ring-white/70", s.dot)} />
                 <p className="text-[13px] font-semibold text-ink-800">{s.label}</p>
-                <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-ink-500">{items.length}</span>
+                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-bold text-ink-600 shadow-sm">{items.length}</span>
               </div>
-              {total > 0 && <p className="tnum text-[11px] font-semibold text-ink-500">{brl(total, 0)}</p>}
+              {total > 0 && <p className="tnum rounded-full bg-white/60 px-2 py-0.5 text-[11px] font-semibold text-ink-600">{brl(total, 0)}</p>}
             </div>
             <div className="flex min-h-24 flex-col gap-2">
               {items.map((l) => (
                 <LeadCard key={l.id} lead={l} onMove={onMove} />
               ))}
-              {!items.length && <p className="rounded-2xl border-2 border-dashed border-ink-200 px-3 py-6 text-center text-xs text-ink-400">Arraste leads para cá</p>}
+              {!items.length && <p className="rounded-2xl border-2 border-dashed border-ink-900/10 bg-white/30 px-3 py-6 text-center text-xs text-ink-400">Arraste leads para cá</p>}
             </div>
           </div>
         );

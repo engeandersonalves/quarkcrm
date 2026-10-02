@@ -1,6 +1,6 @@
 "use client";
 
-import { FileDown, ImageDown, Loader2, RotateCcw, Share2, Sparkles } from "lucide-react";
+import { FileDown, ImageDown, Loader2, RotateCcw, Share2, Sparkles, Zap } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -286,6 +286,8 @@ export default function QuickQuotePage() {
   return (
     <div className="animate-fade-up">
       <PageHeader
+        icon={<Zap />}
+        eyebrow="Ferramentas"
         title="Orçamento rápido"
         subtitle="Consumo da anamnese → sistema dimensionado → imagem pronta para o WhatsApp em segundos"
         actions={

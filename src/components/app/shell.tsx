@@ -107,6 +107,21 @@ function ShellInner({ children }: { children: ReactNode }) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setPalette((v) => !v);
+        return;
+      }
+      // Atalhos de uma tecla (fora de campos de texto e janelas abertas): / busca, N lead, T tarefa
+      const el = e.target as HTMLElement | null;
+      if (e.ctrlKey || e.metaKey || e.altKey || el?.closest("input, textarea, select, [contenteditable=true], [role=dialog]")) return;
+      const k = e.key.toLowerCase();
+      if (k === "/") {
+        e.preventDefault();
+        setPalette(true);
+      } else if (k === "n") {
+        e.preventDefault();
+        setLeadModal({ open: true });
+      } else if (k === "t") {
+        e.preventDefault();
+        setTaskModal({ open: true });
       }
     };
     window.addEventListener("keydown", onKey);
@@ -185,7 +200,11 @@ function ShellInner({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1400px] px-4 pt-5 pb-32 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">{children}</main>
+        <main className="mx-auto w-full max-w-[1400px] px-4 pt-5 pb-32 sm:px-6 lg:px-10 lg:pt-10 lg:pb-16">
+          <div key={pathname} className="page-in">
+            {children}
+          </div>
+        </main>
 
         {/* Bottom nav mobile */}
         <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/65 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_rgba(28,18,52,0.18)] backdrop-blur-2xl backdrop-saturate-150 lg:hidden">
@@ -238,10 +257,10 @@ function ShellInner({ children }: { children: ReactNode }) {
 
 function TabLink({ href, label, icon: Icon, active, count = 0, alert }: { href: string; label: string; icon: typeof Sun; active: boolean; count?: number; alert?: boolean }) {
   return (
-    <Link href={href} className={cx("flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition", active ? "text-ink-900" : "text-ink-400")}>
-      <span className="relative">
-        <Icon className={cx("h-[22px] w-[22px]", active && "text-sun-600")} strokeWidth={active ? 2.3 : 2} />
-        {count > 0 && <Badge count={count} alert={alert} className="absolute -top-2 -right-3" />}
+    <Link href={href} className={cx("flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition active:scale-95", active ? "text-ink-900" : "text-ink-400")}>
+      <span className={cx("relative grid h-8 w-14 place-items-center rounded-full transition-all duration-300", active && "bg-gradient-to-br from-[#F3EA3B]/45 to-[#9BD373]/45 shadow-[0_6px_16px_-8px_rgba(127,203,134,0.9)] ring-1 ring-white/70")}>
+        <Icon className={cx("h-[21px] w-[21px]", active && "text-ink-900")} strokeWidth={active ? 2.3 : 2} />
+        {count > 0 && <Badge count={count} alert={alert} className="absolute -top-1.5 right-0.5" />}
       </span>
       {label}
     </Link>

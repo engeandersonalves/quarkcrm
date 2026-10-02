@@ -1,27 +1,7 @@
 "use client";
 
-import {
-  Bell,
-  Building2,
-  Calculator,
-  Check,
-  Code2,
-  Copy,
-  ExternalLink,
-  FileText,
-  GripVertical,
-  ImageIcon,
-  Package,
-  PlugZap,
-  Plus,
-  RotateCcw,
-  Sparkles,
-  Trash2,
-  UserRound,
-  UsersRound,
-  Webhook,
-  Zap,
-} from "lucide-react";
+import Link from "next/link";
+import { Bell, Building2, Calculator, Check, Code2, Copy, ExternalLink, FileText, GripVertical, ImageIcon, Package, PlugZap, Plus, RotateCcw, Sparkles, Trash2, UserRound, UsersRound, Webhook, Zap, Settings } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
@@ -108,6 +88,8 @@ export default function SettingsPage() {
   return (
     <div className="animate-fade-up mx-auto max-w-5xl pb-28">
       <PageHeader
+        icon={<Settings />}
+        eyebrow="Ajustes"
         title="Configurações"
         subtitle="Deixe o app e a proposta do seu jeito"
         actions={
@@ -421,7 +403,16 @@ export default function SettingsPage() {
 
           {tab === "perfil" && (
             <Card>
-              <CardHeader icon={<UserRound className="h-[18px] w-[18px]" />} title="Meu perfil" subtitle="Seu nome aparece como consultor nas propostas" />
+              <CardHeader
+                icon={<UserRound className="h-[18px] w-[18px]" />}
+                title="Meu perfil"
+                subtitle="Seu nome aparece como consultor nas propostas"
+                action={
+                  <Link href="/perfil" className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] px-3 text-[13px] font-semibold text-[#1C1234] shadow-sm">
+                    Capa, bio e conquistas
+                  </Link>
+                }
+              />
               <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
                 <Field label="Nome"><Input value={me.full_name} onChange={(e) => { setMe({ ...me, full_name: e.target.value }); setDirty(true); }} /></Field>
                 <Field label="Telefone"><Input value={me.phone} onChange={(e) => { setMe({ ...me, phone: e.target.value }); setDirty(true); }} /></Field>
