@@ -165,6 +165,8 @@ export interface SignerInfo {
   signature?: string | null;
   ip?: string | null;
   content_hash?: string | null;
+  selfie?: string | null;
+  selfie_at?: string | null;
 }
 
 /* ------------------------------------------------------------- padrões */

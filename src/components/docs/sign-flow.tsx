@@ -1,18 +1,19 @@
 "use client";
 
-import { CheckCircle2, Download, FileSignature, Loader2, Lock, MessageCircle, ShieldCheck, X } from "lucide-react";
+import { Camera, CheckCircle2, Download, FileSignature, Loader2, Lock, MessageCircle, ShieldCheck, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { formatDoc, isValidDoc } from "@/lib/br";
 import { ROLE_LABEL, type DocData, type DocKind, type SignerInfo } from "@/lib/documents";
 import { whatsappUrl } from "@/lib/format";
 import { DocumentView } from "./document-view";
+import { SelfieStep } from "./selfie-step";
 import { SignaturePad, type SignaturePadHandle } from "./signature-pad";
 
 export interface PublicDocument {
   cancelled?: boolean;
   document?: { id: string; kind: DocKind; title: string; data: DocData; status: string; created_at: string; completed_at: string | null; hash: string };
-  signer?: { role: string; name: string; cpf: string | null; signed_at: string | null; signed_name: string | null };
+  signer?: { role: string; name: string; cpf: string | null; signed_at: string | null; signed_name: string | null; selfie_at?: string | null };
   signers?: SignerInfo[];
   company?: { company_name?: string | null; logo_url?: string | null; whatsapp?: string | null; phone?: string | null; email?: string | null } | null;
   seller?: { name?: string | null; phone?: string | null; email?: string | null } | null;
@@ -25,6 +26,8 @@ export function SignFlow({ data, token, scriptFont }: { data: PublicDocument; to
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
   const [read, setRead] = useState(false);
+  const [selfieOpen, setSelfieOpen] = useState(false);
+  const [selfieDone, setSelfieDone] = useState(!!data.signer?.selfie_at);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -100,6 +103,21 @@ export function SignFlow({ data, token, scriptFont }: { data: PublicDocument; to
       </section>
 
       <main className="relative -mt-16 px-0 pb-40 sm:px-5 print:mt-0 print:p-0">
+        {iSigned && !selfieDone && (
+          <div className="animate-fade-up relative mx-auto mb-3 flex max-w-[800px] items-center gap-3 overflow-hidden bg-[#1C1234] p-4 text-white ring-1 ring-white/10 sm:rounded-2xl print:hidden">
+            <div className="pointer-events-none absolute -top-12 -right-8 h-32 w-32 rounded-full bg-[#F3EA3B]/25 blur-2xl" />
+            <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/10 ring-1 ring-white/15">
+              <Camera className="h-5 w-5 text-[#F3EA3B]" />
+            </span>
+            <div className="relative min-w-0 flex-1 text-sm">
+              <p className="font-semibold">Falta só a sua selfie de segurança</p>
+              <p className="text-white/65">Para a sua proteção: confirma que foi você quem assinou.</p>
+            </div>
+            <button onClick={() => setSelfieOpen(true)} className="relative shrink-0 rounded-xl bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] px-3.5 py-2.5 text-xs font-bold text-[#1C1234]">
+              Tirar selfie
+            </button>
+          </div>
+        )}
         {iSigned && (
           <div className="animate-fade-up mx-auto mb-4 flex max-w-[800px] items-start gap-3 bg-emerald-50 p-4 text-emerald-900 ring-1 ring-emerald-200 sm:rounded-2xl print:hidden">
             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
@@ -160,10 +178,12 @@ export function SignFlow({ data, token, scriptFont }: { data: PublicDocument; to
             setOpen(false);
             setDone(true);
             window.scrollTo({ top: 0, behavior: "smooth" });
+            if (!selfieDone) setSelfieOpen(true);
             router.refresh();
           }}
         />
       )}
+      {selfieOpen && <SelfieStep token={token} first={first} onClose={() => setSelfieOpen(false)} onSent={() => setSelfieDone(true)} />}
     </Shell>
   );
 }

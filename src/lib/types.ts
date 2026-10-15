@@ -135,6 +135,9 @@ export interface DocumentSigner {
   signature: string | null;
   ip: string | null;
   content_hash: string | null;
+  /** Selfie de segurança (JPEG em data URL), tirada logo após assinar. */
+  selfie?: string | null;
+  selfie_at?: string | null;
 }
 
 export interface Activity {

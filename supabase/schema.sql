@@ -807,6 +807,9 @@ create table if not exists public.document_signers (
   unique (document_id, role)
 );
 create index if not exists document_signers_doc_idx on public.document_signers (document_id);
+-- Selfie de segurança tirada logo após a assinatura (comprova a autoria).
+alter table public.document_signers add column if not exists selfie text;
+alter table public.document_signers add column if not exists selfie_at timestamptz;
 
 alter table public.documents enable row level security;
 alter table public.document_signers enable row level security;
@@ -838,6 +841,11 @@ create or replace function public.guard_signer()
 returns trigger language plpgsql as $$
 begin
   if old.signed_at is not null then
+    -- Única exceção: anexar a selfie de segurança uma vez, sem mudar mais nada.
+    if old.selfie is null and new.selfie is not null
+       and (to_jsonb(new) - 'selfie' - 'selfie_at') = (to_jsonb(old) - 'selfie' - 'selfie_at') then
+      return new;
+    end if;
     raise exception 'Assinatura já registrada não pode ser alterada.';
   end if;
   return new;
@@ -870,10 +878,11 @@ begin
   return jsonb_build_object(
     'document', jsonb_build_object('id', d.id, 'kind', d.kind, 'title', d.title, 'data', d.data, 'status', d.status,
                                    'created_at', d.created_at, 'completed_at', d.completed_at, 'hash', public.document_hash(d)),
-    'signer', jsonb_build_object('role', s.role, 'name', s.name, 'cpf', s.cpf, 'signed_at', s.signed_at, 'signed_name', s.signed_name),
+    'signer', jsonb_build_object('role', s.role, 'name', s.name, 'cpf', s.cpf, 'signed_at', s.signed_at, 'signed_name', s.signed_name, 'selfie_at', s.selfie_at),
     'signers', (select coalesce(jsonb_agg(jsonb_build_object(
                   'role', x.role, 'name', x.name, 'signed_at', x.signed_at, 'signed_name', x.signed_name,
-                  'signed_cpf', x.signed_cpf, 'signature', x.signature, 'ip', x.ip, 'content_hash', x.content_hash
+                  'signed_cpf', x.signed_cpf, 'signature', x.signature, 'ip', x.ip, 'content_hash', x.content_hash,
+                  'selfie_at', x.selfie_at
                 ) order by x.position), '[]'::jsonb)
                 from public.document_signers x where x.document_id = d.id),
     'company', (select jsonb_build_object('company_name', data ->> 'company_name', 'logo_url', data ->> 'logo_url',
@@ -929,7 +938,30 @@ begin
 end;
 $$;
 
+-- Selfie de segurança: só depois de assinar, uma única vez, JPEG de até ~500 KB.
+create or replace function public.attach_signer_selfie(p_token text, p_selfie text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  s public.document_signers;
+begin
+  if p_selfie not like 'data:image/jpeg;base64,%' or length(p_selfie) > 700000 then
+    return jsonb_build_object('ok', false, 'error', 'imagem');
+  end if;
+  select * into s from public.document_signers where token = p_token for update;
+  if s.id is null or s.signed_at is null then
+    return jsonb_build_object('ok', false, 'error', 'nao_assinado');
+  end if;
+  if s.selfie is not null then
+    return jsonb_build_object('ok', false, 'error', 'ja_enviada');
+  end if;
+  update public.document_signers set selfie = p_selfie, selfie_at = now() where id = s.id;
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
 revoke all on function public.get_public_document(text) from public;
+revoke all on function public.attach_signer_selfie(text, text) from public;
+grant execute on function public.attach_signer_selfie(text, text) to anon, authenticated;
 revoke all on function public.view_public_document(text) from public;
 revoke all on function public.sign_public_document(text, text, text, text, text, text) from public;
 grant execute on function public.get_public_document(text) to anon, authenticated;

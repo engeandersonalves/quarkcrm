@@ -8,6 +8,7 @@ interface Body {
   name?: string;
   cpf?: string;
   signature?: string;
+  selfie?: string;
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
@@ -39,6 +40,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     if (error || !data?.ok) return NextResponse.json({ ok: false, error: data?.error ?? "erro" }, { status: 400 });
     await notify(token, String(body.name ?? ""), !!data.completed, data.document_id as string);
     return NextResponse.json({ ok: true, completed: !!data.completed });
+  }
+
+  if (body.action === "selfie") {
+    const selfie = String(body.selfie ?? "");
+    if (!selfie.startsWith("data:image/jpeg;base64,") || selfie.length > 700_000) return NextResponse.json({ ok: false, error: "imagem" }, { status: 400 });
+    const { data, error } = await anon.rpc("attach_signer_selfie", { p_token: token, p_selfie: selfie });
+    if (error || !data?.ok) return NextResponse.json({ ok: false, error: data?.error ?? "erro" }, { status: 400 });
+    return NextResponse.json({ ok: true });
   }
 
   return NextResponse.json({ error: "invalid action" }, { status: 400 });
