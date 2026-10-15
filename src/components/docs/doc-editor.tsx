@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { moneyInWords } from "@/lib/br";
 import {
@@ -34,6 +34,7 @@ import {
   missingFields,
   signersFor,
   type AluguelData,
+  type ContratoData,
   type DocData,
   type DocKind,
   type Party,
@@ -42,13 +43,14 @@ import {
 import { formatDateTime, whatsappUrl } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { supabase } from "@/lib/supabase/client";
-import type { DocumentSigner, Lead } from "@/lib/types";
+import type { DocumentSigner } from "@/lib/types";
 import { useApp } from "../app/app-context";
-import { Badge, Button, Card, Field, Input, Modal, MoneyInput, NumberInput, Segmented, Select, Switch, Textarea, cx } from "../ui";
+import { Badge, Button, Field, Input, Modal, MoneyInput, NumberInput, Segmented, Select, Switch, Textarea, cx } from "../ui";
+import { ContratoForm } from "./contrato-form";
 import { DocumentView } from "./document-view";
+import { LeadPicker, PlaceDate, Section, type LeadLite } from "./form-bits";
 import { PartyFields } from "./party-fields";
 
-type LeadLite = Pick<Lead, "id" | "name" | "document" | "email" | "phone" | "address" | "city" | "state">;
 
 export interface EditorDoc {
   id: string | null;
@@ -90,7 +92,7 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
     [],
   );
 
-  const update = (patch: Partial<ProcuracaoData> | Partial<AluguelData>) => {
+  const update = (patch: Partial<ProcuracaoData> | Partial<AluguelData> | Partial<ContratoData>) => {
     setData((d) => ({ ...d, ...patch }) as DocData);
     setDirty(true);
   };
@@ -110,7 +112,7 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
     }
     setDirty(false);
     if (!initial.id) {
-      toast.success(`${DOC_KINDS[kind].label} criada`);
+      toast.success(`${DOC_KINDS[kind].label} ${kind === "procuracao" ? "criada" : "criado"}`);
       router.replace(`/documentos/${res.data.id}`);
     } else toast.success("Salvo");
     return res.data.id as string;
@@ -173,10 +175,12 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
     const { error } = await supabase().from("documents").delete().eq("id", initial.id);
     if (error) return toast.error(error.message);
     toast.success("Documento excluído");
-    router.push("/documentos");
+    router.push(backHref);
   };
 
-  const pickLead = (id: string, target: "grantor" | "tenant" | "landlord") => {
+  const backHref = kind === "contrato" ? "/contratos" : "/documentos";
+
+  const pickLead = (id: string, target: "grantor" | "tenant" | "landlord" | "client") => {
     setLeadId(id || null);
     const lead = leads?.find((l) => l.id === id);
     if (!lead) return;
@@ -184,7 +188,8 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
     if (kind === "procuracao") {
       const d = data as ProcuracaoData;
       update({ grantor: party, ucAddress: d.ucAddress || [lead.address, lead.city && `${lead.city}/${lead.state || "AL"}`].filter(Boolean).join(", ") });
-    } else update({ [target]: party } as Partial<AluguelData>);
+    } else if (kind === "contrato") update({ client: party });
+    else update({ [target]: party } as Partial<AluguelData>);
   };
 
   const status = DOC_STATUS[initial.status];
@@ -195,7 +200,7 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
     <div className="animate-fade-up">
       {/* Cabeçalho */}
       <div className="no-print mb-5 flex flex-wrap items-center gap-3">
-        <Link href="/documentos" className="grid h-10 w-10 place-items-center rounded-xl bg-white text-ink-600 shadow-soft ring-1 ring-ink-200/70 hover:text-ink-900" aria-label="Voltar">
+        <Link href={backHref} className="grid h-10 w-10 place-items-center rounded-xl bg-white text-ink-600 shadow-soft ring-1 ring-ink-200/70 hover:text-ink-900" aria-label="Voltar">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="min-w-0 flex-1">
@@ -247,6 +252,8 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
         <fieldset disabled={locked} className={cx("no-print grid min-w-0 content-start gap-4", view === "preview" && "hidden lg:grid")}>
           {kind === "procuracao" ? (
             <ProcuracaoForm data={data as ProcuracaoData} update={update} leads={leads ?? []} leadId={leadId} onLead={(id) => pickLead(id, "grantor")} />
+          ) : kind === "contrato" ? (
+            <ContratoForm data={data as ContratoData} update={update} leads={leads ?? []} leadId={leadId} onLead={(id) => pickLead(id, "client")} />
           ) : (
             <AluguelForm data={data as AluguelData} update={update} leads={leads ?? []} leadId={leadId} onLead={pickLead} />
           )}
@@ -307,37 +314,6 @@ function AutoOpenSend({ onOpen, enabled }: { onOpen: () => void; enabled: boolea
 }
 
 /* ------------------------------------------------------------ formulários */
-
-function Section({ icon, title, subtitle, children }: { icon?: ReactNode; title: string; subtitle?: string; children: ReactNode }) {
-  return (
-    <Card className="p-4 sm:p-5">
-      <div className="mb-4 flex items-start gap-3">
-        {icon && <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-ink-900 text-brand-yellow">{icon}</span>}
-        <div>
-          <h2 className="font-display text-[15px] font-semibold">{title}</h2>
-          {subtitle && <p className="text-xs text-ink-500">{subtitle}</p>}
-        </div>
-      </div>
-      {children}
-    </Card>
-  );
-}
-
-function LeadPicker({ leads, value, onChange, label }: { leads: LeadLite[]; value: string | null; onChange: (id: string) => void; label: string }) {
-  return (
-    <Field label={label} hint="Puxa nome, CPF, contato e endereço do cadastro do lead">
-      <Select value={value ?? ""} onChange={(e) => onChange(e.target.value)}>
-        <option value="">Selecionar um lead…</option>
-        {leads.map((l) => (
-          <option key={l.id} value={l.id}>
-            {l.name}
-            {l.city ? ` — ${l.city}` : ""}
-          </option>
-        ))}
-      </Select>
-    </Field>
-  );
-}
 
 function ProcuracaoForm({
   data,
@@ -447,21 +423,6 @@ function ProcuracaoForm({
 
       <PlaceDate data={data} update={update} />
     </>
-  );
-}
-
-function PlaceDate({ data, update }: { data: { place: string; date: string }; update: (p: { place?: string; date?: string }) => void }) {
-  return (
-    <Section title="Local e data">
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Local">
-          <Input value={data.place} onChange={(e) => update({ place: e.target.value })} />
-        </Field>
-        <Field label="Data">
-          <Input type="date" value={data.date} onChange={(e) => update({ date: e.target.value })} />
-        </Field>
-      </div>
-    </Section>
   );
 }
 
@@ -664,9 +625,13 @@ function SendModal({
     const what =
       kind === "procuracao"
         ? `a procuração que nos permite cuidar de todo o processo do seu sistema junto à Equatorial`
-        : s.role === "testemunha1" || s.role === "testemunha2"
-          ? "o contrato de locação em que você é testemunha"
-          : "o contrato de locação";
+        : kind === "contrato"
+          ? s.role === "testemunha1" || s.role === "testemunha2"
+            ? "o contrato do sistema de energia solar em que você é testemunha"
+            : "o contrato do seu sistema de energia solar"
+          : s.role === "testemunha1" || s.role === "testemunha2"
+            ? "o contrato de locação em que você é testemunha"
+            : "o contrato de locação";
     return `Olá, ${first}! Aqui é da ${company || "Quark Energia"}. Segue ${what}, para assinatura eletrônica.\n\nÉ só abrir o link, conferir e assinar com o dedo pelo celular — leva 1 minuto ✍️\n${url(s.token)}`;
   };
 

@@ -3,12 +3,14 @@
 import { useSearchParams } from "next/navigation";
 import { use, useMemo } from "react";
 import { useApp } from "@/components/app/app-context";
+import { contractFromProposal } from "@/components/docs/contrato-form";
 import { DocEditor, partyFromLead, type EditorDoc } from "@/components/docs/doc-editor";
 import { Card, Empty, Skeleton } from "@/components/ui";
-import { defaultAluguel, defaultProcuracao, type DocData, type DocKind } from "@/lib/documents";
+import { DEFAULT_SIGNATURE } from "@/lib/defaults";
+import { defaultAluguel, defaultContrato, defaultProcuracao, type DocData, type DocKind } from "@/lib/documents";
 import { must, useLive } from "@/lib/live";
 import { supabase } from "@/lib/supabase/client";
-import type { DocumentRow, Lead } from "@/lib/types";
+import type { DocumentRow, Lead, Proposal } from "@/lib/types";
 import { FileX } from "lucide-react";
 
 export default function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +21,8 @@ export default function DocumentPage({ params }: { params: Promise<{ id: string 
 function NewDocument() {
   const search = useSearchParams();
   const { settings, settingsLoaded } = useApp();
-  const kind: DocKind = search.get("tipo") === "aluguel" ? "aluguel" : "procuracao";
+  const tipo = search.get("tipo");
+  const kind: DocKind = tipo === "aluguel" || tipo === "contrato" ? tipo : "procuracao";
   const leadId = search.get("lead");
 
   const { data: lead, loading } = useLive(
@@ -28,9 +31,19 @@ function NewDocument() {
     [],
     { fresh: true },
   );
+  // Contrato: parte da proposta solar mais recente do lead (aceita primeiro).
+  const { data: proposals, loading: loadingProposals } = useLive(
+    async () =>
+      kind === "contrato" && leadId
+        ? (must(await supabase().from("proposals").select("id,number,title,status,inputs,final_price,power_kwp,created_at").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(20)) as Proposal[])
+        : [],
+    [kind, leadId],
+    [],
+    { fresh: true },
+  );
 
   const initial = useMemo<EditorDoc | null>(() => {
-    if (loading || !settingsLoaded) return null;
+    if (loading || loadingProposals || !settingsLoaded) return null;
     const party = lead ? partyFromLead(lead) : {};
     const place = settings.city ? (settings.city.includes("/") ? settings.city : `${settings.city}/AL`) : "Maceió/AL";
     const data: DocData =
@@ -47,9 +60,24 @@ function NewDocument() {
             party,
             place,
           )
-        : defaultAluguel(party, place);
+        : kind === "contrato"
+          ? (() => {
+              const base = defaultContrato({
+                client: party,
+                defaults: settings.contract_defaults,
+                contractor: { name: (settings.legal_name || settings.company_name).toUpperCase(), doc: settings.cnpj, address: settings.address, city: (settings.city || "").split("/")[0], repName: (settings.tech_name || "").replace(/^(eletrot[ée]cnic[oa]|t[ée]cnic[oa] em \S+|engenheir[oa](?: eletricista)?|eng\.)\s+/i, "") },
+                signature: settings.signature_url || DEFAULT_SIGNATURE,
+                place,
+              });
+              const solar = (proposals ?? []).filter((p) => Number(p.inputs?.moduleQty) > 0);
+              const pick = solar.find((p) => p.status === "aceita") ?? solar[0];
+              const patch = pick ? contractFromProposal(pick) : null;
+              if (!patch || !pick) return base;
+              return { ...base, ...patch, payment: { ...base.payment, installments: Number(pick.inputs?.cardInstallments) || base.payment.installments } };
+            })()
+          : defaultAluguel(party, place);
     return { id: null, kind, data, lead_id: lead?.id ?? null, status: "rascunho", signers: [] };
-  }, [loading, settingsLoaded, lead, kind, settings]);
+  }, [loading, loadingProposals, settingsLoaded, lead, kind, settings, proposals]);
 
   if (!initial) return <EditorSkeleton />;
   return <DocEditor key={`${kind}-${leadId ?? ""}`} initial={initial} />;

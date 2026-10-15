@@ -1,6 +1,7 @@
 import type { ProposalInputs } from "./pricing.ts";
 import type { SaveInputs } from "./save.ts";
 import { DEFAULT_CADENCE, mergeCadence, type CadencePrefs } from "./cadence.ts";
+import type { ContractDefaults } from "./documents.ts";
 
 /** Assinatura do responsável técnico da Quark (padrão de todos os documentos assinados pela empresa). */
 export const DEFAULT_SIGNATURE = "/brand/assinatura.png";
@@ -46,6 +47,8 @@ export interface CompanySettings {
   cadence: CadencePrefs;
   /** Pastas do Google Drive que alimentam o banco de conteúdo do Marketing. */
   marketing_drive: DriveFolder[];
+  /** Dados padrão dos contratos solares (empresa, fornecedora, garantias, prazos e multas). */
+  contract_defaults: ContractDefaults;
 }
 
 export interface DriveFolder {
@@ -190,6 +193,7 @@ export const DEFAULT_INPUTS: ProposalInputs = {
 
 export const DEFAULT_SETTINGS: CompanySettings = {
   marketing_drive: [],
+  contract_defaults: {},
   company_name: "Quark Energia",
   legal_name: "",
   cnpj: "",
@@ -276,6 +280,7 @@ export function mergeSettings(s: Partial<CompanySettings> | null | undefined): C
     integrations: { ...DEFAULT_SETTINGS.integrations, ...((s?.integrations ?? {}) as Partial<IntegrationPrefs>) },
     cadence: mergeCadence(s?.cadence),
     marketing_drive: Array.isArray(s?.marketing_drive) ? s.marketing_drive : [],
+    contract_defaults: s?.contract_defaults && typeof s.contract_defaults === "object" ? s.contract_defaults : {},
     proposal: {
       ...DEFAULT_SETTINGS.proposal,
       ...proposal,

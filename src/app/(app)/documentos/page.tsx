@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, FileSignature, FileText, Home, KeyRound, Plus, ShieldCheck } from "lucide-react";
+import { ChevronRight, FileSignature, FileText, Home, KeyRound, Plus, ShieldCheck, Sun } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
@@ -16,7 +16,7 @@ type Tab = "todos" | DocKind;
 export default function DocumentsPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const tab = (["procuracao", "aluguel"].includes(params.get("tipo") ?? "") ? params.get("tipo") : "todos") as Tab;
+  const tab = (["procuracao", "aluguel", "contrato"].includes(params.get("tipo") ?? "") ? params.get("tipo") : "todos") as Tab;
 
   const { data, loading } = useLive(
     async () =>
@@ -38,7 +38,7 @@ export default function DocumentsPage() {
         title="Documentos"
         subtitle="Procurações e contratos com assinatura eletrônica pelo celular"
         actions={
-          <Button onClick={() => router.push(`/documentos/novo?tipo=${tab === "aluguel" ? "aluguel" : "procuracao"}`)}>
+          <Button onClick={() => router.push(`/documentos/novo?tipo=${tab === "todos" ? "procuracao" : tab}`)}>
             <Plus className="h-4 w-4" /> Novo documento
           </Button>
         }
@@ -92,6 +92,7 @@ export default function DocumentsPage() {
           options={[
             { value: "todos", label: "Todos" },
             { value: "procuracao", label: "Procurações" },
+            { value: "contrato", label: "Contratos solares" },
             { value: "aluguel", label: "Aluguel" },
           ]}
         />
@@ -123,7 +124,7 @@ export default function DocumentsPage() {
             return (
               <Link key={d.id} href={`/documentos/${d.id}`} className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-ink-50 sm:px-5">
                 <span className={cx("grid h-10 w-10 shrink-0 place-items-center rounded-xl", d.kind === "procuracao" ? "bg-ink-900 text-brand-yellow" : "bg-sun-50 text-sun-700")}>
-                  {d.kind === "procuracao" ? <KeyRound className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+                  {d.kind === "procuracao" ? <KeyRound className="h-5 w-5" /> : d.kind === "contrato" ? <Sun className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-ink-900">{d.title}</p>

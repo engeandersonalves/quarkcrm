@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { dateInWords, endOfTerm, formatDoc, isValidCnpj, isValidCpf, maskDoc, moneyInWords, numberInWords } from "./br.ts";
 import { DEFAULT_CADENCE, renderCopy } from "./cadence.ts";
-import { defaultAluguel, defaultProcuracao, documentBlocks, missingFields, signersFor } from "./documents.ts";
+import { contractKwp, defaultAluguel, defaultContrato, defaultProcuracao, documentBlocks, documentTitle, equipmentPhrase, missingFields, newEquipment, paymentText, signersFor } from "./documents.ts";
 
 test("valida e formata CPF e CNPJ", () => {
   assert.ok(isValidCpf("529.982.247-25"));
@@ -83,4 +83,46 @@ test("cadência padrão do schema.sql é igual à do app", () => {
   const m = sql.match(/\$cadence\$(.*?)\$cadence\$/s);
   assert.ok(m, "cadência não encontrada no schema.sql");
   assert.deepEqual(JSON.parse(m[1]), JSON.parse(JSON.stringify(DEFAULT_CADENCE)));
+});
+
+test("contrato solar: texto do modelo com os dados preenchidos", () => {
+  const d = defaultContrato({
+    client: { name: "Darcy Mendonça de Farias", doc: "52998224725", address: "R. I, Cj Pajuçara, 260, Qd L, Poço", city: "Maceió", state: "AL", phone: "82999990000" },
+    contractor: { name: "QUARK ENERGIA", doc: "11222333000181", address: "Rua Paulo Henrique Mendes", cep: "57081520", repName: "Fulano de Tal", repDoc: "52998224725" },
+    signature: "/brand/assinatura.png",
+  });
+  d.equipment = [newEquipment({ kind: "modulo", qty: 4, power: 710 }), newEquipment({ kind: "inversor", qty: 1, power: 10 })];
+  d.price = 7950;
+  assert.equal(contractKwp(d), 2.84);
+  assert.equal(equipmentPhrase(d.equipment[0]), "4 módulos fotovoltaicos de 710 W");
+  assert.equal(equipmentPhrase(d.equipment[1]), "1 inversor de 10 kW");
+  assert.deepEqual(missingFields("contrato", d), []);
+  assert.equal(documentTitle("contrato", d), "Contrato — Darcy Mendonça de Farias · 2,84 kWp");
+
+  const text = documentBlocks("contrato", d).map((b) => b.text).join("\n");
+  assert.match(text, /QUARK ENERGIA, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº 11\.222\.333\/0001-81, localizada na Rua Paulo Henrique Mendes, CEP 57081-520, neste ato representada por seu Diretor Técnico, Fulano de Tal, brasileiro, inscrito no CPF sob o nº 529\.982\.247-25/);
+  assert.match(text, /DARCY MENDONÇA DE FARIAS/);
+  assert.match(text, /potência instalada de 2,84 kWp, sendo 4 módulos fotovoltaicos de 710 W, 1 inversor de 10 kW e estrutura de fixação para telhado colonial/);
+  assert.match(text, /m\. Fornecimento de 4 módulos fotovoltaicos;\nn\. Fornecimento de 1 inversor\./);
+  assert.match(text, /R\$\s7\.950,00 \(sete mil novecentos e cinquenta reais\)/);
+  assert.match(text, /em 12 \(doze\) vezes no cartão de crédito \(com a presença de juros\)/);
+  assert.match(text, /FORNECEDORA \(FORTLEV SOLAR\)/);
+  assert.match(text, /entrega mínima de 84% \(oitenta e quatro por cento\)/);
+  assert.match(text, /Cláusula 18ª\. Elegem as partes o foro da Comarca de Maceió, no Estado de Alagoas/);
+  assert.match(text, /em 3 \(três\) vias/);
+  assert.match(text, /Anexo I/);
+
+  // Só o cliente (e testemunhas) assinam pelo link: a contratada vai com a assinatura padrão.
+  d.witnesses[0] = { name: "Testemunha Um", doc: "" };
+  assert.deepEqual(signersFor("contrato", d).map((s) => s.role), ["contratante", "testemunha1"]);
+
+  // Cláusulas extras entram antes do foro e a numeração segue.
+  d.extraClauses = "O CONTRATANTE autoriza fotos da usina.";
+  const t2 = documentBlocks("contrato", d).map((b) => b.text).join("\n");
+  assert.match(t2, /Cláusula 18ª\. O CONTRATANTE autoriza fotos da usina\.[\s\S]*Cláusula 19ª\. Elegem/);
+
+  d.payment = { ...d.payment, method: "entrada", entry: 2000, balanceWhen: "na entrega do kit" };
+  assert.match(paymentText(d), /R\$\s2\.000,00 \(dois mil reais\) de entrada, na assinatura deste contrato, e o saldo de R\$\s5\.950,00 \(cinco mil novecentos e cinquenta reais\) na entrega do kit\./);
+  const empty = defaultContrato();
+  assert.ok(missingFields("contrato", empty).includes("Valor do contrato"));
 });

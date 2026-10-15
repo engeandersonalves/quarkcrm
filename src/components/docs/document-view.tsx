@@ -1,6 +1,7 @@
 import { ShieldCheck } from "lucide-react";
+import { cx } from "@/components/ui";
 import { maskDoc } from "@/lib/br";
-import { ROLE_LABEL, documentBlocks, signersFor, type DocData, type DocKind, type SignerInfo } from "@/lib/documents";
+import { ROLE_LABEL, documentBlocks, signersFor, type ContratoData, type DocData, type DocKind, type SignerInfo } from "@/lib/documents";
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Maceio", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -24,8 +25,18 @@ export function DocumentView({
   hash?: string | null;
 }) {
   const blocks = documentBlocks(kind, data);
-  const list: SignerInfo[] = signers?.length ? signers : signersFor(kind, data).map((s) => ({ role: s.role, name: s.name }));
-  const signed = list.filter((s) => s.signed_at);
+  const people: SignerInfo[] = signers?.length ? signers : signersFor(kind, data).map((s) => ({ role: s.role, name: s.name }));
+  const signed = people.filter((s) => s.signed_at);
+  // Contrato solar: a CONTRATADA já sai assinada com a assinatura padrão da empresa.
+  const c = kind === "contrato" ? (data as ContratoData).contractor : null;
+  const contractorSig = kind === "contrato" ? (data as ContratoData).contractorSignature : "";
+  const list: (SignerInfo & { fixed?: string })[] = c
+    ? [
+        { role: "contratante", name: "", ...people.find((s) => s.role === "contratante") },
+        { role: "contratada", name: c.name || "Contratada", signature: contractorSig || null, fixed: [c.repName, c.repRole].filter(Boolean).join(" · ") },
+        ...people.filter((s) => s.role !== "contratante"),
+      ]
+    : people;
 
   return (
     <article className="doc-paper relative mx-auto w-full max-w-[800px] bg-white px-6 py-10 text-[14.5px] leading-[1.75] text-ink-900 shadow-lift ring-1 ring-ink-200/70 sm:rounded-2xl sm:px-14 sm:py-14 print:max-w-none print:rounded-none print:px-0 print:py-0 print:shadow-none print:ring-0">
@@ -55,11 +66,11 @@ export function DocumentView({
       <div className="mt-12 grid gap-x-10 gap-y-10 sm:grid-cols-2 print:grid-cols-2">
         {list.map((s) => (
           <div key={s.role} className="break-inside-avoid text-center">
-            <div className="flex h-20 items-end justify-center">
+            <div className={cx("flex items-end justify-center", c ? "h-28" : "h-20")}>
               {s.signature ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={s.signature} alt={`Assinatura de ${s.signed_name ?? s.name}`} className="max-h-20 w-auto max-w-[260px] object-contain" />
-              ) : (
+                <img src={s.signature} alt={`Assinatura de ${s.signed_name ?? s.name}`} className={cx("w-auto max-w-[260px] object-contain", s.fixed !== undefined ? "mb-1.5 max-h-24" : "max-h-20")} />
+              ) : s.fixed !== undefined ? null : (
                 <span className="pb-2 text-xs text-ink-300 italic">aguardando assinatura</span>
               )}
             </div>
@@ -69,6 +80,7 @@ export function DocumentView({
                 {ROLE_LABEL[s.role] ?? s.role}
                 {s.signed_cpf ? ` · CPF ${maskDoc(s.signed_cpf)}` : ""}
               </p>
+              {s.fixed && <p className="text-[11px] text-ink-400">{s.fixed}</p>}
             </div>
           </div>
         ))}
