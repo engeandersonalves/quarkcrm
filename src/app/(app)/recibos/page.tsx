@@ -356,7 +356,7 @@ export default function ReceiptsPage() {
         {/* ------------------------------------------------ prévia */}
         <div className="lg:sticky lg:top-6 lg:self-start">
           <div ref={boxRef} className="glass overflow-hidden rounded-3xl p-3 sm:p-4">
-            <div className="mx-auto overflow-hidden rounded-xl shadow-[0_20px_50px_-20px_rgba(28,18,52,0.45)] ring-1 ring-ink-900/10" style={{ width: PAGE_W * scale, height: PAGE_H * scale }}>
+            <div className="palette-classic mx-auto overflow-hidden rounded-xl shadow-[0_20px_50px_-20px_rgba(28,18,52,0.45)] ring-1 ring-ink-900/10" style={{ width: PAGE_W * scale, height: PAGE_H * scale }}>
               <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: PAGE_W, height: PAGE_H }}>
                 <Paper ref={paperRef} r={r} copies={copies === "2" ? 2 : 1} company={company} cnpj={settings.cnpj} address={settings.address} phone={settings.whatsapp || settings.phone} email={settings.email} instagram={settings.instagram} signature={signature} />
               </div>

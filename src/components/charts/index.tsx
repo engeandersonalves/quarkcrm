@@ -132,9 +132,9 @@ export function AreaChart({ data, format, color = SERIES[1], height = 200 }: { d
           </linearGradient>
         </defs>
         {[0.5, 1].map((k) => (
-          <line key={k} x1="0" x2={W} y1={y(max * k)} y2={y(max * k)} stroke="#EEEDF4" vectorEffect="non-scaling-stroke" />
+          <line key={k} x1="0" x2={W} y1={y(max * k)} y2={y(max * k)} stroke="var(--color-ink-100)" vectorEffect="non-scaling-stroke" />
         ))}
-        <line x1="0" x2={W} y1={H} y2={H} stroke="#CFCCDC" vectorEffect="non-scaling-stroke" />
+        <line x1="0" x2={W} y1={H} y2={H} stroke="var(--color-ink-300)" vectorEffect="non-scaling-stroke" />
         <path d={area} fill={`url(#a${id})`} />
         <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         {hover != null && <line x1={x(hover)} x2={x(hover)} y1="0" y2={H} stroke={INK} strokeOpacity="0.25" vectorEffect="non-scaling-stroke" />}
@@ -170,7 +170,7 @@ export function Donut({ data, center, centerSub, format = (v) => String(v) }: { 
     <div className="flex flex-col items-center gap-5 sm:flex-row">
       <div className="relative h-44 w-44 shrink-0">
         <svg viewBox="0 0 180 180" className="h-full w-full -rotate-90">
-          <circle cx="90" cy="90" r={R} fill="none" stroke="#F0EFF5" strokeWidth="22" />
+          <circle cx="90" cy="90" r={R} fill="none" stroke="var(--color-ink-100)" strokeWidth="22" />
           {total > 0 &&
             data.map((d, i) => {
               const len = (d.value / total) * C;

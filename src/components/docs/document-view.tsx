@@ -140,7 +140,7 @@ export function DocumentView({
   const where = (data as { place?: string }).place;
 
   return (
-    <article className="doc-paper @container relative mx-auto w-full max-w-[820px] overflow-hidden bg-white font-sans text-[14px] leading-[1.75] text-[#2B2541] shadow-lift ring-1 ring-ink-200/70 sm:rounded-[28px] print:max-w-none print:overflow-visible print:rounded-none print:text-[10.5pt] print:leading-[1.6] print:shadow-none print:ring-0">
+    <article className="doc-paper palette-classic @container relative mx-auto w-full max-w-[820px] overflow-hidden bg-white font-sans text-[14px] leading-[1.75] text-[#2B2541] shadow-lift ring-1 ring-ink-200/70 sm:rounded-[28px] print:max-w-none print:overflow-visible print:rounded-none print:text-[10.5pt] print:leading-[1.6] print:shadow-none print:ring-0">
       {/* ------------------------------------------------------------ capa */}
       <header className="relative overflow-hidden px-6 pt-7 pb-6 text-white sm:px-12 sm:pt-10 sm:pb-8 print:rounded-[18px] print:px-8 print:pt-7 print:pb-6" style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #261845 55%, #120B24 100%)` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* dark: = dentro do tema escuro do app, fora das ilhas de paleta clássica */
+@custom-variant dark (&:is(.theme-dark *):not(:is(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)));
+
 @theme {
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-playfair), Georgia, serif;
@@ -550,3 +553,267 @@ a:focus-visible, button:focus-visible, [role="tab"]:focus-visible { outline: 2px
   -webkit-text-fill-color: #fff;
   transition: background-color 9999s ease-in-out 0s;
 }
+
+/* =====================================================================
+   Tema escuro (estética da capa): paleta remapeada por variáveis.
+   .palette-classic = ilhas com a paleta original (documentos, artes,
+   recibos e a barra lateral, que já é escura).
+   ===================================================================== */
+.theme-dark {
+  color-scheme: dark;
+  color: #f3f1f9;
+  --color-ink-50: #0d0b19;
+  --color-ink-100: #151227;
+  --color-ink-200: #242038;
+  --color-ink-300: #3a3552;
+  --color-ink-400: #6e6989;
+  --color-ink-500: #9792b0;
+  --color-ink-600: #b7b3cb;
+  --color-ink-700: #d1cee1;
+  --color-ink-800: #e6e4f0;
+  --color-ink-900: #f3f1f9;
+  --color-sun-50: rgb(155 211 115 / 0.09);
+  --color-sun-100: rgb(155 211 115 / 0.15);
+  --color-sun-200: rgb(155 211 115 / 0.24);
+  --color-sun-300: rgb(155 211 115 / 0.4);
+  --color-sun-600: #8fd18f;
+  --color-sun-700: #c9e97a;
+  --shadow-soft: 0 0 0 1px rgb(255 255 255 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.7);
+  --shadow-lift: 0 0 0 1px rgb(255 255 255 / 0.05), 0 24px 60px -20px rgb(0 0 0 / 0.85);
+  --color-emerald-50: oklch(70% 0.13 166.113 / 0.12);
+  --color-emerald-100: oklch(70% 0.13 166.113 / 0.18);
+  --color-emerald-200: oklch(72% 0.13 166.113 / 0.3);
+  --color-emerald-300: oklch(76% 0.13 166.113 / 0.5);
+  --color-emerald-700: oklch(80% 0.14 166.113);
+  --color-emerald-800: oklch(86% 0.11 166.113);
+  --color-emerald-900: oklch(91% 0.07 166.113);
+  --color-rose-50: oklch(70% 0.13 12.422 / 0.12);
+  --color-rose-100: oklch(70% 0.13 12.422 / 0.18);
+  --color-rose-200: oklch(72% 0.13 12.422 / 0.3);
+  --color-rose-300: oklch(76% 0.13 12.422 / 0.5);
+  --color-rose-700: oklch(80% 0.14 12.422);
+  --color-rose-800: oklch(86% 0.11 12.422);
+  --color-rose-900: oklch(91% 0.07 12.422);
+  --color-amber-50: oklch(70% 0.13 95.277 / 0.12);
+  --color-amber-100: oklch(70% 0.13 95.277 / 0.18);
+  --color-amber-200: oklch(72% 0.13 95.277 / 0.3);
+  --color-amber-300: oklch(76% 0.13 95.277 / 0.5);
+  --color-amber-700: oklch(80% 0.14 95.277);
+  --color-amber-800: oklch(86% 0.11 95.277);
+  --color-amber-900: oklch(91% 0.07 95.277);
+  --color-violet-50: oklch(70% 0.13 293.756 / 0.12);
+  --color-violet-100: oklch(70% 0.13 293.756 / 0.18);
+  --color-violet-200: oklch(72% 0.13 293.756 / 0.3);
+  --color-violet-300: oklch(76% 0.13 293.756 / 0.5);
+  --color-violet-700: oklch(80% 0.14 293.756);
+  --color-violet-800: oklch(86% 0.11 293.756);
+  --color-violet-900: oklch(91% 0.07 293.756);
+  --color-sky-50: oklch(70% 0.13 236.62 / 0.12);
+  --color-sky-100: oklch(70% 0.13 236.62 / 0.18);
+  --color-sky-200: oklch(72% 0.13 236.62 / 0.3);
+  --color-sky-300: oklch(76% 0.13 236.62 / 0.5);
+  --color-sky-700: oklch(80% 0.14 236.62);
+  --color-sky-800: oklch(86% 0.11 236.62);
+  --color-sky-900: oklch(91% 0.07 236.62);
+  --color-indigo-50: oklch(70% 0.13 272.314 / 0.12);
+  --color-indigo-100: oklch(70% 0.13 272.314 / 0.18);
+  --color-indigo-200: oklch(72% 0.13 272.314 / 0.3);
+  --color-indigo-300: oklch(76% 0.13 272.314 / 0.5);
+  --color-indigo-700: oklch(80% 0.14 272.314);
+  --color-indigo-800: oklch(86% 0.11 272.314);
+  --color-indigo-900: oklch(91% 0.07 272.314);
+}
+.palette-classic,
+.theme-dark :is(.glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\]) {
+  --color-ink-50: #f7f6fa;
+  --color-ink-100: #f0eff5;
+  --color-ink-200: #e5e3ee;
+  --color-ink-300: #cfccdc;
+  --color-ink-400: #9a97ae;
+  --color-ink-500: #6d6985;
+  --color-ink-600: #4b4766;
+  --color-ink-700: #3b3160;
+  --color-ink-800: #2a2046;
+  --color-ink-900: #1c1234;
+  --color-sun-50: #f4fbe9;
+  --color-sun-100: #e7f6d2;
+  --color-sun-200: #d2eeaa;
+  --color-sun-300: #bde480;
+  --color-sun-600: #3f9c6a;
+  --color-sun-700: #2c7a52;
+  --shadow-soft: 0 1px 2px rgb(28 18 52 / 0.04), 0 4px 16px -4px rgb(28 18 52 / 0.08);
+  --shadow-lift: 0 2px 4px rgb(28 18 52 / 0.04), 0 16px 40px -12px rgb(28 18 52 / 0.2);
+  --color-emerald-50: oklch(97.9% 0.021 166.113);
+  --color-emerald-100: oklch(95% 0.052 163.051);
+  --color-emerald-200: oklch(90.5% 0.093 164.15);
+  --color-emerald-300: oklch(84.5% 0.143 164.978);
+  --color-emerald-700: oklch(50.8% 0.118 165.612);
+  --color-emerald-800: oklch(43.2% 0.095 166.913);
+  --color-emerald-900: oklch(37.8% 0.077 168.94);
+  --color-rose-50: oklch(96.9% 0.015 12.422);
+  --color-rose-100: oklch(94.1% 0.03 12.58);
+  --color-rose-200: oklch(89.2% 0.058 10.001);
+  --color-rose-300: oklch(81% 0.117 11.638);
+  --color-rose-700: oklch(51.4% 0.222 16.935);
+  --color-rose-800: oklch(45.5% 0.188 13.697);
+  --color-rose-900: oklch(41% 0.159 10.272);
+  --color-amber-50: oklch(98.7% 0.022 95.277);
+  --color-amber-100: oklch(96.2% 0.059 95.617);
+  --color-amber-200: oklch(92.4% 0.12 95.746);
+  --color-amber-300: oklch(87.9% 0.169 91.605);
+  --color-amber-700: oklch(55.5% 0.163 48.998);
+  --color-amber-800: oklch(47.3% 0.137 46.201);
+  --color-amber-900: oklch(41.4% 0.112 45.904);
+  --color-violet-50: oklch(96.9% 0.016 293.756);
+  --color-violet-100: oklch(94.3% 0.029 294.588);
+  --color-violet-200: oklch(89.4% 0.057 293.283);
+  --color-violet-300: oklch(81.1% 0.111 293.571);
+  --color-violet-700: oklch(49.1% 0.27 292.581);
+  --color-violet-800: oklch(43.2% 0.232 292.759);
+  --color-violet-900: oklch(38% 0.189 293.745);
+  --color-sky-50: oklch(97.7% 0.013 236.62);
+  --color-sky-100: oklch(95.1% 0.026 236.824);
+  --color-sky-200: oklch(90.1% 0.058 230.902);
+  --color-sky-300: oklch(82.8% 0.111 230.318);
+  --color-sky-700: oklch(50% 0.134 242.749);
+  --color-sky-800: oklch(44.3% 0.11 240.79);
+  --color-sky-900: oklch(39.1% 0.09 240.876);
+  --color-indigo-50: oklch(96.2% 0.018 272.314);
+  --color-indigo-100: oklch(93% 0.034 272.788);
+  --color-indigo-200: oklch(87% 0.065 274.039);
+  --color-indigo-300: oklch(78.5% 0.115 274.713);
+  --color-indigo-700: oklch(45.7% 0.24 277.023);
+  --color-indigo-800: oklch(39.8% 0.195 277.366);
+  --color-indigo-900: oklch(35.9% 0.144 278.697);
+}
+body:has(.theme-dark) { background: #05040b; }
+@layer utilities {
+:where(.theme-dark) .bg-white:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/95:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/90:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/85:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/80:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/75:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/70:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/65:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/60:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/55:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/50:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  background-color: rgb(255 255 255 / 0.045);
+}
+:where(.theme-dark) .hover\:bg-white:hover:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .focus\:bg-white:focus:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .hover\:bg-white\/80:hover:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  background-color: rgb(255 255 255 / 0.08);
+}
+:where(.theme-dark) .bg-white\/25:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/30:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/35:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/40:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .bg-white\/45:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  background-color: rgb(255 255 255 / 0.03);
+}
+:where(.theme-dark) .border-white\/60:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .border-white\/70:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .border-white\/80:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .ring-white\/60:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  border-color: rgb(255 255 255 / 0.07); --tw-ring-color: rgb(255 255 255 / 0.07);
+}
+:where(.theme-dark) .ring-white:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .ring-white\/70:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .ring-white\/80:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .ring-white\/90:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  --tw-ring-color: #0b0918;
+}
+:where(.theme-dark) .bg-ink-900:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  background-color: #1b1731;
+}
+:where(.theme-dark) .text-ink-950:not(.bg-sun-gradient):not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)),
+:where(.theme-dark) .hover\:text-ink-950:hover:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  color: #f3f1f9;
+}
+:where(.theme-dark) .from-white:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  --tw-gradient-from: rgb(255 255 255 / 0.07);
+}
+:where(.theme-dark) .to-white:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  --tw-gradient-to: rgb(255 255 255 / 0.02);
+}
+:where(.theme-dark) .via-white:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  --tw-gradient-via: rgb(255 255 255 / 0.04);
+}
+:where(.theme-dark) .hover\:bg-emerald-700:hover:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  background-color: #047857;
+}
+:where(.theme-dark) .font-serif:not(:where(.palette-classic, .palette-classic *)) {
+  font-family: var(--font-display);
+  font-style: normal;
+  font-weight: 300;
+  letter-spacing: -0.015em;
+}
+:where(.theme-dark) .glass:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  background-color: rgb(18 15 34 / 0.55);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  backdrop-filter: blur(22px) saturate(1.3);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 0 0 1px rgb(255 255 255 / 0.07), 0 24px 48px -24px rgb(0 0 0 / 0.8);
+}
+}
+
+.theme-dark .glass table thead tr:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  background: rgb(255 255 255 / 0.03);
+}
+.theme-dark .glass table tbody tr:hover:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  background: rgb(255 255 255 / 0.04);
+}
+.theme-dark .skeleton:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  background: linear-gradient(100deg, rgb(255 255 255 / 0.03) 20%, rgb(255 255 255 / 0.08) 40%, rgb(255 255 255 / 0.03) 60%); background-size: 200% 100%;
+}
+.theme-dark * { scrollbar-color: rgb(255 255 255 / 0.14) transparent; }
+.theme-dark *::-webkit-scrollbar-thumb { background-color: rgb(255 255 255 / 0.12); }
+.theme-dark ::selection { background: rgb(155 211 115 / 0.35); color: #fff; }
+
+/* Fundo do app: preto profundo, grade em perspectiva sutil e poeira de luz */
+.theme-dark .app-aurora {
+  background:
+    radial-gradient(60rem 36rem at 110% -12%, rgb(155 211 115 / 0.1), transparent 60%),
+    radial-gradient(52rem 34rem at -12% -4%, rgb(91 52 214 / 0.16), transparent 60%),
+    radial-gradient(44rem 28rem at 50% 118%, rgb(108 198 144 / 0.08), transparent 62%),
+    #05040b;
+}
+.theme-dark .app-aurora::before {
+  content: "";
+  position: absolute;
+  inset: -10% -50% 0;
+  background-image:
+    linear-gradient(to right, rgb(155 211 115 / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(155 211 115 / 0.07) 1px, transparent 1px);
+  background-size: 72px 72px;
+  transform: perspective(700px) rotateX(58deg);
+  transform-origin: 50% 100%;
+  mask-image: linear-gradient(to top, #000 0%, transparent 55%);
+  animation: q-floor-app 14s linear infinite;
+}
+@keyframes q-floor-app { to { background-position: 0 72px; } }
+.theme-dark .app-aurora::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 14% 22%, rgb(255 255 255 / 0.45), transparent 60%),
+    radial-gradient(1px 1px at 72% 14%, rgb(255 255 255 / 0.35), transparent 60%),
+    radial-gradient(1px 1px at 58% 38%, rgb(243 234 59 / 0.4), transparent 60%),
+    radial-gradient(1px 1px at 33% 64%, rgb(255 255 255 / 0.25), transparent 60%),
+    radial-gradient(1px 1px at 88% 52%, rgb(155 211 115 / 0.4), transparent 60%),
+    radial-gradient(1px 1px at 46% 9%, rgb(255 255 255 / 0.35), transparent 60%),
+    radial-gradient(1.5px 1.5px at 8% 78%, rgb(255 255 255 / 0.3), transparent 60%);
+  animation: q-twinkle 7s ease-in-out infinite alternate;
+}
+
+/* Cartões e links interativos: brilho fino ao passar o mouse */
+.theme-dark a.glass:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)), .theme-dark button.glass:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) { transition: box-shadow 0.25s, transform 0.25s, background-color 0.25s; }
+.theme-dark a.glass:hover:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)), .theme-dark button.glass:hover:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), 0 0 0 1px rgb(155 211 115 / 0.28), 0 18px 40px -18px rgb(155 211 115 / 0.25);
+}
+.theme-dark .page-in { animation: page-in-dark 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+@keyframes page-in-dark { from { opacity: 0; transform: translate3d(0, 10px, 0); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .theme-dark .app-aurora::before, .theme-dark .app-aurora::after, .theme-dark .page-in { animation: none; } }
+@media print { .theme-dark .app-aurora { display: none; } }

@@ -86,6 +86,7 @@ export default function DocumentsPage() {
       </div>
 
       <div className="mt-6 mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="max-w-full overflow-x-auto">
         <Segmented
           value={tab}
           onChange={(v) => router.replace(v === "todos" ? "/documentos" : `/documentos?tipo=${v}`)}
@@ -96,6 +97,7 @@ export default function DocumentsPage() {
             { value: "aluguel", label: "Aluguel" },
           ]}
         />
+        </div>
         <div className="flex gap-2 text-xs font-semibold">
           <span className="rounded-full bg-amber-50 px-3 py-1.5 text-amber-800 ring-1 ring-amber-600/15">{waiting} aguardando assinatura</span>
           <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700 ring-1 ring-emerald-600/15">{signedMonth} assinados no mês</span>

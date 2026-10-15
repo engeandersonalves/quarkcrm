@@ -543,7 +543,7 @@ export default function QuickQuotePage() {
               ]}
             />
             <div ref={boxRef} className={cx("mx-auto w-full", template === "story" ? "max-w-[430px]" : "max-w-[540px]")}>
-              <div className="overflow-hidden rounded-[22px] shadow-lift" style={{ height: H * scale }}>
+              <div className="palette-classic overflow-hidden rounded-[22px] shadow-lift" style={{ height: H * scale }}>
                 <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: W }}>
                   {!number ? (
                     <div style={{ width: W, height: H }} className="bg-[#07060F]" />

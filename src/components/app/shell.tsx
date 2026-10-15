@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator, Receipt, ScrollText } from "lucide-react";
+import { BarChart3, CheckSquare, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator, Receipt, ScrollText, Moon } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -21,6 +21,7 @@ import { Avatar, cx } from "../ui";
 import { AvatarPicker, OpeningFlow } from "./onboarding";
 import { useNavBadges, type NavBadges } from "./nav-badges";
 import { useProposalViewAlerts } from "./view-alerts";
+import { useTheme, type Theme } from "./theme";
 
 type NavKey = "tasks" | "leads" | "proposals" | "documents";
 interface NavItem {
@@ -144,6 +145,7 @@ function ShellInner({ children }: { children: ReactNode }) {
   const badges = useNavBadges(user.id);
   useProposalViewAlerts();
   const [collapsed, setCollapsed] = useState(false);
+  const [theme, toggleTheme] = useTheme();
   useEffect(() => {
     try {
       setCollapsed(localStorage.getItem("sidebar-collapsed") === "1");
@@ -168,7 +170,7 @@ function ShellInner({ children }: { children: ReactNode }) {
 
   return (
     <Quick.Provider value={{ openLead, openTask }}>
-      <div className={cx("min-h-dvh transition-[padding] duration-300 print:pl-0", collapsed ? "lg:pl-[88px]" : "lg:pl-[276px]")}>
+      <div className={cx("min-h-dvh transition-[padding] duration-300 print:pl-0", collapsed ? "lg:pl-[88px]" : "lg:pl-[276px]", theme === "dark" && "theme-dark")}>
         <div className="app-aurora" aria-hidden />
         <Sidebar
           collapsed={collapsed}
@@ -180,22 +182,27 @@ function ShellInner({ children }: { children: ReactNode }) {
           onNewTask={() => openTask()}
           onAvatar={() => router.push(`/perfil/${user.id}`)}
           onSignOut={signOut}
+          theme={theme}
+          onTheme={toggleTheme}
         />
 
         {/* Topbar mobile */}
-        <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-white/60 bg-white/55 px-4 shadow-[0_1px_0_rgba(28,18,52,0.05)] pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden">
+        <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-white/60 bg-white/55 px-4 shadow-[0_1px_0_rgba(28,18,52,0.05)] pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden dark:border-white/[0.06] dark:bg-[#07060F]/75 dark:shadow-none">
           <Link href="/" className="flex items-center" aria-label={settings.company_name || "Quark Energia"}>
-            <BrandLogo variant="color" className="h-8" />
+            <BrandLogo variant={theme === "dark" ? "white" : "color"} className="h-7" />
           </Link>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <XpChip />
             <button onClick={() => router.push(`/perfil/${user.id}`)} className="ml-0.5 rounded-full" aria-label="Meu perfil">
               <Avatar name={profile?.full_name ?? user.email} src={profile?.avatar_url} className="h-8 w-8 text-[10px]" />
             </button>
-            <button onClick={() => setPalette(true)} className="grid h-9 w-9 place-items-center rounded-xl text-ink-600" aria-label="Buscar">
+            <button onClick={() => setPalette(true)} className="grid h-9 w-8 place-items-center rounded-xl text-ink-600" aria-label="Buscar">
               <Search className="h-[18px] w-[18px]" />
             </button>
-            <button onClick={signOut} className="grid h-9 w-9 place-items-center rounded-xl text-ink-500" aria-label="Sair">
+            <button onClick={toggleTheme} className="grid h-9 w-8 place-items-center rounded-xl text-ink-500" aria-label={theme === "dark" ? "Tema claro" : "Tema escuro"}>
+              {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+            </button>
+            <button onClick={signOut} className="grid h-9 w-8 place-items-center rounded-xl text-ink-500" aria-label="Sair">
               <LogOut className="h-[18px] w-[18px]" />
             </button>
           </div>
@@ -208,7 +215,7 @@ function ShellInner({ children }: { children: ReactNode }) {
         </main>
 
         {/* Bottom nav mobile */}
-        <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/65 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_rgba(28,18,52,0.18)] backdrop-blur-2xl backdrop-saturate-150 lg:hidden">
+        <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/65 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_rgba(28,18,52,0.18)] backdrop-blur-2xl backdrop-saturate-150 lg:hidden dark:border-white/[0.06] dark:bg-[#07060F]/80 dark:shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.8)]">
           <div className="relative grid h-16 grid-cols-5">
             {MOBILE_TABS.slice(0, 2).map((item) => (
               <TabLink key={item.href} {...item} active={isActive(item.href)} count={item.badge ? badges[item.badge] : 0} alert={item.badge === "tasks" && badges.late > 0} />
@@ -293,6 +300,8 @@ function Sidebar({
   onNewTask,
   onAvatar,
   onSignOut,
+  theme,
+  onTheme,
 }: {
   collapsed: boolean;
   onToggle: () => void;
@@ -303,6 +312,8 @@ function Sidebar({
   onNewTask: () => void;
   onAvatar: () => void;
   onSignOut: () => void;
+  theme: Theme;
+  onTheme: () => void;
 }) {
   const { profile, user, settings } = useApp();
   const { xp, streak } = useReward();
@@ -313,13 +324,13 @@ function Sidebar({
   return (
     <aside
       className={cx(
-        "no-print fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-white/[0.06] text-ink-300 transition-[width] duration-300 lg:flex",
+        "palette-classic no-print fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-white/[0.06] text-ink-300 transition-[width] duration-300 lg:flex",
         collapsed ? "w-[88px]" : "w-[276px]",
       )}
-      style={{ background: "linear-gradient(180deg, #16102C 0%, #0D0A1C 45%, #08070F 100%)" }}
+      style={{ background: theme === "dark" ? "linear-gradient(180deg, #0B0918 0%, #07060F 55%, #05040B 100%)" : "linear-gradient(180deg, #16102C 0%, #0D0A1C 45%, #08070F 100%)" }}
     >
       {/* brilhos de fundo */}
-      <div className="pointer-events-none absolute -top-28 -left-24 h-72 w-72 rounded-full bg-[#5B34D6]/35 blur-[90px]" />
+      <div className={cx("pointer-events-none absolute -top-28 -left-24 h-72 w-72 rounded-full blur-[90px]", theme === "dark" ? "bg-[#5B34D6]/15" : "bg-[#5B34D6]/35")} />
       <div className="pointer-events-none absolute top-1/2 -right-32 h-72 w-72 rounded-full bg-[#9BD373]/10 blur-[90px]" />
       <div className="pointer-events-none absolute -bottom-24 -left-10 h-60 w-60 rounded-full bg-[#F3EA3B]/10 blur-[90px]" />
 
@@ -482,6 +493,9 @@ function Sidebar({
             >
               <Settings className="h-4 w-4" />
             </Link>
+            <button onClick={onTheme} className="grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition hover:bg-white/10 hover:text-white" title={theme === "dark" ? "Tema claro" : "Tema escuro"}>
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
             <button onClick={onSignOut} className="grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition hover:bg-white/10 hover:text-white" title="Sair">
               <LogOut className="h-4 w-4" />
             </button>
