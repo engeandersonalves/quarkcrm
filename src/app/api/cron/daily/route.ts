@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { appUrl, emailTemplate, sendEmail } from "@/lib/email";
+import { syncAll } from "@/lib/monitoring/sync";
 import { adminSupabase } from "@/lib/supabase/server";
+
+export const maxDuration = 60;
 
 /**
  * Resumo diário de tarefas (atrasadas + do dia) para cada responsável.
@@ -13,6 +16,9 @@ export async function GET(req: Request) {
   }
   const sb = adminSupabase();
   if (!sb) return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY ausente" }, { status: 500 });
+
+  // Monitoramento: atualiza as usinas de todas as contas conectadas (erros ficam registrados na conexão).
+  await syncAll(sb).catch(() => null);
 
   const tz = process.env.APP_TIMEZONE || "America/Sao_Paulo";
   const endOfDay = new Date(Date.now() + 24 * 3600 * 1000).toISOString();

@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CheckSquare, Crown, FileSignature, Megaphone, Zap, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users, Receipt, ScrollText } from "lucide-react";
+import { BarChart3, CheckSquare, Crown, FileSignature, Megaphone, Zap, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users, Receipt, ScrollText, Activity } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { productOf } from "@/lib/constants";
@@ -76,6 +76,7 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
       { id: "p-docs", group: "Ir para", label: "Documentos (procurações e contratos)", icon: <FileSignature className="h-4 w-4" />, keywords: "documentos procuracao equatorial contrato aluguel locacao assinatura", run: go("/documentos") },
       { id: "a-brief", group: "Ações", label: "Plano do dia (missões)", icon: <Zap className="h-4 w-4" />, keywords: "plano do dia missoes sugestoes postar prospeccao", run: () => window.dispatchEvent(new Event("quark:briefing")) },
       { id: "a-profile", group: "Ações", label: "Meu perfil (capa, conquistas e mural)", icon: <Crown className="h-4 w-4" />, keywords: "perfil conquistas capa bio mural atualizacoes", run: go("/perfil") },
+      { id: "p-monitoring", group: "Ir para", label: "Monitoramento de usinas", icon: <Activity className="h-4 w-4" />, keywords: "monitoramento usinas inversores geracao solis deye sungrow growatt huawei solplanet solarman", run: go("/monitoramento") },
       { id: "p-contracts", group: "Ir para", label: "Contratos solares", icon: <ScrollText className="h-4 w-4" />, keywords: "contratos contrato solar fornecimento instalacao assinatura", run: go("/contratos") },
       { id: "n-contract", group: "Ações", label: "Novo contrato solar", icon: <ScrollText className="h-4 w-4" />, keywords: "contrato solar fornecimento instalacao equipamentos fornecedora", run: go("/documentos/novo?tipo=contrato") },
       { id: "a-receipt", group: "Ações", label: "Gerar recibo (PDF com assinatura)", icon: <Receipt className="h-4 w-4" />, keywords: "recibo pagamento quitacao comprovante pdf", run: go("/recibos") },

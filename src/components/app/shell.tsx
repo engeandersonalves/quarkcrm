@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator, Receipt, ScrollText, Moon } from "lucide-react";
+import { BarChart3, CheckSquare, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator, Receipt, ScrollText, Moon, Activity } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -54,6 +54,10 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
       { href: "/recibos", label: "Recibos", icon: Receipt },
       { href: "/marketing", label: "Marketing", icon: Megaphone },
     ],
+  },
+  {
+    title: "Pós-venda",
+    items: [{ href: "/monitoramento", label: "Monitoramento", icon: Activity }],
   },
   {
     title: "Desempenho",

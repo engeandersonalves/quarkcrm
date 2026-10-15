@@ -19,6 +19,7 @@ import { must, useLive } from "@/lib/live";
 import { brl, fmtNum } from "@/lib/pricing";
 import { supabase } from "@/lib/supabase/client";
 import { WhatsAppMenu } from "@/components/app/whatsapp-menu";
+import { LeadPlants } from "@/components/monitoring/lead-plants";
 import { useReward } from "@/components/app/rewards";
 import type { Activity, Lead, LeadStatus, Proposal, Task } from "@/lib/types";
 
@@ -379,6 +380,8 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
               )}
             </div>
           </Card>
+
+          <LeadPlants leadId={lead.id} />
 
           {/* Dados */}
           <Card>

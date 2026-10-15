@@ -1035,13 +1035,79 @@ drop policy if exists "team_all" on public.receipts;
 create policy "team_all" on public.receipts for all to authenticated using (public.is_member()) with check (public.is_member());
 
 -- -----------------------------------------------------------------------------
+-- Monitoramento de usinas (Solis, Deye, Solarman, Sungrow, Growatt, Huawei, Solplanet)
+-- -----------------------------------------------------------------------------
+create table if not exists public.monitoring_connections (
+  id uuid primary key default gen_random_uuid(),
+  provider text not null check (provider in ('solis', 'deye', 'solarman', 'sungrow', 'growatt', 'huawei', 'solplanet')),
+  label text not null,
+  status text not null default 'ok' check (status in ('ok', 'error', 'syncing')),
+  last_error text,
+  last_sync_at timestamptz,
+  plants_count int not null default 0,
+  created_by uuid references public.profiles (id) on delete set null default auth.uid(),
+  created_at timestamptz not null default now()
+);
+alter table public.monitoring_connections enable row level security;
+drop policy if exists "team_read" on public.monitoring_connections;
+create policy "team_read" on public.monitoring_connections for select to authenticated using (public.is_member());
+-- Criar, sincronizar e excluir passam pelo servidor (que valida e criptografa as credenciais).
+
+-- Credenciais criptografadas (AES-256-GCM no servidor). Sem políticas: só a service role lê.
+create table if not exists public.monitoring_secrets (
+  connection_id uuid primary key references public.monitoring_connections (id) on delete cascade,
+  payload text not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.monitoring_secrets enable row level security;
+revoke all on public.monitoring_secrets from anon, authenticated;
+
+create table if not exists public.monitoring_plants (
+  id uuid primary key default gen_random_uuid(),
+  connection_id uuid not null references public.monitoring_connections (id) on delete cascade,
+  provider text not null,
+  external_id text not null,
+  name text not null,
+  capacity_kwp numeric,
+  power_kw numeric,
+  today_kwh numeric,
+  month_kwh numeric,
+  total_kwh numeric,
+  status text not null default 'unknown' check (status in ('online', 'offline', 'alarm', 'unknown')),
+  last_update_at timestamptz,
+  address text,
+  lead_id uuid references public.leads (id) on delete set null,
+  synced_at timestamptz not null default now(),
+  unique (connection_id, external_id)
+);
+create index if not exists monitoring_plants_lead_idx on public.monitoring_plants (lead_id);
+alter table public.monitoring_plants enable row level security;
+drop policy if exists "team_read" on public.monitoring_plants;
+create policy "team_read" on public.monitoring_plants for select to authenticated using (public.is_member());
+-- A equipe pode vincular a usina a um cliente do CRM (só a coluna lead_id).
+drop policy if exists "team_link" on public.monitoring_plants;
+create policy "team_link" on public.monitoring_plants for update to authenticated using (public.is_member()) with check (public.is_member());
+revoke update on public.monitoring_plants from authenticated;
+grant update (lead_id) on public.monitoring_plants to authenticated;
+
+create table if not exists public.monitoring_daily (
+  plant_id uuid not null references public.monitoring_plants (id) on delete cascade,
+  day date not null,
+  kwh numeric not null,
+  primary key (plant_id, day)
+);
+alter table public.monitoring_daily enable row level security;
+drop policy if exists "team_read" on public.monitoring_daily;
+create policy "team_read" on public.monitoring_daily for select to authenticated using (public.is_member());
+
+-- -----------------------------------------------------------------------------
 -- Tempo real
 -- -----------------------------------------------------------------------------
 do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers', 'marketing_assets', 'profile_updates', 'receipts'] loop
+    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers', 'marketing_assets', 'profile_updates', 'receipts', 'monitoring_connections', 'monitoring_plants'] loop
       if not exists (
         select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
       ) then
