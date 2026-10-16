@@ -214,6 +214,30 @@ test("leituras elétricas: padrões de cada fabricante", async () => {
   assert.deepEqual([gw.dc[0].voltage, gw.ac[0].current, gw.temperatureC], [350, 9, 39]);
 });
 
+test("tensão da rede: split-phase usa a tensão entre pernas", async () => {
+  const { parseElectrical, flatten, deviceFrom } = await import("./monitoring/electrical.ts");
+  // Deye/Solarman híbrido split-phase ligado em 220 V: cada perna ~117 V, entre pernas 238 V
+  const deye = parseElectrical(flatten([{ key: "G_V_L1", name: "Grid Voltage L1", value: "117.4", unit: "V" }, { key: "G_V_L2", name: "Grid Voltage L2", value: "120.6", unit: "V" }, { key: "G_V_L1L2", name: "Grid Voltage L1-L2", value: "238.0", unit: "V" }]));
+  assert.equal(deye.gridVoltage, 238);
+  assert.match(deye.gridVoltageLabel!, /L1-L2/);
+  assert.deepEqual(deye.acLine, [{ label: "L1-L2", voltage: 238 }]);
+  // Monofásico 220 V F/N normal: usa a própria fase
+  const mono = parseElectrical({ uAc1: 238.2, iAc1: 12 });
+  assert.equal(mono.gridVoltage, 238.2);
+  // Trifásico com tensões de linha (Huawei): continua usando fase-neutro
+  const tri = parseElectrical({ a_u: 220, b_u: 221, c_u: 219, ab_u: 381, bc_u: 382, ca_u: 380 });
+  assert.equal(tri.gridVoltage, 220);
+  assert.equal(tri.acLine.length, 3);
+  // Growatt vacRs não vira fase
+  const gro = parseElectrical({ vacr: 118, vacs: 119, vacRs: 237 });
+  assert.equal(gro.gridVoltage, 237);
+  // Campo "st" (status) não vira tensão
+  assert.equal(parseElectrical({ st: 3, uAc1: 220 }).acLine.length, 0);
+  // Leituras brutas guardadas para conferência
+  const d = deviceFrom({ sn: "x", name: "x", model: null, status: "online", powerKw: 1, todayKwh: 1, totalKwh: 1, updatedAt: null }, { uAc1: 230, serialNo: 123, temp: 40 });
+  assert.deepEqual(d.readings!.map((r) => r.key), ["uAc1", "temp"]);
+});
+
 test("Solis: geração do mês e inversores com tensão e corrente", async () => {
   const { fetch, calls } = fakeFetch((c) => {
     if (c.url.endsWith("/stationMonth")) return { body: { code: "0", data: [{ dateStr: "2026-10-01", energy: 41.2, energyStr: "kWh" }, { dateStr: "2026-10-02", energy: 0.0388, energyStr: "MWh" }] } };
@@ -316,9 +340,9 @@ test("SolarZ: Basic Auth, lista de usinas e geração do mês", async () => {
   assert.equal(plants[0].capacityKwp, 9.9);
   assert.equal(plants[0].totalKwh, 18342.5);
   assert.equal(plants[0].status, "online");
-  assert.equal(plants[0].monthKwh, 80.5);
   assert.equal(plants[0].address, "Maceió - AL");
-  assert.ok(calls.some((c) => c.url.endsWith(`/openApi/seller/plant/energy/plantId/431/month/${month}`)));
+  // A lista não consulta a geração usina por usina (isso vai para o sincronizador, aos poucos)
+  assert.ok(!calls.some((c) => c.url.includes("/plant/energy/")));
   const days = await ADAPTERS.solarz.fetchDays!({ username: "a", password: "b" }, "431", month, fetch);
   assert.deepEqual(days.map((d) => d.kwh), [42.5, 38]);
 });
@@ -326,4 +350,41 @@ test("SolarZ: Basic Auth, lista de usinas e geração do mês", async () => {
 test("SolarZ: senha recusada explica o Usuário de API", async () => {
   const { fetch } = fakeFetch(() => ({ status: 401, body: {} }));
   await assert.rejects(ADAPTERS.solarz.fetchPlants({ username: "a", password: "b" }, fetch), /Usuário de API/);
+});
+
+test("relatório por período", async () => {
+  const { rangeStats, periodLabel, daysBetween } = await import("./monitoring/report.ts");
+  assert.equal(daysBetween("2026-09-01", "2026-09-30"), 30);
+  assert.equal(daysBetween("2026-02-27", "2026-03-02"), 4);
+  const days = [{ day: "2026-09-01", kwh: 30 }, { day: "2026-09-02", kwh: 40 }, { day: "2026-10-01", kwh: 50 }];
+  const r = rangeStats({ from: "2026-09-01", to: "2026-09-30", days, capacityKwp: 10, tariff: 1, sunHours: 5, performanceRatio: 0.8 });
+  assert.equal(r.total, 70);
+  assert.equal(r.days, 30);
+  assert.equal(r.expected, 1200);
+  assert.equal(r.best?.kwh, 40);
+  // Período que termina no futuro: conta só até hoje
+  const cur = rangeStats({ from: "2026-10-01", to: "2026-10-31", days, capacityKwp: 10, tariff: 1, sunHours: 5, performanceRatio: 0.8, today: "2026-10-10" });
+  assert.equal(cur.days, 10);
+  assert.equal(periodLabel("2026-09-01", "2026-09-30"), "setembro de 2026");
+  assert.equal(periodLabel("2026-09-05", "2026-10-04"), "05/09/2026 a 04/10/2026");
+});
+
+test("sincronizador: histórico e limite de consultas", async () => {
+  const { monthsBack, isRateLimit } = await import("./monitoring/sync.ts");
+  assert.deepEqual(monthsBack("2026-02", 3), ["2026-01", "2025-12", "2025-11"]);
+  const { MonitoringError } = await import("./monitoring/types.ts");
+  assert.ok(isRateLimit(new MonitoringError("SolarZ: muitas consultas seguidas. Tente de novo em alguns minutos.")));
+  assert.ok(isRateLimit(new Error("Request too frequently")));
+  assert.ok(!isRateLimit(new MonitoringError("SolarZ: usuário ou senha recusados.")));
+});
+
+test("usinas que precisam de atenção", async () => {
+  const { attentionOf } = await import("./monitoring/view.ts");
+  const base = { status: "online" as const, today_kwh: 30, capacity_kwp: 10, last_update_at: new Date().toISOString(), provider: "solis" as const };
+  assert.equal(attentionOf(base, 15), null);
+  assert.equal(attentionOf({ ...base, status: "offline" }, 15), "Offline");
+  assert.equal(attentionOf({ ...base, today_kwh: 5 }, 15), "Geração baixa hoje");
+  assert.equal(attentionOf({ ...base, today_kwh: 5 }, 9), null);
+  assert.equal(attentionOf({ ...base, last_update_at: new Date(Date.now() - 30 * 3600_000).toISOString() }, 15), "Sem leitura há mais de 24 h");
+  assert.equal(attentionOf({ ...base, provider: "manual" as const, status: "offline" }, 15), null);
 });

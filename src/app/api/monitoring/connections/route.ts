@@ -2,7 +2,7 @@ import { explainDbError } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { missingCredentials, PROVIDERS, providerInfo } from "@/lib/monitoring/catalog";
 import { sealCredentials } from "@/lib/monitoring/crypto";
-import { fetchProviderPlants, savePlants } from "@/lib/monitoring/sync";
+import { fetchProviderPlants, savePlants, syncDetails } from "@/lib/monitoring/sync";
 import { MonitoringError, type ProviderId } from "@/lib/monitoring/types";
 import { monitoringContext } from "../auth";
 
@@ -50,6 +50,8 @@ export async function POST(req: Request) {
     const { error: e2 } = await ctx.admin.from("monitoring_secrets").insert({ connection_id: conn.id, payload: sealCredentials(creds) });
     if (e2) throw new Error(e2.message);
     await savePlants(ctx.admin, conn as { id: string; provider: ProviderId; label: string }, plants);
+    // Primeiro detalhe já na conexão (o resto continua aos poucos)
+    await syncDetails(ctx.admin, conn as { id: string; provider: ProviderId; label: string }, creds, { deadline: Date.now() + 15_000 }).catch(() => null);
   } catch (e) {
     await ctx.admin.from("monitoring_connections").delete().eq("id", conn.id);
     return NextResponse.json({ error: e instanceof Error ? explainDbError(e.message) : "Falha ao salvar." }, { status: 500 });

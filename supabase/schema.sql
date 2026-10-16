@@ -1103,6 +1103,25 @@ alter table public.monitoring_daily enable row level security;
 drop policy if exists "team_read" on public.monitoring_daily;
 create policy "team_read" on public.monitoring_daily for select to authenticated using (public.is_member());
 
+-- Baixar uma vez, mostrar do banco: controle do que já foi baixado e do ritmo das consultas
+alter table public.monitoring_plants add column if not exists details_synced_at timestamptz;
+alter table public.monitoring_plants add column if not exists devices jsonb;
+alter table public.monitoring_plants add column if not exists devices_at timestamptz;
+alter table public.monitoring_connections add column if not exists retry_after timestamptz;
+
+create table if not exists public.monitoring_months (
+  plant_id uuid not null references public.monitoring_plants (id) on delete cascade,
+  month text not null,
+  kwh numeric,
+  -- dia a dia do mês já baixado por completo (mês passado não é consultado de novo)
+  complete boolean not null default false,
+  fetched_at timestamptz not null default now(),
+  primary key (plant_id, month)
+);
+alter table public.monitoring_months enable row level security;
+drop policy if exists "team_read" on public.monitoring_months;
+create policy "team_read" on public.monitoring_months for select to authenticated using (public.is_member());
+
 -- -----------------------------------------------------------------------------
 -- Rastreamento detalhado da proposta: seções lidas, tempo de leitura e cliques
 -- -----------------------------------------------------------------------------

@@ -28,6 +28,7 @@ export interface ConnectionRow {
   last_error: string | null;
   last_sync_at: string | null;
   plants_count: number;
+  retry_after?: string | null;
   created_at: string;
 }
 
@@ -77,4 +78,18 @@ export function lastDays(count: number, now = new Date()) {
     d.setUTCDate(d.getUTCDate() - (count - 1 - i));
     return d.toISOString().slice(0, 10);
   });
+}
+
+/**
+ * Por que a usina precisa de atenção (ou null). `hour` é a hora local (0–23):
+ * geração baixa só conta depois das 13h, quando o dia já deveria ter rendido.
+ */
+export function attentionOf(p: Pick<PlantRow, "status" | "today_kwh" | "capacity_kwp" | "last_update_at" | "provider">, hour: number, now = Date.now()): string | null {
+  if (p.provider === "manual") return null;
+  if (p.status === "offline") return "Offline";
+  if (p.status === "alarm") return "Alarme no inversor";
+  if (p.last_update_at && now - new Date(p.last_update_at).getTime() > 24 * 3600_000) return "Sem leitura há mais de 24 h";
+  const y = yieldOf(p);
+  if (hour >= 13 && y !== null && y < 1) return "Geração baixa hoje";
+  return null;
 }

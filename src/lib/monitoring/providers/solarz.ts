@@ -1,6 +1,6 @@
-import { MonitoringError, type Credentials, type DayValue, type Fetch, type MonthValue, type PlantData, type PlantStatus, type ProviderAdapter } from "../types.ts";
+import { MonitoringError, type Credentials, type DayValue, type Fetch, type PlantData, type PlantStatus, type ProviderAdapter } from "../types.ts";
 import { num, toIso } from "../units.ts";
-import { call, monthRange, obj, pool, str } from "./http.ts";
+import { call, obj, str } from "./http.ts";
 
 /**
  * SolarZ (Open API do integrador): reúne num login só as usinas de todos os
@@ -111,26 +111,11 @@ async function fetchPlants(creds: Credentials, fetch: Fetch): Promise<PlantData[
   // Contas sem o plano com informações extras recebem lista vazia na rota detalhada
   if (!rows.length) rows = await listRows(creds, fetch, "/openApi/seller/plant/list");
 
-  const { start, end } = monthRange();
-  const month = start.slice(0, 7);
-  const deadline = Date.now() + 30_000;
-
-  return pool(
-    rows.filter((r) => r.id !== undefined && r.id !== null),
-    6,
-    async (r) => {
+  // Só a lista (1 chamada por página). A geração dia a dia é baixada aos poucos pelo sincronizador.
+  return rows
+    .filter((r) => r.id !== undefined && r.id !== null)
+    .map((r) => {
       const id = str(r.id);
-      // Geração do mês corrente (dia a dia) para preencher hoje/mês e o histórico
-      let daily: DayValue[] = [];
-      if (Date.now() < deadline) {
-        try {
-          daily = await energyMonth(creds, fetch, id, month);
-        } catch {
-          daily = [];
-        }
-      }
-      const monthSum = daily.length ? daily.reduce((t, d) => t + d.kwh, 0) : null;
-      const todayRow = daily.find((d) => d.day === end);
       const city = str(pick(r, ["city", "cidade", "cityName"]));
       const uf = str(pick(r, ["state", "uf", "estado", "stateAcronym"]));
       return {
@@ -138,33 +123,18 @@ async function fetchPlants(creds: Credentials, fetch: Fetch): Promise<PlantData[
         name: str(r.name ?? r.nome) || `Usina ${id}`,
         capacityKwp: num(pick(r, ["installedPower", "potenciaInstalada", "power", "capacity"])),
         powerKw: num(pick(r, ["currentPower", "lastPower", "instantPower", "powerNow"])),
-        todayKwh: todayRow ? todayRow.kwh : num(pick(r, ["energyToday", "todayEnergy", "geracaoHoje"])),
-        monthKwh: monthSum ?? num(pick(r, ["energyMonth", "monthEnergy"])),
+        todayKwh: num(pick(r, ["energyToday", "todayEnergy", "geracaoHoje"])),
+        monthKwh: num(pick(r, ["energyMonth", "monthEnergy"])),
         totalKwh: num(pick(r, ["energyProducedKwh", "totalEnergy", "energyTotal"])),
         status: statusOf(r.status ?? r.situation),
         lastUpdate: toIso(pick(r, ["lastUpdate", "lastCommunication", "updatedAt", "lastReading"]) ?? null),
         address: str(pick(r, ["address", "endereco"])) || [city, uf].filter(Boolean).join(" - ") || null,
-        daily: daily.filter((d) => d.kwh > 0),
       };
-    },
-  );
+    });
 }
 
 async function fetchDays(creds: Credentials, plantId: string, month: string, fetch: Fetch) {
   return energyMonth(creds, fetch, plantId, month);
 }
 
-async function fetchMonths(creds: Credentials, plantId: string, year: string, fetch: Fetch): Promise<MonthValue[]> {
-  const now = monthRange().start.slice(0, 7);
-  const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`).filter((m) => m <= now);
-  const sums = await pool(months, 4, async (m) => {
-    try {
-      return (await energyMonth(creds, fetch, plantId, m)).reduce((t, d) => t + d.kwh, 0);
-    } catch {
-      return 0;
-    }
-  });
-  return months.map((month, i) => ({ month, kwh: Math.round(sums[i] * 100) / 100 }));
-}
-
-export const solarz: ProviderAdapter = { id: "solarz", fetchPlants, fetchDays, fetchMonths };
+export const solarz: ProviderAdapter = { id: "solarz", fetchPlants, fetchDays };

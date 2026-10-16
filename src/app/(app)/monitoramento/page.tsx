@@ -5,14 +5,17 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
-import { BarChart, Sparkline } from "@/components/charts";
+import { BarChart, Donut, Sparkline } from "@/components/charts";
+import { Alert3D, Bolt3D, Calendar3D, Coin3D, Gauge3D, House3D, IconTile, Inverter3D, Leaf3D, Panel3D, Sun3D } from "@/components/icons3d";
 import { ConnectModal, ProviderMark } from "@/components/monitoring/connect-modal";
 import { Badge, Button, Card, Empty, Input, PageHeader, Segmented, Select, Skeleton, cx } from "@/components/ui";
+import { DEFAULT_INPUTS } from "@/lib/defaults";
 import { relativeTime } from "@/lib/format";
+import { CO2_KG_PER_KWH, monthShort } from "@/lib/monitoring/report";
 import { must, useLive } from "@/lib/live";
 import { PROVIDERS, providerInfo } from "@/lib/monitoring/catalog";
 import type { PlantStatus } from "@/lib/monitoring/types";
-import { STATUS_LABEL, fmtKw, fmtKwh, fmtKwp, lastDays, loadOf, summarize, yieldBand, yieldOf, type ConnectionRow, type PlantRow } from "@/lib/monitoring/view";
+import { STATUS_LABEL, attentionOf, fmtKw, fmtKwh, fmtKwp, lastDays, loadOf, summarize, yieldBand, yieldOf, type ConnectionRow, type PlantRow } from "@/lib/monitoring/view";
 import { supabase } from "@/lib/supabase/client";
 
 type Filter = "todas" | PlantStatus;
@@ -35,7 +38,8 @@ const STATUS_STYLE: Record<PlantStatus, { dot: string; badge: string; icon: type
 };
 
 export default function MonitoringPage() {
-  const { profile } = useApp();
+  const { profile, settings } = useApp();
+  const tariff = { ...DEFAULT_INPUTS, ...settings.defaults }.tariff;
   const isAdmin = profile?.role === "admin";
   const [connectOpen, setConnectOpen] = useState(false);
   const [syncing, setSyncing] = useState<string | "all" | null>(null);
@@ -61,6 +65,20 @@ export default function MonitoringPage() {
     [],
   );
 
+  // Histórico mensal (12 meses) já baixado e guardado no banco
+  const monthsKeys = useMemo(() => {
+    const now = new Date(Date.now() - 3 * 3600_000);
+    return Array.from({ length: 12 }, (_, i) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11 + i, 1)).toISOString().slice(0, 7));
+  }, []);
+  const { data: monthRows } = useLive(
+    async () => {
+      const { data, error } = await supabase().from("monitoring_months").select("plant_id, month, kwh").gte("month", monthsKeys[0]).limit(20000);
+      return error ? [] : ((data ?? []) as { plant_id: string; month: string; kwh: number | null }[]);
+    },
+    [monthsKeys[0]],
+    [],
+  );
+
   const byPlant = useMemo(() => {
     const m = new Map<string, Map<string, number>>();
     for (const d of daily ?? []) {
@@ -72,7 +90,7 @@ export default function MonitoringPage() {
 
   const sync = async (connectionId?: string, silent = false) => {
     setSyncing(connectionId ?? "all");
-    const res = await fetch("/api/monitoring/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ connectionId }) }).catch(() => null);
+    const res = await fetch("/api/monitoring/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ connectionId, auto: silent }) }).catch(() => null);
     const json = res ? await res.json().catch(() => ({})) : {};
     setSyncing(null);
     reloadConn();
@@ -85,11 +103,11 @@ export default function MonitoringPage() {
     else toast.success("Usinas atualizadas");
   };
 
-  // Ao abrir a tela: atualiza sozinho se a última leitura tiver mais de 15 minutos.
+  // Ao abrir a tela: só pede atualização se a última tiver mais de 1 hora (os dados vêm do banco).
   const auto = useRef(false);
   useEffect(() => {
     if (auto.current || !connections?.length) return;
-    const stale = connections.some((c) => c.status !== "syncing" && (!c.last_sync_at || Date.now() - new Date(c.last_sync_at).getTime() > 15 * 60_000));
+    const stale = connections.some((c) => c.status !== "syncing" && (!c.last_sync_at || Date.now() - new Date(c.last_sync_at).getTime() > 60 * 60_000) && !(c.retry_after && new Date(c.retry_after).getTime() > Date.now()));
     auto.current = true;
     if (stale) sync(undefined, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,6 +141,25 @@ export default function MonitoringPage() {
 
   const fleetDaily = useMemo(() => days.map((d, i) => ({ label: i % 6 === 0 ? d.slice(8) : "", full: new Date(`${d}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }), value: [...byPlant.values()].reduce((t, m) => t + (m.get(d) ?? 0), 0) })), [days, byPlant]);
   const loading = loadingConn || loadingPlants;
+  const hour = Number(new Date(Date.now() - 3 * 3600_000).toISOString().slice(11, 13));
+  const totalKwh = all.reduce((t, p) => t + (Number(p.total_kwh) || 0), 0);
+  const fleetMonthly = useMemo(() => {
+    const agg = new Map<string, number>();
+    for (const r of monthRows ?? []) agg.set(r.month, (agg.get(r.month) ?? 0) + (Number(r.kwh) || 0));
+    // Mês corrente: soma do que as usinas informam agora (mais atual que o histórico)
+    agg.set(monthsKeys[11], Math.max(agg.get(monthsKeys[11]) ?? 0, s.monthKwh));
+    return monthsKeys.map((m) => ({ label: monthShort(m), full: `${monthShort(m)}/${m.slice(2, 4)}`, value: agg.get(m) ?? 0 }));
+  }, [monthRows, monthsKeys, s.monthKwh]);
+  const yearKwh = fleetMonthly.filter((_, i) => monthsKeys[i].startsWith(monthsKeys[11].slice(0, 4))).reduce((t, m) => t + m.value, 0);
+  const attention = all.map((p) => ({ p, why: attentionOf(p, hour) })).filter((x) => x.why) as { p: PlantRow; why: string }[];
+  const top = all.filter((p) => yieldOf(p) !== null && p.provider !== "manual").sort((a, b) => (yieldOf(b) ?? 0) - (yieldOf(a) ?? 0)).slice(0, 5);
+  const byProvider = PROVIDERS.map((pr) => {
+    const list = all.filter((p) => p.provider === pr.id);
+    return { pr, count: list.length, kwp: list.reduce((t, p) => t + (Number(p.capacity_kwp) || 0), 0), today: list.reduce((t, p) => t + (Number(p.today_kwh) || 0), 0) };
+  }).filter((x) => x.count);
+  const unknown = s.total - s.online - s.alarm - s.offline;
+  const limited = (connections ?? []).find((c) => c.retry_after && new Date(c.retry_after).getTime() > Date.now());
+  const lastSync = (connections ?? []).map((c) => c.last_sync_at).filter(Boolean).sort().pop() ?? null;
 
   return (
     <div className="animate-fade-up">
@@ -167,60 +204,217 @@ export default function MonitoringPage() {
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(155,211,115,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(155,211,115,0.06)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_at_80%_0%,#000,transparent_70%)]" />
             <div className="relative grid gap-6 lg:grid-cols-[1fr_1.4fr] lg:items-center">
               <div>
-                <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.28em] text-[#C9E97A] uppercase">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-                  </span>
-                  Potência agora
+                <div className="flex items-center gap-4">
+                  <Sun3D size={76} className="animate-[float_6s_ease-in-out_infinite] drop-shadow-[0_10px_30px_rgba(255,170,0,0.35)]" />
+                  <div>
+                    <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.28em] text-[#C9E97A] uppercase">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                      </span>
+                      Potência agora
+                    </p>
+                    <p className="tnum mt-1 font-display text-5xl font-semibold tracking-tight sm:text-6xl">
+                      {fmtKw(s.powerKw).replace(/ (k|M)W$/, "")}
+                      <span className="ml-2 text-2xl font-normal text-white/50">{/MW$/.test(fmtKw(s.powerKw)) ? "MW" : "kW"}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="flex justify-between text-xs text-white/55">
+                    <span>{s.capacityKwp ? `${Math.round((s.powerKw / s.capacityKwp) * 100)}% da capacidade` : `${s.total} usinas`}</span>
+                    <span>{fmtKwp(s.capacityKwp)} instalados</span>
+                  </div>
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#F3EA3B] via-[#C9E97A] to-[#6CC690] transition-all duration-1000" style={{ width: `${s.capacityKwp ? Math.min(100, (s.powerKw / s.capacityKwp) * 100) : 0}%` }} />
+                  </div>
+                </div>
+                <p className="mt-4 text-xs text-white/45">
+                  {limited
+                    ? `Pausa pedida pelo fabricante: nova leitura automática às ${new Date(limited.retry_after!).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}. Os dados abaixo já estão salvos.`
+                    : lastSync
+                      ? `Dados salvos ${relativeTime(lastSync)} · atualização automática aos poucos, sem estourar o limite dos fabricantes`
+                      : "Aguardando a primeira leitura"}
                 </p>
-                <p className="tnum mt-2 font-display text-5xl font-semibold tracking-tight sm:text-6xl">
-                  {fmtKw(s.powerKw).replace(/ (k|M)W$/, "")}
-                  <span className="ml-2 text-2xl font-normal text-white/50">{/MW$/.test(fmtKw(s.powerKw)) ? "MW" : "kW"}</span>
-                </p>
-                <p className="mt-1 text-sm text-white/55">
-                  {s.capacityKwp ? `${Math.round((s.powerKw / s.capacityKwp) * 100)}% de ${fmtKwp(s.capacityKwp)} instalados` : `${s.total} usinas`}
-                </p>
-                <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/10 sm:grid-cols-4 lg:grid-cols-2">
-                  {[
-                    { k: "Hoje", v: fmtKwh(s.todayKwh) },
-                    { k: "No mês", v: s.monthKwh ? fmtKwh(s.monthKwh) : "—" },
-                    { k: "Gerando", v: `${s.online}/${s.total}` },
-                    { k: "Atenção", v: String(s.alarm + s.offline), warn: s.alarm + s.offline > 0 },
-                  ].map((x) => (
-                    <div key={x.k} className="bg-[#120B24]/60 px-4 py-3">
-                      <dt className="text-[10px] font-semibold tracking-[0.16em] text-white/45 uppercase">{x.k}</dt>
-                      <dd className={cx("tnum mt-0.5 font-display text-lg font-semibold whitespace-nowrap", x.warn && "text-amber-300")}>{x.v}</dd>
-                    </div>
-                  ))}
-                </dl>
               </div>
               <div className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/10" style={DARK_CHART}>
-                <p className="mb-2 text-xs font-semibold text-white/60">Geração das usinas · últimos 30 dias</p>
+                <p className="mb-2 text-xs font-semibold text-white/60">Geração da carteira · últimos 30 dias</p>
                 {fleetDaily.some((d) => d.value > 0) ? (
                   <BarChart data={fleetDaily} format={(v) => fmtKwh(v)} color={GREEN} height={180} />
                 ) : (
-                  <p className="grid h-[180px] place-items-center text-center text-sm text-white/45">O histórico começa a aparecer conforme as sincronizações acontecem.</p>
+                  <p className="grid h-[180px] place-items-center text-center text-sm text-white/45">O histórico aparece conforme os dados são baixados.</p>
                 )}
               </div>
             </div>
           </section>
 
+          {/* ------------------------------------------------ indicadores */}
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            {[
+              { k: "Gerado hoje", v: fmtKwh(s.todayKwh), sub: `${s.online} de ${s.total} gerando`, icon: <Bolt3D size={40} />, tone: "#9BD373" },
+              { k: "Neste mês", v: fmtKwh(s.monthKwh), sub: `≈ ${(s.monthKwh * tariff).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} economizados`, icon: <Calendar3D size={40} />, tone: "#8E6CF7" },
+              { k: "No ano", v: yearKwh ? fmtKwh(yearKwh) : "—", sub: "histórico baixado", icon: <Panel3D size={42} />, tone: "#5B8DEF" },
+              { k: "Economia no ano", v: yearKwh ? (yearKwh * tariff).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }) : "—", sub: `tarifa ${tariff.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}/kWh`, icon: <Coin3D size={40} />, tone: "#FFC93C" },
+              { k: "CO₂ evitado", v: `${((totalKwh * CO2_KG_PER_KWH) / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t`, sub: `${fmtKwh(totalKwh)} gerados no total`, icon: <Leaf3D size={40} />, tone: "#6CC690" },
+              { k: "Usinas", v: String(s.total), sub: `${fmtKwp(s.capacityKwp)} · ${connections.length} ${connections.length === 1 ? "conta" : "contas"}`, icon: <House3D size={42} />, tone: "#F3EA3B" },
+            ].map((x) => (
+              <Card key={x.k} className="relative overflow-hidden p-4">
+                <div className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full blur-2xl" style={{ background: `${x.tone}26` }} />
+                <IconTile tone={x.tone}>{x.icon}</IconTile>
+                <p className="mt-3 text-[10px] font-semibold tracking-[0.16em] text-ink-500 uppercase">{x.k}</p>
+                <p className="tnum mt-0.5 font-display text-xl font-semibold text-ink-900">{x.v}</p>
+                <p className="mt-0.5 truncate text-[11px] text-ink-500">{x.sub}</p>
+              </Card>
+            ))}
+          </div>
+
+          {/* ------------------------------------------------ gráficos e listas */}
+          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <Card className="p-5">
+              <div className="mb-3 flex items-center gap-3">
+                <IconTile tone="#5B8DEF" className="h-11 w-11">
+                  <Panel3D size={34} />
+                </IconTile>
+                <div>
+                  <p className="font-display text-[15px] font-semibold text-ink-900">Geração mensal</p>
+                  <p className="text-xs text-ink-500">Últimos 12 meses, todas as usinas</p>
+                </div>
+              </div>
+              {fleetMonthly.some((m) => m.value > 0) ? (
+                <BarChart data={fleetMonthly} format={(v) => fmtKwh(v)} color={GREEN} height={220} />
+              ) : (
+                <p className="grid h-[220px] place-items-center text-sm text-ink-500">O histórico mensal é baixado aos poucos, um mês por vez.</p>
+              )}
+            </Card>
+            <Card className="p-5">
+              <div className="mb-3 flex items-center gap-3">
+                <IconTile tone="#9BD373" className="h-11 w-11">
+                  <Inverter3D size={34} />
+                </IconTile>
+                <div>
+                  <p className="font-display text-[15px] font-semibold text-ink-900">Situação das usinas</p>
+                  <p className="text-xs text-ink-500">Status informado pelos inversores</p>
+                </div>
+              </div>
+              <Donut
+                data={[
+                  { label: "Gerando", value: s.online, color: "#3FBF6A" },
+                  { label: "Alerta", value: s.alarm, color: "#F5B700" },
+                  { label: "Offline", value: s.offline, color: "#E5484D" },
+                  { label: "Sem status", value: unknown, color: "#A1A1AA" },
+                ].filter((x) => x.value > 0)}
+                center={String(s.total)}
+                centerSub="usinas"
+              />
+            </Card>
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <Card className="p-5">
+              <div className="mb-3 flex items-center gap-3">
+                <IconTile tone="#F5B700" className="h-11 w-11">
+                  <Alert3D size={32} />
+                </IconTile>
+                <div className="min-w-0">
+                  <p className="font-display text-[15px] font-semibold text-ink-900">Precisam de atenção</p>
+                  <p className="text-xs text-ink-500">{attention.length ? `${attention.length} ${attention.length === 1 ? "usina" : "usinas"}` : "Tudo certo por aqui"}</p>
+                </div>
+              </div>
+              {attention.length ? (
+                <ul className="grid gap-1.5">
+                  {attention.slice(0, 6).map(({ p, why }) => (
+                    <li key={p.id}>
+                      <Link href={`/monitoramento/${p.id}`} className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition hover:bg-ink-50 dark:hover:bg-white/[0.04]">
+                        <span className={cx("h-2 w-2 shrink-0 rounded-full", why === "Offline" ? "bg-rose-500" : "bg-amber-400")} />
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink-900">{p.name}</span>
+                        <span className="shrink-0 text-[11px] text-ink-500">{why}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-xl bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800 ring-1 ring-emerald-200">Nenhuma usina parada ou gerando abaixo do esperado.</p>
+              )}
+            </Card>
+            <Card className="p-5">
+              <div className="mb-3 flex items-center gap-3">
+                <IconTile tone="#3FBF6A" className="h-11 w-11">
+                  <Gauge3D size={32} />
+                </IconTile>
+                <div>
+                  <p className="font-display text-[15px] font-semibold text-ink-900">Melhor desempenho hoje</p>
+                  <p className="text-xs text-ink-500">kWh gerados por kWp instalado</p>
+                </div>
+              </div>
+              {top.length ? (
+                <ol className="grid gap-2">
+                  {top.map((p, i) => {
+                    const y = yieldOf(p) ?? 0;
+                    return (
+                      <li key={p.id}>
+                        <Link href={`/monitoramento/${p.id}`} className="block rounded-xl px-2 py-1 transition hover:bg-ink-50 dark:hover:bg-white/[0.04]">
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="tnum w-4 text-xs font-bold text-ink-400">{i + 1}</span>
+                            <span className="min-w-0 flex-1 truncate font-medium text-ink-900">{p.name}</span>
+                            <span className="tnum text-xs font-semibold text-emerald-700">{y.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="mt-1 ml-6 h-1 overflow-hidden rounded-full bg-ink-100">
+                            <div className="h-full rounded-full bg-gradient-to-r from-[#C9E97A] to-[#3FBF6A]" style={{ width: `${Math.min(100, (y / Math.max(0.1, yieldOf(top[0]) ?? 1)) * 100)}%` }} />
+                          </div>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <p className="text-sm text-ink-500">Aparece quando as usinas informarem a geração de hoje.</p>
+              )}
+            </Card>
+            <Card className="p-5">
+              <div className="mb-3 flex items-center gap-3">
+                <IconTile tone="#8E6CF7" className="h-11 w-11">
+                  <House3D size={34} />
+                </IconTile>
+                <div>
+                  <p className="font-display text-[15px] font-semibold text-ink-900">Por fabricante</p>
+                  <p className="text-xs text-ink-500">Usinas, potência e geração de hoje</p>
+                </div>
+              </div>
+              <ul className="grid gap-2">
+                {byProvider.map(({ pr, count, kwp, today }) => (
+                  <li key={pr.id} className="flex items-center gap-2.5">
+                    <ProviderMark id={pr.id} className="h-8 w-8 text-[10px]" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-ink-900">{pr.name}</p>
+                      <p className="text-[11px] text-ink-500">
+                        {count} {count === 1 ? "usina" : "usinas"} · {fmtKwp(kwp)}
+                      </p>
+                    </div>
+                    <span className="tnum text-xs font-semibold text-ink-700">{fmtKwh(today)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+
           {/* --------------------------------------------------- conexões */}
           <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
             {connections.map((c) => {
               const info = providerInfo(c.provider);
+              const paused = c.retry_after && new Date(c.retry_after).getTime() > Date.now();
               return (
-                <div key={c.id} className="glass flex min-w-[270px] items-center gap-3 rounded-2xl p-3 pr-2">
+                <div key={c.id} className="glass flex min-w-[280px] items-center gap-3 rounded-2xl p-3 pr-2">
                   <ProviderMark id={c.provider} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-ink-900">{c.label}</p>
-                    <p className={cx("truncate text-xs", c.status === "error" ? "text-rose-600" : "text-ink-500")} title={c.last_error ?? undefined}>
+                    <p className={cx("truncate text-xs", c.status === "error" ? "text-rose-600" : paused ? "text-amber-700" : "text-ink-500")} title={c.last_error ?? undefined}>
                       {c.status === "syncing" || syncing === c.id
-                        ? "Atualizando…"
-                        : c.status === "error"
-                          ? c.last_error ?? "Erro na última atualização"
-                          : `${c.plants_count} ${c.plants_count === 1 ? "usina" : "usinas"} · ${c.last_sync_at ? relativeTime(c.last_sync_at) : info?.platform}`}
+                        ? "Baixando dados…"
+                        : paused
+                          ? `Pausa do fabricante até ${new Date(c.retry_after!).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                          : c.status === "error"
+                            ? c.last_error ?? "Erro na última atualização"
+                            : `${c.plants_count} ${c.plants_count === 1 ? "usina" : "usinas"} · ${c.last_sync_at ? relativeTime(c.last_sync_at) : info?.platform}`}
                     </p>
                   </div>
                   <button onClick={() => sync(c.id)} disabled={!!syncing} className="grid h-8 w-8 place-items-center rounded-lg text-ink-400 transition hover:bg-ink-100 hover:text-ink-800 disabled:opacity-40" aria-label="Atualizar conexão" title="Atualizar">

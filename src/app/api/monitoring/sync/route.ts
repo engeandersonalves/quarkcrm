@@ -9,12 +9,18 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const ctx = await monitoringContext();
   if ("error" in ctx) return NextResponse.json({ error: ctx.error }, { status: ctx.status });
-  const { connectionId } = (await req.json().catch(() => ({}))) as { connectionId?: string };
+  const { connectionId, auto } = (await req.json().catch(() => ({}))) as { connectionId?: string; auto?: boolean };
   let q = ctx.admin.from("monitoring_connections").select("id, provider, label").order("created_at");
   if (connectionId) q = q.eq("id", connectionId);
   const { data, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // Abertura da tela (auto) só sincroniza o que venceu; o botão força a lista (com intervalo mínimo)
+  const conns = (data ?? []) as ConnectionRow[];
+  const end = Date.now() + 45_000;
   const results = [];
-  for (const c of (data ?? []) as ConnectionRow[]) results.push(await syncConnection(ctx.admin, c));
+  for (let i = 0; i < conns.length; i++) {
+    const share = Math.max(8_000, (end - Date.now()) / (conns.length - i));
+    results.push(await syncConnection(ctx.admin, conns[i], { force: !auto, deadline: Math.min(end, Date.now() + share) }));
+  }
   return NextResponse.json({ ok: results.every((r) => r.ok), results });
 }

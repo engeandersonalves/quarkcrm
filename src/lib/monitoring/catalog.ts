@@ -89,9 +89,9 @@ export const PROVIDERS: ProviderInfo[] = [
     ],
     features: ["dias", "meses", "eletrica"],
     steps: [
-      "Acesse developer.deyecloud.com e entre com a mesma conta do Deye Cloud.",
-      "Crie um aplicativo (Application) e copie o App ID e o App Secret.",
-      "Use o servidor em que a sua conta foi criada (no Brasil costuma ser o eu1).",
+      "A chave de API só existe em conta de Integrador do Deye Cloud.",
+      "Acesse developer.deyecloud.com com essa conta, crie um aplicativo e copie o App ID e o App Secret.",
+      "Informe também o e-mail e a senha do Deye Cloud e o servidor (no Brasil costuma ser o eu1).",
     ],
   },
   {
@@ -139,9 +139,10 @@ export const PROVIDERS: ProviderInfo[] = [
     ],
     features: ["eletrica"],
     steps: [
-      "No iSolarCloud (web), abra Configurações → Open API e gere as chaves (App Key, Access Key e RSA Key).",
-      "Se a opção não aparecer, solicite o acesso à OpenAPI ao suporte Sungrow do Brasil.",
-      "Recomendado: crie um usuário só de leitura para a integração.",
+      "Entre no Sungrow Developer Portal (developer-api.isolarcloud.com) com a conta do iSolarCloud.",
+      "Clique em Create Application, preencha os dados da empresa e escolha a opção sem OAuth 2.0.",
+      "Aguarde a aprovação (de 1 a 5 dias úteis) e copie a App Key e a Secret Key (e a RSA Key, se houver).",
+      "Informe também o usuário e a senha do iSolarCloud.",
     ],
   },
   {
@@ -194,9 +195,10 @@ export const PROVIDERS: ProviderInfo[] = [
     ],
     features: ["dias", "meses", "eletrica"],
     steps: [
-      "No FusionSolar (conta de empresa), vá em Sistema → Gerenciamento da empresa → API Northbound.",
-      "Crie um usuário de API com acesso às usinas e anote o usuário e a senha (System Code).",
-      "Escolha o mesmo servidor em que você acessa o FusionSolar.",
+      "Entre no FusionSolar com o usuário master da empresa (só ele vê a Gestão de API).",
+      "Abra Mais → Gerenciamento da empresa → aba Gestão de API e clique em adicionar.",
+      "Dê um nome, a validade, escolha “API básica” e selecione as usinas.",
+      "Crie a senha com maiúsculas, minúsculas, números e caractere especial. Use esse usuário e senha aqui, não o login normal do FusionSolar.",
     ],
   },
   {
@@ -245,8 +247,8 @@ export const PROVIDERS: ProviderInfo[] = [
     ],
     features: [],
     steps: [
-      "No Livoltek Portal, abra Conta → API e gere o Security ID e a chave.",
-      "Se não aparecer, peça a liberação da API ao suporte Livoltek.",
+      "Peça ao suporte Livoltek o Security ID (secuid) e a chave de API da sua conta.",
+      "Com eles, o app gera o token de acesso sozinho a cada consulta.",
     ],
   },
   {
@@ -278,12 +280,13 @@ export const PROVIDERS: ProviderInfo[] = [
     name: "Outros fabricantes",
     platform: "Planilha de geração",
     color: "#6D6985",
-    brands: "AUXSOL, Canadian (CSI Cloud), Hoymiles, WEG, Intelbras e outros",
+    brands: "Marcas sem API e sem SolarZ: planilha de geração",
     fields: [],
     features: ["dias", "meses"],
     manual: true,
     steps: [
-      "Estas marcas não têm API pública. Cadastre a usina aqui e importe a geração diária.",
+      "Se a usina já está na sua SolarZ (AUXSOL, Hoymiles, Canadian e outras), prefira conectar a SolarZ: entra automático.",
+      "Sem SolarZ e sem API: cadastre a usina aqui e importe a geração diária.",
       "No portal do fabricante, exporte o relatório de geração (Excel/CSV) com data e kWh por dia.",
       "Na usina, clique em Importar planilha: o app lê as colunas de data e energia sozinho.",
     ],
@@ -298,3 +301,16 @@ export function missingCredentials(id: string, creds: Record<string, string>) {
   if (!p) return ["Fabricante"];
   return p.fields.filter((f) => !f.optional && !String(creds[f.key] ?? "").trim()).map((f) => f.label);
 }
+
+/**
+ * Marcas que não publicam API própria, mas chegam pela SolarZ (que já integra o portal delas).
+ * Ao escolher uma delas, o app conecta a conta SolarZ.
+ */
+export const VIA_SOLARZ: { name: string; color: string; portal: string; note: string }[] = [
+  { name: "AUXSOL", color: "#E4002B", portal: "AUXSOL Cloud", note: "A AUXSOL informa ter API aberta, mas não publica documentação. As usinas AUXSOL entram pela SolarZ; para API direta, peça a ficha técnica ao suporte AUXSOL." },
+  { name: "Hoymiles", color: "#F7931E", portal: "S-Miles Cloud", note: "Sem API pública. As usinas Hoymiles entram pela SolarZ." },
+  { name: "Canadian", color: "#D7141A", portal: "CSI Cloud", note: "Sem API pública. As usinas Canadian entram pela SolarZ." },
+  { name: "WEG", color: "#00579D", portal: "WEG Solar Portal", note: "A WEG libera API pela SolarZ (guia “Criando API da WEG SOLAR”). As usinas entram pela SolarZ." },
+  { name: "SAJ", color: "#E60012", portal: "Elekeeper", note: "Integrada pela SolarZ (guia “Como criar API da Elekeeper”)." },
+  { name: "Hyxipower", color: "#00A3E0", portal: "HyxiPower", note: "Integrada pela SolarZ (guia “Gerando API do Portal HyxiPower”)." },
+];

@@ -54,3 +54,40 @@ export const shiftMonth = (month: string, delta: number) => {
   const d = new Date(Date.UTC(y, m - 1 + delta, 1));
   return d.toISOString().slice(0, 7);
 };
+
+/** Dias entre duas datas (inclusive). */
+export function daysBetween(from: string, to: string) {
+  return Math.round((Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10)) - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10))) / 86400000) + 1;
+}
+
+/** Totais de um período qualquer (mês fechado ou intervalo de datas). */
+export function rangeStats(r: { from: string; to: string; days: DayValue[]; capacityKwp: number | null; tariff: number; sunHours: number; performanceRatio: number; today?: string }) {
+  const end = r.today && r.today < r.to ? r.today : r.to;
+  const span = Math.max(0, daysBetween(r.from, end));
+  const inRange = r.days.filter((d) => d.day >= r.from && d.day <= end);
+  const total = inRange.reduce((t, d) => t + d.kwh, 0);
+  const withData = inRange.filter((d) => d.kwh > 0);
+  const best = withData.reduce<DayValue | null>((b, d) => (!b || d.kwh > b.kwh ? d : b), null);
+  const worst = withData.reduce<DayValue | null>((b, d) => (!b || d.kwh < b.kwh ? d : b), null);
+  const expected = r.capacityKwp ? r.capacityKwp * r.sunHours * r.performanceRatio * span : null;
+  return {
+    total,
+    avg: withData.length ? total / withData.length : 0,
+    best,
+    worst,
+    days: span,
+    daysWithData: withData.length,
+    specific: r.capacityKwp ? total / r.capacityKwp : null,
+    expected,
+    pctExpected: expected ? total / expected : null,
+    savings: total * r.tariff,
+    co2Kg: total * CO2_KG_PER_KWH,
+  };
+}
+
+/** Rótulo curto de período: "outubro de 2026" ou "01/09/2026 a 15/10/2026". */
+export function periodLabel(from: string, to: string) {
+  const br = (d: string) => d.split("-").reverse().join("/");
+  if (from.slice(0, 7) === to.slice(0, 7) && from.endsWith("-01") && to === `${to.slice(0, 7)}-${String(daysInMonth(to.slice(0, 7))).padStart(2, "0")}`) return monthLabel(from.slice(0, 7));
+  return `${br(from)} a ${br(to)}`;
+}

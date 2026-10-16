@@ -1,17 +1,17 @@
 "use client";
 
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Printer, Share2 } from "lucide-react";
+import { ArrowLeft, CalendarRange, ChevronLeft, ChevronRight, Download, Loader2, Printer, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { forwardRef, use, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
-import { Button, Card, Skeleton } from "@/components/ui";
+import { Button, Card, Input, Segmented, Skeleton } from "@/components/ui";
 import { DEFAULT_INPUTS } from "@/lib/defaults";
 import { must, useLive } from "@/lib/live";
 import { providerInfo } from "@/lib/monitoring/catalog";
-import { CO2_KG_PER_KWH, daysInMonth, monthLabel, monthShort, reportStats, shiftMonth } from "@/lib/monitoring/report";
-import type { DayValue, MonthValue } from "@/lib/monitoring/types";
+import { CO2_KG_PER_KWH, daysBetween, daysInMonth, monthLabel, monthShort, periodLabel, rangeStats, shiftMonth } from "@/lib/monitoring/report";
+import type { DayValue } from "@/lib/monitoring/types";
 import { fmtKwh, fmtKwp, type PlantRow } from "@/lib/monitoring/view";
 import { dataUrlToBytes, jpegToPdf } from "@/lib/pdf-image";
 import { supabase } from "@/lib/supabase/client";
@@ -24,11 +24,15 @@ const todayLocal = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice
 const nf = (v: number | null | undefined, d = 1) => (v === null || v === undefined || !Number.isFinite(v) ? "—" : v.toLocaleString("pt-BR", { maximumFractionDigits: d, minimumFractionDigits: 0 }));
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const ddmm = (day: string) => day.slice(8, 10) + "/" + day.slice(5, 7);
-const slug = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const slug = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const isDay = (v: string | null) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const lastOf = (m: string) => `${m}-${String(daysInMonth(m)).padStart(2, "0")}`;
+const addDays = (d: string, n: number) => new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10) + n)).toISOString().slice(0, 10);
 
 interface Data {
   days: DayValue[];
-  months: MonthValue[];
+  pending: string[];
+  rangeMonthly: { month: string; kwh: number; fromDays: boolean }[];
   notes: Record<string, string>;
 }
 
@@ -38,7 +42,16 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
   const search = useSearchParams();
   const { settings } = useApp();
   const today = todayLocal();
-  const month = /^\d{4}-\d{2}$/.test(search.get("mes") ?? "") ? search.get("mes")! : today.slice(0, 7);
+  // Padrão: o último mês fechado
+  const prevMonth = shiftMonth(today.slice(0, 7), -1);
+  const qMonth = /^\d{4}-\d{2}$/.test(search.get("mes") ?? "") ? search.get("mes")! : null;
+  const rangeMode = isDay(search.get("de")) && isDay(search.get("ate"));
+  const from = rangeMode ? search.get("de")! : `${qMonth ?? prevMonth}-01`;
+  const to = rangeMode ? search.get("ate")! : lastOf(qMonth ?? prevMonth);
+  const month = from.slice(0, 7);
+
+  const [mode, setMode] = useState<"mes" | "periodo">(rangeMode ? "periodo" : "mes");
+  const [draft, setDraft] = useState({ from, to });
   const [data, setData] = useState<Data | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [scale, setScale] = useState(0.6);
@@ -51,17 +64,23 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     ["monitoring_plants"],
   );
 
+  // Dados do banco; meses passados que faltam são baixados uma única vez (fetch=1)
+  const fetchData = async (alive: () => boolean) => {
+    const res = await fetch(`/api/monitoring/plant/${id}?from=${from}&to=${to}&year=${to.slice(0, 4)}&fetch=1`).catch(() => null);
+    const j = res ? await res.json().catch(() => null) : null;
+    if (!alive()) return;
+    setData(res?.ok && j ? { days: j.days ?? [], pending: j.pending ?? [], rangeMonthly: j.rangeMonthly ?? [], notes: j.notes ?? {} } : { days: [], pending: [], rangeMonthly: [], notes: { geral: j?.error ?? "Não foi possível carregar os dados agora." } });
+  };
   useEffect(() => {
     let alive = true;
     setData(null);
-    fetch(`/api/monitoring/plant/${id}?month=${month}&year=${month.slice(0, 4)}&devices=0`)
-      .then((r) => r.json())
-      .then((j) => alive && setData({ days: j.days ?? [], months: j.months ?? [], notes: j.notes ?? (j.error ? { geral: j.error } : {}) }))
-      .catch(() => alive && setData({ days: [], months: [], notes: { geral: "Não foi possível carregar os dados agora." } }));
+    setDraft({ from, to });
+    fetchData(() => alive);
     return () => {
       alive = false;
     };
-  }, [id, month]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, from, to]);
 
   // A folha A4 é encolhida para caber na tela; a exportação usa o tamanho real.
   useEffect(() => {
@@ -74,13 +93,30 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
 
   const inputs = { ...DEFAULT_INPUTS, ...settings.defaults };
   const capacity = plant?.capacity_kwp != null ? Number(plant.capacity_kwp) : null;
-  const stats = useMemo(
-    () => reportStats({ month, days: data?.days ?? [], months: data?.months ?? [], capacityKwp: capacity, tariff: inputs.tariff, sunHours: inputs.sunHours, performanceRatio: inputs.performanceRatio, today }),
-    [data, month, capacity, inputs.tariff, inputs.sunHours, inputs.performanceRatio, today],
-  );
+  const stats = useMemo(() => {
+    const base = rangeStats({ from, to, days: data?.days ?? [], capacityKwp: capacity, tariff: inputs.tariff, sunHours: inputs.sunHours, performanceRatio: inputs.performanceRatio, today });
+    // Meses só com total mensal (sem dia a dia) entram no total do período
+    const extra = (data?.rangeMonthly ?? []).filter((m) => !m.fromDays).reduce((t, m) => t + m.kwh, 0);
+    if (!extra) return base;
+    const total = base.total + extra;
+    return { ...base, total, savings: total * inputs.tariff, co2Kg: total * CO2_KG_PER_KWH, specific: capacity ? total / capacity : null, pctExpected: base.expected ? total / base.expected : null };
+  }, [data, from, to, capacity, inputs.tariff, inputs.sunHours, inputs.performanceRatio, today]);
+  const label = periodLabel(from, to);
 
-  const go = (delta: number) => router.replace(`/monitoramento/${id}/relatorio?mes=${shiftMonth(month, delta)}`);
-  const fileName = `relatorio-geracao-${slug(plant?.name ?? "usina")}-${month}`;
+  const goMonth = (m: string) => router.replace(`/monitoramento/${id}/relatorio?mes=${m}`);
+  const goRange = (a: string, b: string) => {
+    if (!isDay(a) || !isDay(b)) return toast.error("Escolha as duas datas");
+    if (a > b) return toast.error("A data inicial precisa ser antes da final");
+    if (daysBetween(a, b) > 731) return toast.error("Escolha um período de até 2 anos");
+    router.replace(`/monitoramento/${id}/relatorio?de=${a}&ate=${b > today ? today : b}`);
+  };
+  const presets = [
+    { k: "Últimos 30 dias", a: addDays(today, -29), b: today },
+    { k: "Últimos 3 meses", a: `${shiftMonth(today.slice(0, 7), -3)}-01`, b: lastOf(prevMonth) },
+    { k: `Este ano`, a: `${today.slice(0, 4)}-01-01`, b: today },
+    { k: `${Number(today.slice(0, 4)) - 1}`, a: `${Number(today.slice(0, 4)) - 1}-01-01`, b: `${Number(today.slice(0, 4)) - 1}-12-31` },
+  ];
+  const fileName = `relatorio-geracao-${slug(plant?.name ?? "usina")}-${rangeMode ? `${from}_${to}` : month}`;
 
   const render = async () => {
     const { toJpeg } = await import("html-to-image");
@@ -125,7 +161,7 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     run("share", async () => {
       const file = new File([await pdfBlob()], `${fileName}.pdf`, { type: "application/pdf" });
       const first = plant?.lead?.name?.split(" ")[0];
-      const text = `${first ? `Olá, ${first}! ` : ""}Segue o relatório de geração da sua usina em ${monthLabel(month)}: ${fmtKwh(stats.total)} gerados, cerca de ${brl(stats.savings)} de economia. ☀️`;
+      const text = `${first ? `Olá, ${first}! ` : ""}Segue o relatório de geração da sua usina (${label}): ${fmtKwh(stats.total)} gerados, cerca de ${brl(stats.savings)} de economia. ☀️`;
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], text }).catch(() => {});
         return;
@@ -134,8 +170,8 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
       download(url, file.name);
       setTimeout(() => URL.revokeObjectURL(url), 5000);
       const phone = (plant?.lead?.phone ?? "").replace(/\D/g, "");
-      const to = phone ? (phone.startsWith("55") ? phone : `55${phone}`) : "";
-      window.open(`https://wa.me/${to}?text=${encodeURIComponent(`${text}\n\n(o PDF foi baixado: é só anexar aqui)`)}`, "_blank", "noopener");
+      const dest = phone ? (phone.startsWith("55") ? phone : `55${phone}`) : "";
+      window.open(`https://wa.me/${dest}?text=${encodeURIComponent(`${text}\n\n(o PDF foi baixado: é só anexar aqui)`)}`, "_blank", "noopener");
     });
 
   if (loading && !plant) return <Skeleton className="h-[60vh]" />;
@@ -147,26 +183,16 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
     );
 
   const company = settings.legal_name || settings.company_name;
-  const future = month >= today.slice(0, 7);
 
   return (
     <div className="animate-fade-up">
-      <div className="mb-5 flex flex-wrap items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <Link href={`/monitoramento/${id}`} className="grid h-10 w-10 place-items-center rounded-xl bg-white text-ink-600 shadow-soft ring-1 ring-ink-200/70 hover:text-ink-900" aria-label="Voltar">
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-semibold tracking-[0.18em] text-ink-400 uppercase">Relatório de geração</p>
           <h1 className="truncate font-display text-xl font-semibold tracking-tight text-ink-900 sm:text-2xl">{plant.name}</h1>
-        </div>
-        <div className="flex w-full items-center justify-between gap-1 rounded-xl bg-white p-1 shadow-soft ring-1 ring-ink-200/70 sm:w-auto">
-          <button onClick={() => go(-1)} className="grid h-8 w-8 place-items-center rounded-lg text-ink-500 hover:bg-ink-50 hover:text-ink-900" aria-label="Mês anterior">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <span className="min-w-[132px] text-center text-sm font-semibold inline-block text-ink-900 first-letter:uppercase">{monthLabel(month)}</span>
-          <button onClick={() => go(1)} disabled={future} className="grid h-8 w-8 place-items-center rounded-lg text-ink-500 hover:bg-ink-50 hover:text-ink-900 disabled:opacity-30" aria-label="Próximo mês">
-            <ChevronRight className="h-4 w-4" />
-          </button>
         </div>
         <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto">
           <Button onClick={savePdf} disabled={!!busy || !data}>
@@ -181,23 +207,78 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
         </div>
       </div>
 
+      {/* período */}
+      <Card className="mb-4 flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <Segmented
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: "mes", label: "Mês fechado" },
+            { value: "periodo", label: "Período" },
+          ]}
+        />
+        {mode === "mes" ? (
+          <div className="flex items-center justify-between gap-1 sm:justify-start">
+            <button onClick={() => goMonth(shiftMonth(rangeMode ? prevMonth : month, -1))} className="grid h-9 w-9 place-items-center rounded-xl text-ink-500 ring-1 ring-ink-200 hover:text-ink-900" aria-label="Mês anterior">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="inline-block min-w-[150px] text-center text-sm font-semibold text-ink-900 first-letter:uppercase">{monthLabel(rangeMode ? prevMonth : month)}</span>
+            <button
+              onClick={() => goMonth(shiftMonth(rangeMode ? prevMonth : month, 1))}
+              disabled={(rangeMode ? prevMonth : month) >= today.slice(0, 7)}
+              className="grid h-9 w-9 place-items-center rounded-xl text-ink-500 ring-1 ring-ink-200 hover:text-ink-900 disabled:opacity-30"
+              aria-label="Próximo mês"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            {rangeMode && (
+              <Button size="sm" variant="secondary" onClick={() => goMonth(prevMonth)}>
+                Ver mês
+              </Button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input type="date" value={draft.from} max={today} onChange={(e) => setDraft((d) => ({ ...d, from: e.target.value }))} className="h-9 w-[150px]" />
+              <span className="text-xs text-ink-500">até</span>
+              <Input type="date" value={draft.to} max={today} onChange={(e) => setDraft((d) => ({ ...d, to: e.target.value }))} className="h-9 w-[150px]" />
+              <Button size="sm" onClick={() => goRange(draft.from, draft.to)}>
+                <CalendarRange className="h-4 w-4" /> Gerar
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {presets.map((p) => (
+                <button key={p.k} onClick={() => goRange(p.a, p.b)} className="rounded-full bg-ink-50 px-2.5 py-1 text-xs font-medium text-ink-700 ring-1 ring-ink-200 transition hover:ring-sun-400 dark:bg-white/[0.03]">
+                  {p.k}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </Card>
+
       {data?.notes.geral && <p className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">{data.notes.geral}</p>}
+      {!!data?.pending.length && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-sky-50 px-4 py-3 text-sm text-sky-900 ring-1 ring-sky-200">
+          <p>
+            Ainda faltam {data.pending.length} {data.pending.length === 1 ? "mês" : "meses"} deste período para baixar do fabricante. Baixamos poucos de cada vez para não estourar o limite; cada mês fica salvo.
+          </p>
+          <Button size="sm" variant="secondary" onClick={() => fetchData(() => true)}>
+            Baixar o restante
+          </Button>
+        </div>
+      )}
 
       <div ref={boxRef} className="w-full">
         {!data ? (
-          <div style={{ width: PAGE_W * scale, height: PAGE_H * scale }} className="mx-auto"><Skeleton className="h-full w-full" /></div>
+          <div style={{ width: PAGE_W * scale, height: PAGE_H * scale }} className="mx-auto">
+            <Skeleton className="h-full w-full" />
+          </div>
         ) : (
           <div className="palette-classic mx-auto overflow-hidden rounded-xl shadow-[0_20px_50px_-20px_rgba(28,18,52,0.45)] ring-1 ring-ink-900/10" style={{ width: PAGE_W * scale, height: PAGE_H * scale }}>
             <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: PAGE_W, height: PAGE_H }}>
-              <Paper
-                ref={paperRef}
-                plant={plant}
-                month={month}
-                data={data}
-                stats={stats}
-                company={company}
-                contact={[settings.whatsapp || settings.phone, settings.email, settings.instagram].filter(Boolean).join("  ·  ")}
-              />
+              <Paper ref={paperRef} plant={plant} from={from} to={to} today={today} label={label} days={data.days} monthly={data.rangeMonthly} stats={stats} company={company} contact={[settings.whatsapp || settings.phone, settings.email, settings.instagram].filter(Boolean).join("  ·  ")} />
             </div>
           </div>
         )}
@@ -211,29 +292,29 @@ export default function ReportPage({ params }: { params: Promise<{ id: string }>
 
 /* --------------------------------------------------------------- a folha */
 
-type Stats = ReturnType<typeof reportStats>;
+type Stats = ReturnType<typeof rangeStats>;
 
-const Paper = forwardRef<HTMLDivElement, { plant: PlantRow & { lead?: { name: string } | null }; month: string; data: Data; stats: Stats; company: string; contact: string }>(function Paper(
-  { plant, month, data, stats, company, contact },
+const Paper = forwardRef<HTMLDivElement, { plant: PlantRow & { lead?: { name: string } | null }; from: string; to: string; today: string; label: string; days: DayValue[]; monthly: Data["rangeMonthly"]; stats: Stats; company: string; contact: string }>(function Paper(
+  { plant, from, to, today, label, days: raw, monthly, stats, company, contact },
   ref,
 ) {
   const info = providerInfo(plant.provider);
-  const dim = daysInMonth(month);
-  const dayMap = new Map(data.days.map((d) => [d.day, d.kwh]));
-  const days = Array.from({ length: dim }, (_, i) => {
-    const day = `${month}-${String(i + 1).padStart(2, "0")}`;
-    return { day, n: i + 1, kwh: dayMap.get(day) ?? 0 };
+  const end = to > today ? today : to;
+  const span = Math.max(1, daysBetween(from, end));
+  const map = new Map(raw.map((d) => [d.day, d.kwh]));
+  const daily = span <= 62;
+  // Até ~2 meses: barras por dia. Acima: barras por mês.
+  const dayList = Array.from({ length: span }, (_, i) => {
+    const day = addDays(from, i);
+    return { day, kwh: map.get(day) ?? 0 };
   });
-  const year = month.slice(0, 4);
-  const monMap = new Map(data.months.map((m) => [m.month, m.kwh]));
-  const months = Array.from({ length: 12 }, (_, i) => {
-    const mm = `${year}-${String(i + 1).padStart(2, "0")}`;
-    return { mm, kwh: monMap.get(mm) ?? 0 };
-  });
-  const yearTotal = months.reduce((t, m) => t + m.kwh, 0);
-  const expectedDay = stats.expected && stats.elapsed ? stats.expected / stats.elapsed : null;
+  const monthKeys: string[] = [];
+  for (let m = from.slice(0, 7); m <= end.slice(0, 7); m = shiftMonth(m, 1)) monthKeys.push(m);
+  const monthList = monthKeys.map((m) => ({ m, kwh: monthly.find((x) => x.month === m)?.kwh ?? raw.filter((d) => d.day.startsWith(m) && d.day >= from && d.day <= end).reduce((t, d) => t + d.kwh, 0) }));
+  const expectedDay = stats.expected && stats.days ? stats.expected / stats.days : null;
   const pct = stats.pctExpected;
   const brand = info?.manual ? "Planilha importada" : (info?.name ?? plant.provider);
+  const step = Math.ceil(span / 12);
 
   return (
     <div ref={ref} className="relative flex flex-col bg-white font-sans text-[#1C1234]" style={{ width: PAGE_W, height: PAGE_H }}>
@@ -245,15 +326,13 @@ const Paper = forwardRef<HTMLDivElement, { plant: PlantRow & { lead?: { name: st
           <img src="/brand/logo-h-white.png" alt={company} className="h-10 w-auto" />
           <div className="text-right">
             <p className="text-[10px] font-semibold tracking-[0.28em] text-white/50 uppercase">Relatório de geração</p>
-            <p className="mt-1 font-display text-2xl font-semibold text-white first-letter:uppercase">{monthLabel(month)}</p>
+            <p className="mt-1 font-display text-2xl font-semibold text-white first-letter:uppercase">{label}</p>
           </div>
         </div>
         <div className="relative mt-8 flex items-end justify-between gap-6">
           <div className="min-w-0">
             <p className="truncate font-display text-[26px] leading-tight font-semibold text-white">{plant.name}</p>
-            <p className="mt-1 truncate text-[12px] text-white/60">
-              {[plant.lead?.name !== plant.name ? plant.lead?.name : null, plant.address].filter(Boolean).join("  ·  ") || "Usina fotovoltaica"}
-            </p>
+            <p className="mt-1 truncate text-[12px] text-white/60">{[plant.lead?.name !== plant.name ? plant.lead?.name : null, plant.address].filter(Boolean).join("  ·  ") || "Usina fotovoltaica"}</p>
           </div>
           <div className="flex shrink-0 gap-6 text-right">
             <div>
@@ -269,10 +348,9 @@ const Paper = forwardRef<HTMLDivElement, { plant: PlantRow & { lead?: { name: st
       </div>
 
       <div className="flex flex-1 flex-col px-12 pt-7 pb-6">
-        {/* destaque */}
         <div className="grid grid-cols-[1.25fr_1fr_1fr] gap-3">
           <div className="rounded-2xl p-5" style={{ background: "#F2F8EC" }}>
-            <p className="text-[10px] font-bold tracking-[0.2em] text-[#4F7F31] uppercase">Energia gerada no mês</p>
+            <p className="text-[10px] font-bold tracking-[0.2em] text-[#4F7F31] uppercase">Energia gerada no período</p>
             <p className="tnum mt-2 font-display text-[40px] leading-none font-semibold">
               {nf(stats.total, 0)}
               <span className="ml-1.5 text-lg font-medium text-[#1C1234]/50">kWh</span>
@@ -283,7 +361,7 @@ const Paper = forwardRef<HTMLDivElement, { plant: PlantRow & { lead?: { name: st
                   <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct * 100)}%`, background: GREEN }} />
                 </div>
                 <p className="mt-1.5 text-[11px] text-[#1C1234]/60">
-                  <b className="text-[#1C1234]">{nf(pct * 100, 0)}%</b> do esperado ({nf(stats.expected, 0)} kWh{stats.elapsed < stats.daysInMonth ? ` até o dia ${stats.elapsed}` : ""})
+                  <b className="text-[#1C1234]">{nf(pct * 100, 0)}%</b> do esperado ({nf(stats.expected, 0)} kWh em {stats.days} dias)
                 </p>
               </div>
             )}
@@ -295,31 +373,42 @@ const Paper = forwardRef<HTMLDivElement, { plant: PlantRow & { lead?: { name: st
           <Kpi small label="Média diária" value={`${nf(stats.avg)} kWh`} />
           <Kpi small label="Melhor dia" value={stats.best ? `${nf(stats.best.kwh)} kWh` : "—"} sub={stats.best ? ddmm(stats.best.day) : undefined} />
           <Kpi small label="Produtividade" value={stats.specific !== null ? `${nf(stats.specific)} kWh/kWp` : "—"} />
-          <Kpi small label="Dias com geração" value={`${stats.daysWithData} de ${stats.elapsed}`} />
+          <Kpi small label="Dias com geração" value={`${stats.daysWithData} de ${stats.days}`} />
         </div>
 
-        {/* geração diária */}
-        <Section title="Geração diária" right={expectedDay ? `linha tracejada: esperado (${nf(expectedDay)} kWh/dia)` : undefined}>
-          <Bars values={days.map((d) => d.kwh)} labels={days.map((d) => (d.n === 1 || d.n % 5 === 0 ? String(d.n) : ""))} height={185} reference={expectedDay} best />
-        </Section>
-
-        <div className="mt-1 grid grid-cols-[1fr_250px] gap-6">
-          {/* histórico do ano */}
-          <Section title={`Histórico de ${year}`} right={`${nf(yearTotal, 0)} kWh no ano`}>
-            <Bars values={months.map((m) => m.kwh)} labels={months.map((m) => monthShort(m.mm))} height={150} highlight={Number(month.slice(5, 7)) - 1} />
+        {daily ? (
+          <Section title="Geração diária" right={expectedDay ? `linha tracejada: esperado (${nf(expectedDay)} kWh/dia)` : undefined}>
+            <Bars values={dayList.map((d) => d.kwh)} labels={dayList.map((d, i) => (i % step === 0 ? `${d.day.slice(8)}${span > 31 ? `/${d.day.slice(5, 7)}` : ""}` : ""))} height={185} reference={expectedDay} best />
           </Section>
-          {/* tabela compacta */}
-          <Section title="Dia a dia (kWh)">
-            <div className="grid grid-cols-4 gap-x-2 gap-y-[3px] text-[10px]">
-              {days.map((d) => (
+        ) : (
+          <Section title="Geração por mês" right={`${monthList.length} meses`}>
+            <Bars values={monthList.map((m) => m.kwh)} labels={monthList.map((m) => `${monthShort(m.m)}${monthList.length > 12 ? `/${m.m.slice(2, 4)}` : ""}`)} height={185} best />
+          </Section>
+        )}
+
+        <Section title={daily ? "Dia a dia (kWh)" : "Mês a mês (kWh)"}>
+          {daily ? (
+            <div className="grid grid-cols-6 gap-x-3 gap-y-[3px] text-[10px]">
+              {dayList.slice(0, 62).map((d) => (
                 <div key={d.day} className="flex justify-between border-b border-[#1C1234]/[0.06] pb-[2px]">
-                  <span className="text-[#1C1234]/45">{String(d.n).padStart(2, "0")}</span>
+                  <span className="text-[#1C1234]/45">{ddmm(d.day)}</span>
                   <span className="tnum font-medium">{d.kwh ? nf(d.kwh, d.kwh >= 100 ? 0 : 1) : "—"}</span>
                 </div>
               ))}
             </div>
-          </Section>
-        </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-x-4 gap-y-1 text-[11px]">
+              {monthList.map((m) => (
+                <div key={m.m} className="flex justify-between border-b border-[#1C1234]/[0.06] pb-1">
+                  <span className="text-[#1C1234]/55 first-letter:uppercase">
+                    {monthShort(m.m)}/{m.m.slice(2, 4)}
+                  </span>
+                  <span className="tnum font-medium">{m.kwh ? nf(m.kwh, 0) : "—"}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
 
         <div className="mt-auto flex items-end justify-between border-t border-[#1C1234]/10 pt-4 text-[9.5px] leading-relaxed text-[#1C1234]/50">
           <p className="max-w-[460px]">

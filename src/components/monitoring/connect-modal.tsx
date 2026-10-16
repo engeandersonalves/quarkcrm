@@ -4,7 +4,7 @@ import { ArrowLeft, Check, Eye, EyeOff, Loader2, Lock, PlugZap } from "lucide-re
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { missingCredentials, PROVIDERS, type ProviderInfo } from "@/lib/monitoring/catalog";
+import { missingCredentials, PROVIDERS, VIA_SOLARZ, type ProviderInfo } from "@/lib/monitoring/catalog";
 import { useLive } from "@/lib/live";
 import { supabase } from "@/lib/supabase/client";
 import { Button, Field, Input, Modal, NumberInput, Select, Textarea, cx } from "../ui";
@@ -28,6 +28,7 @@ export function ProviderMark({ id, className }: { id: string; className?: string
 export function ConnectModal({ open, onClose, onConnected }: { open: boolean; onClose: () => void; onConnected: () => void }) {
   const router = useRouter();
   const [provider, setProvider] = useState<ProviderInfo | null>(null);
+  const [via, setVia] = useState<(typeof VIA_SOLARZ)[number] | null>(null);
   const [manual, setManual] = useState({ name: "", capacity: 0, brand: BRANDS[0], address: "", leadId: "" });
   const { data: leads } = useLive(async () => (open ? ((await supabase().from("leads").select("id,name,city").order("name").limit(3000)).data ?? []) as { id: string; name: string; city: string | null }[] : []), [open], []);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -36,7 +37,8 @@ export function ConnectModal({ open, onClose, onConnected }: { open: boolean; on
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const pick = (p: ProviderInfo) => {
+  const pick = (p: ProviderInfo, through: (typeof VIA_SOLARZ)[number] | null = null) => {
+    setVia(through);
     setProvider(p);
     setError("");
     setValues(Object.fromEntries(p.fields.filter((f) => f.type === "select").map((f) => [f.key, f.options?.[0]?.value ?? ""])));
@@ -44,6 +46,7 @@ export function ConnectModal({ open, onClose, onConnected }: { open: boolean; on
   const close = () => {
     if (busy) return;
     setProvider(null);
+    setVia(null);
     setValues({});
     setLabel("");
     setError("");
@@ -133,9 +136,32 @@ export function ConnectModal({ open, onClose, onConnected }: { open: boolean; on
               <span className="text-xs font-semibold text-sun-700 opacity-0 transition group-hover:opacity-100">Conectar →</span>
             </button>
           ))}
+          <div className="mt-2 rounded-2xl bg-ink-50 p-3.5 ring-1 ring-ink-200 sm:col-span-2 dark:bg-white/[0.03]">
+            <p className="text-[11px] font-bold tracking-[0.16em] text-ink-500 uppercase">Sem API própria · entram pela SolarZ</p>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {VIA_SOLARZ.map((b) => (
+                <button
+                  key={b.name}
+                  type="button"
+                  onClick={() => pick(PROVIDERS.find((x) => x.id === "solarz")!, b)}
+                  className="flex items-center gap-2 rounded-full bg-white py-1 pr-3 pl-1 text-xs font-semibold text-ink-800 ring-1 ring-ink-200 transition hover:ring-sun-400 dark:bg-white/[0.04]"
+                >
+                  <span className="grid h-6 w-6 place-items-center rounded-full text-[9px] font-bold text-white" style={{ background: b.color }}>
+                    {b.name.slice(0, 2)}
+                  </span>
+                  {b.name}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
         <div className="grid gap-5">
+          {via && (
+            <p className="rounded-2xl bg-sky-50 px-4 py-3 text-[13px] leading-relaxed text-sky-900 ring-1 ring-sky-200">
+              <b>{via.name}</b> ({via.portal}): {via.note}
+            </p>
+          )}
           <div className="rounded-2xl bg-ink-50 p-4 ring-1 ring-ink-200/70 dark:bg-white/[0.03]">
             <p className="mb-2 text-[11px] font-bold tracking-[0.16em] text-ink-500 uppercase">Como conseguir o acesso</p>
             <ol className="grid gap-1.5">

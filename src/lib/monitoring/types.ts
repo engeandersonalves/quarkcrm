@@ -40,6 +40,13 @@ export interface DeviceData {
   ac: { label: string; voltage: number | null; current: number | null }[];
   /** Lado CC, por string/MPPT. */
   dc: { label: string; voltage: number | null; current: number | null; powerKw: number | null }[];
+  /** Tensões entre fases/pernas (R-S, L1-L2…). */
+  acLine?: { label: string; voltage: number }[];
+  /** Tensão que alimenta o inversor (fase-neutro ou entre pernas no split-phase). */
+  gridVoltage?: number | null;
+  gridVoltageLabel?: string | null;
+  /** Todas as leituras numéricas devolvidas pelo fabricante. */
+  readings?: { key: string; value: number; unit: string }[];
   updatedAt: string | null;
 }
 

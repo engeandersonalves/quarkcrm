@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   if (!sb) return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY ausente" }, { status: 500 });
 
   // Monitoramento: atualiza as usinas de todas as contas conectadas (erros ficam registrados na conexão).
-  await syncAll(sb).catch(() => null);
+  await syncAll(sb, { budgetMs: 35_000 }).catch(() => null);
 
   const tz = process.env.APP_TIMEZONE || "America/Sao_Paulo";
   const endOfDay = new Date(Date.now() + 24 * 3600 * 1000).toISOString();

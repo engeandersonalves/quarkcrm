@@ -1,11 +1,12 @@
 "use client";
 
-import { Activity, AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Cpu, FileBarChart, FileSpreadsheet, Gauge, Link2, Loader2, MapPin, RefreshCw, Thermometer, Trash2, Waves, Zap } from "lucide-react";
+import { Activity, AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Cpu, FileBarChart, FileSpreadsheet, Link2, Loader2, MapPin, RefreshCw, Thermometer, Trash2, Waves, Zap } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
+import { Bolt3D, Calendar3D, Gauge3D, IconTile, Inverter3D, Leaf3D, Panel3D, Sun3D } from "@/components/icons3d";
 import { BarChart } from "@/components/charts";
 import { ProviderMark } from "@/components/monitoring/connect-modal";
 import { ImportModal } from "@/components/monitoring/import-modal";
@@ -33,6 +34,10 @@ interface Detail {
   days: DayValue[];
   months: MonthValue[];
   devices: DeviceData[] | null;
+  devicesAt?: string | null;
+  syncedAt?: string | null;
+  retryAfter?: string | null;
+  pending?: string[];
   notes: Record<string, string>;
 }
 
@@ -61,24 +66,40 @@ export default function PlantPage({ params }: { params: Promise<{ id: string }> 
     if (plant) setLeadId((v) => (v === null ? (plant.lead_id ?? "") : v));
   }, [plant]);
 
-  const load = useCallback(
-    async (opts: { devices?: boolean } = {}) => {
-      setLoading(true);
-      const res = await fetch(`/api/monitoring/plant/${id}?month=${month}&year=${year}&devices=${opts.devices === false ? 0 : 1}`).catch(() => null);
+  // Tudo vem do banco. Mês passado que ainda falta é baixado uma única vez (fetch=1).
+  const tried = useRef(new Set<string>());
+  const load = useCallback(async () => {
+    setLoading(true);
+    const get = async (extra = ""): Promise<Detail> => {
+      const res = await fetch(`/api/monitoring/plant/${id}?month=${month}&year=${year}${extra}`).catch(() => null);
       const json = res ? await res.json().catch(() => null) : null;
-      setLoading(false);
-      if (!res?.ok || !json) {
-        setDetail({ days: [], months: [], devices: null, notes: { geral: json?.error ?? "Não foi possível carregar os dados agora." } });
-        return;
-      }
-      setDetail((d) => (opts.devices === false && d ? { ...json, devices: d.devices } : json));
-    },
-    [id, month, year],
-  );
+      return res?.ok && json ? (json as Detail) : { days: [], months: [], devices: null, notes: { geral: json?.error ?? "Não foi possível carregar os dados agora." } };
+    };
+    let d = await get();
+    setDetail(d);
+    if (d.pending?.includes(month) && !tried.current.has(month)) {
+      tried.current.add(month);
+      d = await get("&fetch=1");
+      setDetail(d);
+    }
+    setLoading(false);
+  }, [id, month, year]);
   useEffect(() => {
-    load({ devices: detail === null });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, year]);
+    load();
+  }, [load]);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = async () => {
+    setRefreshing(true);
+    const res = await fetch(`/api/monitoring/plant/${id}`, { method: "POST" }).catch(() => null);
+    const json = res ? await res.json().catch(() => ({})) : {};
+    setRefreshing(false);
+    if (json.skipped === "recent") toast("Dados atualizados há menos de 10 minutos", { description: "Para não estourar o limite do fabricante, a próxima leitura sai em instantes." });
+    else if (!res?.ok || json.ok === false) toast.error(json.error ?? "Não foi possível atualizar agora");
+    else toast.success("Usina atualizada");
+    reload();
+    load();
+  };
 
   const inputs = { ...DEFAULT_INPUTS, ...settings.defaults };
   const capacity = plant?.capacity_kwp != null ? Number(plant.capacity_kwp) : null;
@@ -150,8 +171,8 @@ export default function PlantPage({ params }: { params: Promise<{ id: string }> 
             </Button>
           )}
           {!isManual && (
-            <Button variant="secondary" onClick={() => load()} disabled={loading}>
-              <RefreshCw className={cx("h-4 w-4", loading && "animate-spin")} /> Atualizar
+            <Button variant="secondary" onClick={refresh} disabled={refreshing}>
+              <RefreshCw className={cx("h-4 w-4", refreshing && "animate-spin")} /> Atualizar
             </Button>
           )}
           <Link href={`/monitoramento/${id}/relatorio?mes=${month}`} className="flex-1 sm:flex-none">
@@ -165,26 +186,39 @@ export default function PlantPage({ params }: { params: Promise<{ id: string }> 
       {/* indicadores */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {[
-          { k: "Potência agora", v: isManual ? "—" : fmtKw(plant.power_kw), icon: <Zap className="h-3.5 w-3.5" /> },
-          { k: "Hoje", v: fmtKwh(plant.today_kwh), icon: <Activity className="h-3.5 w-3.5" /> },
-          { k: "No mês", v: fmtKwh(plant.month_kwh), icon: <Activity className="h-3.5 w-3.5" /> },
-          { k: "Total gerado", v: fmtKwh(plant.total_kwh), icon: <Activity className="h-3.5 w-3.5" /> },
-          { k: "Capacidade", v: fmtKwp(plant.capacity_kwp), icon: <Gauge className="h-3.5 w-3.5" /> },
-          { k: "Desempenho hoje", v: yieldOf(plant) !== null ? `${nf(yieldOf(plant), 2)} kWh/kWp` : "—", icon: <Gauge className="h-3.5 w-3.5" /> },
+          { k: "Potência agora", v: isManual ? "—" : fmtKw(plant.power_kw), icon: <Bolt3D size={32} />, tone: "#9BD373" },
+          { k: "Hoje", v: fmtKwh(plant.today_kwh), icon: <Sun3D size={32} />, tone: "#FFC93C" },
+          { k: "No mês", v: fmtKwh(plant.month_kwh), icon: <Calendar3D size={32} />, tone: "#8E6CF7" },
+          { k: "Total gerado", v: fmtKwh(plant.total_kwh), icon: <Leaf3D size={32} />, tone: "#6CC690" },
+          { k: "Capacidade", v: fmtKwp(plant.capacity_kwp), icon: <Panel3D size={34} />, tone: "#5B8DEF" },
+          { k: "Desempenho hoje", v: yieldOf(plant) !== null ? `${nf(yieldOf(plant), 2)} kWh/kWp` : "—", icon: <Gauge3D size={32} />, tone: "#3FBF6A" },
         ].map((x) => (
-          <Card key={x.k} className="p-4">
-            <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.14em] text-ink-500 uppercase">
-              <span className="text-sun-600">{x.icon}</span> {x.k}
-            </p>
-            <p className="tnum mt-1 font-display text-lg font-semibold text-ink-900 sm:text-xl">{x.v}</p>
+          <Card key={x.k} className="relative overflow-hidden p-4">
+            <div className="pointer-events-none absolute -top-10 -right-10 h-24 w-24 rounded-full blur-2xl" style={{ background: `${x.tone}26` }} />
+            <IconTile tone={x.tone} className="h-11 w-11">
+              {x.icon}
+            </IconTile>
+            <p className="mt-2.5 text-[10px] font-semibold tracking-[0.12em] text-ink-500 uppercase">{x.k}</p>
+            <p className="tnum mt-0.5 font-display text-lg font-semibold whitespace-nowrap text-ink-900">{x.v}</p>
           </Card>
         ))}
       </div>
       <p className="mt-2 text-xs text-ink-500">
         {plant.last_update_at ? `Última leitura ${relativeTime(plant.last_update_at)}` : "Sem leitura ainda"}
+        {detail?.syncedAt ? ` · dados salvos ${relativeTime(detail.syncedAt)}` : ""}
         {plant.address ? ` · ${plant.address}` : ""}
       </p>
 
+      {!!detail?.pending?.length && !notes.geral && (
+        <p className="mt-4 flex items-start gap-2 rounded-2xl bg-sky-50 px-4 py-3 text-sm text-sky-900 ring-1 ring-sky-200">
+          <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" /> Baixando o histórico aos poucos para não estourar o limite do fabricante. Cada mês é baixado uma única vez e fica salvo.
+        </p>
+      )}
+      {detail?.retryAfter && (
+        <p className="mt-4 flex items-start gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> O fabricante pediu uma pausa nas consultas. Nova leitura automática às {new Date(detail.retryAfter).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}; o que já foi baixado continua aqui.
+        </p>
+      )}
       {notes.geral && (
         <p className="mt-4 flex items-start gap-2 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {notes.geral}
@@ -333,7 +367,7 @@ export default function PlantPage({ params }: { params: Promise<{ id: string }> 
         {loading && detail?.devices === undefined ? (
           <Skeleton className="h-40" />
         ) : detail?.devices?.length ? (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
             {detail.devices.map((d) => (
               <DeviceCard key={d.sn} d={d} />
             ))}
@@ -348,19 +382,27 @@ export default function PlantPage({ params }: { params: Promise<{ id: string }> 
         )}
       </section>
 
-      {isManual && <ImportModal plantId={id} open={importOpen} onClose={() => setImportOpen(false)} onDone={() => { reload(); load({ devices: false }); }} />}
+      {isManual && <ImportModal plantId={id} open={importOpen} onClose={() => setImportOpen(false)} onDone={() => { reload(); load(); }} />}
     </div>
   );
 }
 
+/** Faixa nominal (±10%) a partir da própria leitura: rede 127 V ou 220 V. */
+function voltageWarn(v: number | null | undefined) {
+  if (v === null || v === undefined || v <= 0) return false;
+  const nominal = v < 170 ? 127 : v < 300 ? 220 : 380;
+  return v < nominal * 0.9 || v > nominal * 1.1;
+}
+
 function DeviceCard({ d }: { d: DeviceData }) {
   const maxDcV = Math.max(1, ...d.dc.map((x) => x.voltage ?? 0));
+  const grid = d.gridVoltage ?? null;
   return (
     <Card className="p-4 sm:p-5">
       <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sun-50 text-sun-700 ring-1 ring-sun-200/70">
-          <Cpu className="h-5 w-5" />
-        </span>
+        <IconTile tone="#9BD373" className="h-12 w-12">
+          <Inverter3D size={36} />
+        </IconTile>
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[15px] font-semibold text-ink-900">{d.name}</p>
           <p className="truncate font-mono text-[11px] text-ink-500">
@@ -370,7 +412,19 @@ function DeviceCard({ d }: { d: DeviceData }) {
         <Badge className={STATUS_STYLE[d.status]}>{STATUS_LABEL[d.status]}</Badge>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {grid !== null && (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-ink-950 px-4 py-3 text-white">
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.16em] text-white/50 uppercase">Tensão da rede</p>
+            <p className="text-[11px] text-white/45">{d.gridVoltageLabel}</p>
+          </div>
+          <p className={cx("tnum font-display text-3xl font-semibold", voltageWarn(grid) ? "text-amber-300" : "text-brand-lime")}>
+            {nf(grid, 1)} <span className="text-base font-normal text-white/50">V</span>
+          </p>
+        </div>
+      )}
+
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
           { k: "Potência", v: fmtKw(d.powerKw), icon: <Zap className="h-3.5 w-3.5" /> },
           { k: "Hoje", v: fmtKwh(d.todayKwh), icon: <Activity className="h-3.5 w-3.5" /> },
@@ -386,13 +440,13 @@ function DeviceCard({ d }: { d: DeviceData }) {
         ))}
       </div>
 
-      {d.ac.length > 0 && (
+      {(d.ac.length > 0 || (d.acLine?.length ?? 0) > 0) && (
         <div className="mt-4">
           <p className="mb-1.5 text-[11px] font-bold tracking-[0.14em] text-ink-500 uppercase">Lado CA (rede)</p>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[11px] text-ink-400">
-                <th className="py-1 font-medium">Fase</th>
+                <th className="py-1 font-medium">Medição</th>
                 <th className="py-1 text-right font-medium">Tensão</th>
                 <th className="py-1 text-right font-medium">Corrente</th>
               </tr>
@@ -401,12 +455,20 @@ function DeviceCard({ d }: { d: DeviceData }) {
               {d.ac.map((a) => (
                 <tr key={a.label} className="border-t border-ink-100">
                   <td className="py-1.5 text-ink-700">{a.label}</td>
-                  <td className={cx("tnum py-1.5 text-right font-medium", a.voltage !== null && (a.voltage > 242 || a.voltage < 198) && a.voltage > 150 ? "text-amber-600" : "text-ink-900")}>{a.voltage !== null ? `${nf(a.voltage, 1)} V` : "—"}</td>
+                  <td className="tnum py-1.5 text-right font-medium text-ink-900">{a.voltage !== null ? `${nf(a.voltage, 1)} V` : "—"}</td>
                   <td className="tnum py-1.5 text-right font-medium text-ink-900">{a.current !== null ? `${nf(a.current, 2)} A` : "—"}</td>
+                </tr>
+              ))}
+              {(d.acLine ?? []).map((l) => (
+                <tr key={l.label} className="border-t border-ink-100">
+                  <td className="py-1.5 text-ink-700">Entre {l.label}</td>
+                  <td className={cx("tnum py-1.5 text-right font-medium", voltageWarn(l.voltage) ? "text-amber-600" : "text-ink-900")}>{nf(l.voltage, 1)} V</td>
+                  <td className="py-1.5 text-right text-ink-400">—</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {d.gridVoltageLabel?.includes("split") && <p className="mt-1.5 text-[11px] text-ink-500">Inversor split-phase: cada perna é medida contra o neutro interno; a tensão da rede é a entre pernas.</p>}
         </div>
       )}
 
@@ -415,12 +477,12 @@ function DeviceCard({ d }: { d: DeviceData }) {
           <p className="mb-1.5 text-[11px] font-bold tracking-[0.14em] text-ink-500 uppercase">Lado CC (strings / MPPT)</p>
           <div className="grid gap-1.5">
             {d.dc.map((s) => (
-              <div key={s.label} className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 text-sm">
+              <div key={s.label} className="grid grid-cols-[40px_minmax(0,1fr)] items-center gap-x-3 gap-y-0.5 text-sm sm:grid-cols-[44px_minmax(0,1fr)_auto]">
                 <span className="font-semibold text-ink-700">{s.label}</span>
                 <div className="h-1.5 overflow-hidden rounded-full bg-ink-100">
                   <div className="h-full rounded-full bg-gradient-to-r from-[#F3EA3B] to-[#6CC690]" style={{ width: `${Math.round(((s.voltage ?? 0) / maxDcV) * 100)}%` }} />
                 </div>
-                <span className="tnum text-right text-xs text-ink-700">
+                <span className="tnum col-span-2 text-right text-xs text-ink-700 sm:col-span-1">
                   {s.voltage !== null ? `${nf(s.voltage, 1)} V` : "—"} · {s.current !== null ? `${nf(s.current, 2)} A` : "—"}
                   {s.powerKw !== null ? ` · ${fmtKw(s.powerKw)}` : ""}
                 </span>
@@ -431,6 +493,24 @@ function DeviceCard({ d }: { d: DeviceData }) {
       )}
 
       {!d.ac.length && !d.dc.length && <p className="mt-4 text-xs text-ink-500">O fabricante não enviou tensão e corrente deste inversor.</p>}
+      {!!d.readings?.length && (
+        <details className="group mt-4 rounded-xl ring-1 ring-ink-200/70">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-ink-700">
+            Todas as leituras do fabricante ({d.readings.length})
+            <ChevronRight className="h-3.5 w-3.5 transition group-open:rotate-90" />
+          </summary>
+          <div className="grid max-h-64 grid-cols-1 gap-x-4 overflow-y-auto border-t border-ink-100 px-3 py-2 text-[11px] sm:grid-cols-2">
+            {d.readings.map((r) => (
+              <div key={r.key} className="flex justify-between gap-2 border-b border-ink-100/70 py-1 last:border-0">
+                <span className="truncate font-mono text-ink-500">{r.key}</span>
+                <span className="tnum shrink-0 text-ink-900">
+                  {nf(r.value, 2)} {r.unit}
+                </span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
       {d.updatedAt && <p className="mt-3 text-[11px] text-ink-400">Leitura de {relativeTime(d.updatedAt)}</p>}
     </Card>
   );
