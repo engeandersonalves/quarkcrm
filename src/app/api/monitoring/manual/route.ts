@@ -1,3 +1,4 @@
+import { explainDbError } from "@/lib/supabase/server";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { monitoringContext } from "../auth";
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
     await ctx.admin.from("monitoring_connections").update({ plants_count: count ?? 0, last_sync_at: new Date().toISOString() }).eq("id", connId);
     return NextResponse.json({ ok: true, id: data.id });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Falha ao salvar." }, { status: 500 });
+    return NextResponse.json({ error: e instanceof Error ? explainDbError(e.message) : "Falha ao salvar." }, { status: 500 });
   }
 }
 
@@ -53,6 +54,6 @@ export async function DELETE(req: Request) {
   if (!ctx.isAdmin) return NextResponse.json({ error: "Só administradores removem usinas." }, { status: 403 });
   const id = new URL(req.url).searchParams.get("id") ?? "";
   const { error } = await ctx.admin.from("monitoring_plants").delete().eq("id", id).eq("provider", "manual");
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: explainDbError(error.message) }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

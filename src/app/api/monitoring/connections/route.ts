@@ -1,3 +1,4 @@
+import { explainDbError } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { missingCredentials, PROVIDERS, providerInfo } from "@/lib/monitoring/catalog";
 import { sealCredentials } from "@/lib/monitoring/crypto";
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
     .insert({ provider: info.id, label, status: "ok", last_sync_at: new Date().toISOString(), plants_count: plants.length, created_by: ctx.user.id })
     .select("id, provider, label")
     .single();
-  if (error || !conn) return NextResponse.json({ error: error?.message ?? "Falha ao salvar." }, { status: 500 });
+  if (error || !conn) return NextResponse.json({ error: explainDbError(error?.message) ?? "Falha ao salvar." }, { status: 500 });
 
   try {
     const { error: e2 } = await ctx.admin.from("monitoring_secrets").insert({ connection_id: conn.id, payload: sealCredentials(creds) });
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
     await savePlants(ctx.admin, conn as { id: string; provider: ProviderId; label: string }, plants);
   } catch (e) {
     await ctx.admin.from("monitoring_connections").delete().eq("id", conn.id);
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Falha ao salvar." }, { status: 500 });
+    return NextResponse.json({ error: e instanceof Error ? explainDbError(e.message) : "Falha ao salvar." }, { status: 500 });
   }
   return NextResponse.json({ ok: true, id: conn.id, plants: plants.length });
 }
@@ -64,7 +65,7 @@ export async function DELETE(req: Request) {
   const id = new URL(req.url).searchParams.get("id") ?? "";
   if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: "Conexão inválida." }, { status: 400 });
   const { error } = await ctx.admin.from("monitoring_connections").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: explainDbError(error.message) }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 

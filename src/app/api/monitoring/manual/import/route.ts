@@ -1,3 +1,4 @@
+import { explainDbError } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { refreshManualTotals } from "@/lib/monitoring/sync";
 import { todayIso } from "@/lib/monitoring/units";
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
   if (!rows.length) return NextResponse.json({ error: "Nenhuma linha válida (data e kWh) encontrada." }, { status: 400 });
   for (let i = 0; i < rows.length; i += 500) {
     const { error } = await ctx.admin.from("monitoring_daily").upsert(rows.slice(i, i + 500), { onConflict: "plant_id,day" });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: explainDbError(error.message) }, { status: 500 });
   }
   await refreshManualTotals(ctx.admin, plant.id);
   return NextResponse.json({ ok: true, imported: rows.length });
