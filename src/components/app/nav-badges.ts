@@ -13,6 +13,8 @@ export interface NavBadges {
   proposals: number;
   /** Documentos aguardando assinatura. */
   documents: number;
+  /** Alarmes de usinas ativos e ainda não reconhecidos. */
+  alarms: number;
 }
 
 const count = (r: { count: number | null; error: unknown }) => (r.error ? 0 : (r.count ?? 0));
@@ -26,17 +28,18 @@ export function useNavBadges(userId: string): NavBadges {
       end.setHours(23, 59, 59, 999);
       const now = new Date().toISOString();
       const mine = `assigned_to.eq.${userId},assigned_to.is.null`;
-      const [tasks, late, leads, proposals, documents] = await Promise.all([
+      const [tasks, late, leads, proposals, documents, alarms] = await Promise.all([
         sb.from("tasks").select("id", { count: "exact", head: true }).eq("done", false).lte("due_at", end.toISOString()).or(mine),
         sb.from("tasks").select("id", { count: "exact", head: true }).eq("done", false).lt("due_at", now).or(mine),
         sb.from("leads").select("id", { count: "exact", head: true }).eq("status", "novo").or(`owner_id.eq.${userId},owner_id.is.null`),
         sb.from("proposals").select("id", { count: "exact", head: true }).eq("status", "visualizada"),
         sb.from("documents").select("id", { count: "exact", head: true }).eq("status", "enviado"),
+        sb.from("monitoring_alarms").select("id", { count: "exact", head: true }).is("resolved_at", null).is("acknowledged_at", null),
       ]);
-      return { tasks: count(tasks), late: count(late), leads: count(leads), proposals: count(proposals), documents: count(documents) };
+      return { tasks: count(tasks), late: count(late), leads: count(leads), proposals: count(proposals), documents: count(documents), alarms: count(alarms) };
     },
     [userId],
-    ["tasks", "leads", "proposals", "documents"],
+    ["tasks", "leads", "proposals", "documents", "monitoring_alarms"],
   );
-  return data ?? { tasks: 0, late: 0, leads: 0, proposals: 0, documents: 0 };
+  return data ?? { tasks: 0, late: 0, leads: 0, proposals: 0, documents: 0, alarms: 0 };
 }

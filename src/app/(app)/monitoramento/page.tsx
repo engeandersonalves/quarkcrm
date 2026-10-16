@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
 import { BarChart, Donut, Sparkline } from "@/components/charts";
 import { Alert3D, Bolt3D, Calendar3D, Coin3D, Gauge3D, House3D, IconTile, Inverter3D, Leaf3D, Panel3D, Sun3D } from "@/components/icons3d";
+import { AlarmList, useAlarms } from "@/components/monitoring/alarm-list";
 import { ConnectModal, ProviderMark } from "@/components/monitoring/connect-modal";
 import { Badge, Button, Card, Empty, Input, PageHeader, Segmented, Select, Skeleton, cx } from "@/components/ui";
 import { DEFAULT_INPUTS } from "@/lib/defaults";
@@ -78,6 +79,8 @@ export default function MonitoringPage() {
     [monthsKeys[0]],
     [],
   );
+
+  const { data: alarmRows, reload: reloadAlarms } = useAlarms({ status: "abertos", limit: 50 });
 
   const byPlant = useMemo(() => {
     const m = new Map<string, Map<string, number>>();
@@ -158,6 +161,7 @@ export default function MonitoringPage() {
     return { pr, count: list.length, kwp: list.reduce((t, p) => t + (Number(p.capacity_kwp) || 0), 0), today: list.reduce((t, p) => t + (Number(p.today_kwh) || 0), 0) };
   }).filter((x) => x.count);
   const unknown = s.total - s.online - s.alarm - s.offline;
+  const openAlarms = alarmRows ?? null;
   const limited = (connections ?? []).find((c) => c.retry_after && new Date(c.retry_after).getTime() > Date.now());
   const lastSync = (connections ?? []).map((c) => c.last_sync_at).filter(Boolean).sort().pop() ?? null;
 
@@ -170,6 +174,14 @@ export default function MonitoringPage() {
         subtitle="As usinas dos seus clientes, de todos os fabricantes, em um só lugar"
         actions={
           <>
+            {!!connections?.length && (
+              <Link href="/monitoramento/alarmes">
+                <Button variant="secondary">
+                  <AlertTriangle className="h-4 w-4" /> Alarmes
+                  {!!alarmRows?.length && <span className="tnum ml-0.5 rounded-full bg-rose-500 px-1.5 text-[11px] font-bold text-white">{alarmRows.length}</span>}
+                </Button>
+              </Link>
+            )}
             {!!connections?.length && (
               <Button variant="secondary" onClick={() => sync()} disabled={!!syncing}>
                 <RefreshCw className={cx("h-4 w-4", syncing === "all" && "animate-spin")} /> {syncing === "all" ? "Atualizando…" : "Atualizar"}
@@ -315,12 +327,20 @@ export default function MonitoringPage() {
                 <IconTile tone="#F5B700" className="h-11 w-11">
                   <Alert3D size={32} />
                 </IconTile>
-                <div className="min-w-0">
-                  <p className="font-display text-[15px] font-semibold text-ink-900">Precisam de atenção</p>
-                  <p className="text-xs text-ink-500">{attention.length ? `${attention.length} ${attention.length === 1 ? "usina" : "usinas"}` : "Tudo certo por aqui"}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-[15px] font-semibold text-ink-900">{openAlarms ? "Alarmes ativos" : "Precisam de atenção"}</p>
+                  <p className="text-xs text-ink-500">
+                    {openAlarms ? (openAlarms.length ? `${openAlarms.length} ${openAlarms.length === 1 ? "alarme" : "alarmes"} agora` : "Tudo dentro dos limites") : attention.length ? `${attention.length} ${attention.length === 1 ? "usina" : "usinas"}` : "Tudo certo por aqui"}
+                  </p>
                 </div>
               </div>
-              {attention.length ? (
+              {openAlarms ? (
+                openAlarms.length ? (
+                  <AlarmList rows={openAlarms.slice(0, 4)} showPlant compact onChanged={reloadAlarms} />
+                ) : (
+                  <p className="rounded-xl bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800 ring-1 ring-emerald-200">Nenhuma tensão, temperatura ou frequência fora dos limites, e nenhuma usina parada.</p>
+                )
+              ) : attention.length ? (
                 <ul className="grid gap-1.5">
                   {attention.slice(0, 6).map(({ p, why }) => (
                     <li key={p.id}>
@@ -335,6 +355,9 @@ export default function MonitoringPage() {
               ) : (
                 <p className="rounded-xl bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800 ring-1 ring-emerald-200">Nenhuma usina parada ou gerando abaixo do esperado.</p>
               )}
+              <Link href="/monitoramento/alarmes" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-sun-700 hover:underline">
+                Todos os alarmes e limites <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
             </Card>
             <Card className="p-5">
               <div className="mb-3 flex items-center gap-3">

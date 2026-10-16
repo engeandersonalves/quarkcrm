@@ -388,3 +388,36 @@ test("usinas que precisam de atenção", async () => {
   assert.equal(attentionOf({ ...base, last_update_at: new Date(Date.now() - 30 * 3600_000).toISOString() }, 15), "Sem leitura há mais de 24 h");
   assert.equal(attentionOf({ ...base, provider: "manual" as const, status: "offline" }, 15), null);
 });
+
+test("alarmes: tensão, temperatura, frequência e strings", async () => {
+  const { evaluateDevice, evaluatePlant, readingOf, DEFAULT_ALARM_RULES: R } = await import("./monitoring/alarms.ts");
+  const dev = (over: Record<string, unknown>) => ({ sn: "SN1", name: "Inv", model: null, status: "online" as const, powerKw: 5, todayKwh: 20, totalKwh: 1, temperatureC: 45, frequencyHz: 60, ac: [], dc: [], updatedAt: null, ...over });
+  // Monofásico 220: 245 V passa de 240
+  const mono = evaluateDevice(dev({ ac: [{ label: "Fase R", voltage: 245, current: 10 }], gridVoltage: 245 }), R);
+  assert.deepEqual(mono.map((f) => [f.kind, f.severity]), [["sobretensao", "warning"]]);
+  // 238 V está dentro
+  assert.equal(evaluateDevice(dev({ ac: [{ label: "Fase R", voltage: 238, current: 10 }], gridVoltage: 238 }), R).length, 0);
+  // Muito acima: crítico
+  assert.equal(evaluateDevice(dev({ gridVoltage: 255, ac: [{ label: "Fase R", voltage: 255, current: 1 }] }), R)[0].severity, "critical");
+  // Split-phase usa a tensão entre pernas (238): sem alarme, mesmo com pernas a 117 V
+  assert.equal(evaluateDevice(dev({ ac: [{ label: "Fase R", voltage: 117, current: 1 }, { label: "Fase S", voltage: 120, current: 1 }], acLine: [{ label: "L1-L2", voltage: 238 }], gridVoltage: 238, gridVoltageLabel: "L1-L2 (split-phase)" }), R).length, 0);
+  // Trifásico: linha acima de 400 V
+  const tri = evaluateDevice(dev({ ac: [{ label: "Fase R", voltage: 232, current: 1 }, { label: "Fase S", voltage: 233, current: 1 }, { label: "Fase T", voltage: 231, current: 1 }], acLine: [{ label: "R-S", voltage: 405 }, { label: "S-T", voltage: 398 }, { label: "T-R", voltage: 401 }] }), R);
+  assert.equal(tri[0].kind, "sobretensao");
+  assert.match(tri[0].message, /R-S/);
+  // Trifásico sem tensão de linha: cada fase contra 240
+  assert.equal(evaluateDevice(dev({ ac: [{ label: "Fase R", voltage: 244, current: 1 }, { label: "Fase S", voltage: 230, current: 1 }, { label: "Fase T", voltage: 231, current: 1 }] }), R)[0].kind, "sobretensao");
+  // Rede 127 V
+  assert.equal(evaluateDevice(dev({ gridVoltage: 105, ac: [{ label: "Fase R", voltage: 105, current: 1 }] }), R)[0].kind, "subtensao");
+  // Temperatura, frequência e string desigual
+  const misc = evaluateDevice(dev({ temperatureC: 88, frequencyHz: 61.2, dc: [{ label: "PV1", voltage: 400, current: 8, powerKw: 3 }, { label: "PV2", voltage: 395, current: 8, powerKw: 3 }, { label: "PV3", voltage: 250, current: 8, powerKw: 2 }] }), R);
+  assert.deepEqual(misc.map((f) => f.kind), ["temperatura", "frequencia", "string_desigual"]);
+  assert.equal(misc[0].severity, "critical");
+  // Usina
+  const pl = evaluatePlant({ status: "offline", today_kwh: 2, capacity_kwp: 10, last_update_at: new Date(Date.now() - 30 * 3600_000).toISOString() }, R, 16);
+  assert.deepEqual(pl.map((f) => f.kind), ["offline", "sem_leitura"]);
+  assert.deepEqual(evaluatePlant({ status: "online", today_kwh: 5, capacity_kwp: 10, last_update_at: null }, R, 16).map((f) => f.kind), ["geracao_baixa"]);
+  // Histórico
+  const r = readingOf(dev({ ac: [{ label: "Fase R", voltage: 230, current: 9 }], gridVoltage: 230, dc: [{ label: "PV1", voltage: 400, current: 8, powerKw: 3.2 }] }));
+  assert.deepEqual([r.grid_v, r.v_r, r.i_r, r.dc_v, r.phases], [230, 230, 9, 400, 1]);
+});

@@ -9,7 +9,10 @@ import { useApp } from "@/components/app/app-context";
 import { Bolt3D, Calendar3D, Gauge3D, IconTile, Inverter3D, Leaf3D, Panel3D, Sun3D } from "@/components/icons3d";
 import { BarChart } from "@/components/charts";
 import { ProviderMark } from "@/components/monitoring/connect-modal";
+import { AckAllButton, AlarmList, useAlarms } from "@/components/monitoring/alarm-list";
+import { HistoryChart } from "@/components/monitoring/history-chart";
 import { ImportModal } from "@/components/monitoring/import-modal";
+import type { AlarmRules } from "@/lib/monitoring/alarms";
 import { Badge, Button, Card, Empty, Field, Segmented, Select, Skeleton, cx } from "@/components/ui";
 import { DEFAULT_INPUTS } from "@/lib/defaults";
 import { relativeTime } from "@/lib/format";
@@ -87,6 +90,16 @@ export default function PlantPage({ params }: { params: Promise<{ id: string }> 
   useEffect(() => {
     load();
   }, [load]);
+
+  const { data: alarms, reload: reloadAlarms } = useAlarms({ plantId: id, status: "todos", limit: 40 });
+  const openAlarms = (alarms ?? []).filter((a) => !a.resolved_at);
+  const [rules, setRules] = useState<AlarmRules | null>(null);
+  useEffect(() => {
+    fetch("/api/monitoring/alarms")
+      .then((r) => r.json())
+      .then((j) => j.rules && setRules(j.rules))
+      .catch(() => null);
+  }, []);
 
   const [refreshing, setRefreshing] = useState(false);
   const refresh = async () => {
@@ -209,6 +222,18 @@ export default function PlantPage({ params }: { params: Promise<{ id: string }> 
         {plant.address ? ` · ${plant.address}` : ""}
       </p>
 
+      {openAlarms.length > 0 && (
+        <a href="#alarmes" className={cx("mt-4 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm ring-1", openAlarms.some((a) => a.severity === "critical") ? "bg-rose-50 text-rose-900 ring-rose-200" : "bg-amber-50 text-amber-900 ring-amber-200")}>
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <b>
+              {openAlarms.length} {openAlarms.length === 1 ? "alarme ativo" : "alarmes ativos"}
+            </b>
+            : {openAlarms[0].message}
+          </span>
+          <span className="shrink-0 text-xs font-semibold underline">Ver</span>
+        </a>
+      )}
       {!!detail?.pending?.length && !notes.geral && (
         <p className="mt-4 flex items-start gap-2 rounded-2xl bg-sky-50 px-4 py-3 text-sm text-sky-900 ring-1 ring-sky-200">
           <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" /> Baixando o histórico aos poucos para não estourar o limite do fabricante. Cada mês é baixado uma única vez e fica salvo.
@@ -381,6 +406,45 @@ export default function PlantPage({ params }: { params: Promise<{ id: string }> 
           </Card>
         )}
       </section>
+
+      {!isManual && (
+        <section className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <Card className="p-4 sm:p-5">
+            <div className="mb-3 flex items-center gap-3">
+              <IconTile tone="#5B34D6" className="h-11 w-11">
+                <Bolt3D size={30} />
+              </IconTile>
+              <div>
+                <h2 className="font-display text-[15px] font-semibold text-ink-900">Histórico elétrico</h2>
+                <p className="text-xs text-ink-500">Tensão, corrente, potência, temperatura e frequência a cada leitura</p>
+              </div>
+            </div>
+            <HistoryChart plantId={id} rules={rules} />
+          </Card>
+          <Card id="alarmes" className="scroll-mt-24 p-4 sm:p-5">
+            <div className="mb-3 flex items-center gap-3">
+              <IconTile tone="#F5B700" className="h-11 w-11">
+                <Gauge3D size={30} />
+              </IconTile>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-display text-[15px] font-semibold text-ink-900">Alarmes</h2>
+                <p className="text-xs text-ink-500">{alarms === null ? "Rode o supabase/schema.sql para ativar" : openAlarms.length ? `${openAlarms.length} ativos` : "Nenhum alarme ativo"}</p>
+              </div>
+              {openAlarms.some((a) => !a.acknowledged_at) && <AckAllButton plantId={id} onDone={reloadAlarms} />}
+            </div>
+            {alarms?.length ? (
+              <div className="max-h-[420px] overflow-y-auto pr-1">
+                <AlarmList rows={alarms} onChanged={reloadAlarms} />
+              </div>
+            ) : (
+              <p className="rounded-xl bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800 ring-1 ring-emerald-200">Tudo normal. Os alarmes aparecem aqui quando uma leitura passar dos limites.</p>
+            )}
+            <Link href="/monitoramento/alarmes" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-sun-700 hover:underline">
+              Limites e todos os alarmes <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </Card>
+        </section>
+      )}
 
       {isManual && <ImportModal plantId={id} open={importOpen} onClose={() => setImportOpen(false)} onDone={() => { reload(); load(); }} />}
     </div>

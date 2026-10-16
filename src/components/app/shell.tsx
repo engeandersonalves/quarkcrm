@@ -23,7 +23,7 @@ import { useNavBadges, type NavBadges } from "./nav-badges";
 import { useProposalViewAlerts } from "./view-alerts";
 import { useTheme, type Theme } from "./theme";
 
-type NavKey = "tasks" | "leads" | "proposals" | "documents";
+type NavKey = "tasks" | "leads" | "proposals" | "documents" | "alarms";
 interface NavItem {
   href: string;
   label: string;
@@ -57,7 +57,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   },
   {
     title: "Pós-venda",
-    items: [{ href: "/monitoramento", label: "Monitoramento", icon: Activity }],
+    items: [{ href: "/monitoramento", label: "Monitoramento", icon: Activity, badge: "alarms", hint: "alarmes ativos nas usinas" }],
   },
   {
     title: "Desempenho",

@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { openCredentials } from "./crypto.ts";
 import { ADAPTERS } from "./providers/index.ts";
+import { evaluatePlants, loadRules, notifyAlarms, recordDevices, type NewAlarm } from "./alarm-sync.ts";
+import type { AlarmRules } from "./alarms.ts";
+import { SCHEMA_HINT, isSchemaError } from "./db.ts";
 import { MonitoringError, type PlantData, type ProviderId } from "./types.ts";
 import { todayIso } from "./units.ts";
 
@@ -80,7 +83,7 @@ export async function savePlants(admin: SupabaseClient, conn: ConnectionRow, pla
  * - Se o fabricante pedir calma (limite de consultas), a conexão pausa por BACKOFF.
  * ------------------------------------------------------------------------- */
 export const LIST_TTL = 60 * 60_000;
-export const DETAIL_TTL = 3 * 60 * 60_000;
+export const DETAIL_TTL = 90 * 60_000; // também é o intervalo do histórico elétrico
 const BACKOFF = 30 * 60_000;
 const PACE = 700; // ms entre chamadas ao fabricante
 const HISTORY_MONTHS = 12;
@@ -92,6 +95,15 @@ const errText = (e: unknown) => (e instanceof MonitoringError ? e.message : `Fal
 export function monthsBack(fromMonth: string, n: number) {
   const [y, m] = fromMonth.split("-").map(Number);
   return Array.from({ length: n }, (_, i) => new Date(Date.UTC(y, m - 1 - (i + 1), 1)).toISOString().slice(0, 7));
+}
+
+/** Atualiza a conexão; se o banco ainda não tiver as colunas novas, grava só as antigas. */
+async function updateConn(admin: SupabaseClient, id: string, patch: Record<string, unknown>) {
+  const { error } = await admin.from("monitoring_connections").update(patch).eq("id", id);
+  if (error && isSchemaError(error)) {
+    const { retry_after: _r, ...rest } = patch;
+    await admin.from("monitoring_connections").update(rest).eq("id", id);
+  }
 }
 
 type FullConn = ConnectionRow & { last_sync_at: string | null; retry_after: string | null };
@@ -112,7 +124,7 @@ async function upsertDays(admin: SupabaseClient, plantId: string, days: { day: s
 }
 
 /** Baixa o detalhe de uma usina: mês atual, um mês do histórico, meses do ano e inversores. */
-async function detailOne(admin: SupabaseClient, provider: ProviderId, creds: Record<string, string>, plant: { id: string; external_id: string; devices_at: string | null }, deadline: number) {
+async function detailOne(admin: SupabaseClient, provider: ProviderId, creds: Record<string, string>, plant: { id: string; external_id: string; devices_at: string | null }, deadline: number, rules: AlarmRules, created: NewAlarm[]) {
   const adapter = ADAPTERS[provider];
   const realFetch = (u: string, i?: RequestInit) => fetch(u, i);
   const today = todayIso();
@@ -156,6 +168,8 @@ async function detailOne(admin: SupabaseClient, provider: ProviderId, creds: Rec
     const devices = await adapter.fetchDevices(creds, ext, realFetch);
     patch.devices = devices;
     patch.devices_at = new Date().toISOString();
+    // Histórico elétrico + alarmes (sobretensão, temperatura, frequência, strings)
+    created.push(...(await recordDevices(admin, plant.id, devices, rules).catch(() => [])));
   }
   await admin.from("monitoring_plants").update(patch).eq("id", plant.id);
 }
@@ -166,19 +180,26 @@ export async function syncDetails(admin: SupabaseClient, conn: ConnectionRow, cr
   if (!adapter || (!adapter.fetchDays && !adapter.fetchDevices && !adapter.fetchMonths)) return { done: 0, rateLimited: false };
   let q = admin.from("monitoring_plants").select("id, external_id, devices_at, details_synced_at").eq("connection_id", conn.id).order("details_synced_at", { ascending: true, nullsFirst: true }).limit(500);
   if (opts.plantIds?.length) q = q.in("id", opts.plantIds);
-  const { data } = await q;
+  const { data, error } = await q;
+  if (error) {
+    if (isSchemaError(error)) await updateConn(admin, conn.id, { last_error: SCHEMA_HINT });
+    return { done: 0, rateLimited: false };
+  }
   const stale = ((data ?? []) as { id: string; external_id: string; devices_at: string | null; details_synced_at: string | null }[]).filter(
     (p) => opts.force || !p.details_synced_at || Date.now() - new Date(p.details_synced_at).getTime() > DETAIL_TTL,
   );
   let done = 0;
+  const rules = await loadRules(admin);
+  const created: NewAlarm[] = [];
   for (const p of stale) {
     if (Date.now() > opts.deadline) break;
     try {
-      await detailOne(admin, conn.provider, creds, p, opts.deadline);
+      await detailOne(admin, conn.provider, creds, p, opts.deadline, rules, created);
       done++;
     } catch (e) {
       if (isRateLimit(e)) {
-        await admin.from("monitoring_connections").update({ retry_after: new Date(Date.now() + BACKOFF).toISOString(), last_error: errText(e).slice(0, 500) }).eq("id", conn.id);
+        await updateConn(admin, conn.id, { retry_after: new Date(Date.now() + BACKOFF).toISOString(), last_error: errText(e).slice(0, 500) });
+        await notifyAlarms(admin, created, rules);
         return { done, rateLimited: true };
       }
       // Uma usina com problema não trava as outras
@@ -186,6 +207,7 @@ export async function syncDetails(admin: SupabaseClient, conn: ConnectionRow, cr
     }
     await sleep(PACE);
   }
+  await notifyAlarms(admin, created, rules);
   return { done, rateLimited: false };
 }
 
@@ -207,10 +229,13 @@ export async function syncConnection(admin: SupabaseClient, conn: ConnectionRow,
     const creds = await credsOf(admin, conn.id);
     let count: number | null = null;
     if (listDue) {
-      await admin.from("monitoring_connections").update({ status: "syncing" }).eq("id", conn.id);
+      await updateConn(admin, conn.id, { status: "syncing" });
       const plants = await ADAPTERS[conn.provider].fetchPlants(creds, (u, i) => fetch(u, i));
       count = await savePlants(admin, conn, plants);
-      await admin.from("monitoring_connections").update({ status: "ok", last_error: null, retry_after: null, last_sync_at: new Date().toISOString(), plants_count: count }).eq("id", conn.id);
+      // Alarmes de status (offline, alarme do fabricante, sem leitura, geração baixa)
+      const rules = await loadRules(admin);
+      await notifyAlarms(admin, await evaluatePlants(admin, conn.id, rules).catch(() => []), rules);
+      await updateConn(admin, conn.id, { status: "ok", last_error: null, retry_after: null, last_sync_at: new Date().toISOString(), plants_count: count });
     }
     const det = await syncDetails(admin, conn, creds, { deadline });
     if (det.rateLimited) return { id: conn.id, ok: false as const, error: "O fabricante limitou as consultas; continuamos mais tarde com o que falta." };
@@ -219,7 +244,7 @@ export async function syncConnection(admin: SupabaseClient, conn: ConnectionRow,
     const msg = errText(e);
     const patch: Record<string, unknown> = { status: "error", last_error: msg.slice(0, 500), last_sync_at: new Date().toISOString() };
     if (isRateLimit(e)) patch.retry_after = new Date(Date.now() + BACKOFF).toISOString();
-    await admin.from("monitoring_connections").update(patch).eq("id", conn.id);
+    await updateConn(admin, conn.id, patch);
     return { id: conn.id, ok: false as const, error: msg };
   }
 }
@@ -285,7 +310,7 @@ export async function fetchMissingMonths(admin: SupabaseClient, plant: { id: str
       fetched++;
     } catch (e) {
       if (isRateLimit(e)) {
-        await admin.from("monitoring_connections").update({ retry_after: new Date(Date.now() + BACKOFF).toISOString() }).eq("id", plant.connection_id);
+        await updateConn(admin, plant.connection_id, { retry_after: new Date(Date.now() + BACKOFF).toISOString() });
         return { fetched, limited: true };
       }
       throw e;

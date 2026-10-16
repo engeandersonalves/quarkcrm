@@ -3,6 +3,7 @@ import { fetchMissingMonths, syncDetails, type ConnectionRow } from "@/lib/monit
 import { openCredentials } from "@/lib/monitoring/crypto";
 import { MonitoringError, type DayValue, type DeviceData, type MonthValue, type ProviderId } from "@/lib/monitoring/types";
 import { todayIso } from "@/lib/monitoring/units";
+import { SCHEMA_HINT, getPlant } from "@/lib/monitoring/db";
 import { monitoringContext } from "../../auth";
 
 export const runtime = "nodejs";
@@ -44,9 +45,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const year = /^\d{4}$/.test(url.searchParams.get("year") ?? "") ? url.searchParams.get("year")! : to.slice(0, 4);
   if (from > to) return NextResponse.json({ error: "A data inicial precisa ser antes da final." }, { status: 400 });
 
-  const { data: plant } = await ctx.admin.from("monitoring_plants").select("id, external_id, connection_id, provider, devices, devices_at, details_synced_at").eq("id", id).maybeSingle();
-  if (!plant) return NextResponse.json({ error: "Usina não encontrada." }, { status: 404 });
+  const got = await getPlant(ctx.admin, id);
+  if (got.error) return NextResponse.json({ error: `Não foi possível ler a usina: ${got.error}` }, { status: 500 });
+  const plant = got.plant;
+  if (!plant) return NextResponse.json({ error: "Usina não encontrada (ela pode ter sido removida ou a conexão foi refeita)." }, { status: 404 });
   const notes: Record<string, string> = {};
+  if (got.outdated) notes.geral = SCHEMA_HINT;
 
   // Meses do período que ainda não foram baixados por completo
   const rangeMonths = monthsBetween(from, to);
@@ -108,8 +112,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const ctx = await monitoringContext();
   if ("error" in ctx) return NextResponse.json({ error: ctx.error }, { status: ctx.status });
   const { id } = await params;
-  const { data: plant } = await ctx.admin.from("monitoring_plants").select("id, connection_id, provider, details_synced_at").eq("id", id).maybeSingle();
-  if (!plant) return NextResponse.json({ error: "Usina não encontrada." }, { status: 404 });
+  const got = await getPlant(ctx.admin, id);
+  if (got.outdated) return NextResponse.json({ ok: false, error: SCHEMA_HINT });
+  const plant = got.plant;
+  if (!plant) return NextResponse.json({ error: got.error ?? "Usina não encontrada." }, { status: got.error ? 500 : 404 });
   if (plant.provider === "manual") return NextResponse.json({ ok: true, skipped: "manual" });
   if (plant.details_synced_at && Date.now() - new Date(plant.details_synced_at).getTime() < 10 * 60_000) return NextResponse.json({ ok: true, skipped: "recent" });
   const { data: conn } = await ctx.admin.from("monitoring_connections").select("id, provider, label, retry_after").eq("id", plant.connection_id).maybeSingle();

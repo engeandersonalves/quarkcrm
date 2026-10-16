@@ -1122,6 +1122,55 @@ alter table public.monitoring_months enable row level security;
 drop policy if exists "team_read" on public.monitoring_months;
 create policy "team_read" on public.monitoring_months for select to authenticated using (public.is_member());
 
+-- Histórico elétrico dos inversores (uma leitura por download)
+create table if not exists public.monitoring_readings (
+  plant_id uuid not null references public.monitoring_plants (id) on delete cascade,
+  device_sn text not null,
+  at timestamptz not null default now(),
+  grid_v numeric,
+  v_r numeric,
+  v_s numeric,
+  v_t numeric,
+  v_line numeric,
+  i_r numeric,
+  i_s numeric,
+  i_t numeric,
+  power_kw numeric,
+  temp_c numeric,
+  freq_hz numeric,
+  dc_v numeric,
+  dc_i numeric,
+  phases int,
+  primary key (plant_id, device_sn, at)
+);
+create index if not exists monitoring_readings_at_idx on public.monitoring_readings (plant_id, at desc);
+alter table public.monitoring_readings enable row level security;
+drop policy if exists "team_read" on public.monitoring_readings;
+create policy "team_read" on public.monitoring_readings for select to authenticated using (public.is_member());
+
+-- Alarmes (abertos enquanto a condição persiste; resolvidos quando some)
+create table if not exists public.monitoring_alarms (
+  id uuid primary key default gen_random_uuid(),
+  plant_id uuid not null references public.monitoring_plants (id) on delete cascade,
+  device_sn text not null default '',
+  kind text not null,
+  severity text not null default 'warning' check (severity in ('info', 'warning', 'critical')),
+  message text not null,
+  value numeric,
+  threshold numeric,
+  started_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  resolved_at timestamptz,
+  acknowledged_at timestamptz,
+  acknowledged_by uuid references public.profiles (id) on delete set null,
+  notified_at timestamptz
+);
+create unique index if not exists monitoring_alarms_open_idx on public.monitoring_alarms (plant_id, device_sn, kind) where resolved_at is null;
+create index if not exists monitoring_alarms_recent_idx on public.monitoring_alarms (started_at desc);
+alter table public.monitoring_alarms enable row level security;
+drop policy if exists "team_read" on public.monitoring_alarms;
+create policy "team_read" on public.monitoring_alarms for select to authenticated using (public.is_member());
+
 -- -----------------------------------------------------------------------------
 -- Rastreamento detalhado da proposta: seções lidas, tempo de leitura e cliques
 -- -----------------------------------------------------------------------------
@@ -1174,7 +1223,7 @@ do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers', 'marketing_assets', 'profile_updates', 'receipts', 'monitoring_connections', 'monitoring_plants', 'proposal_events'] loop
+    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers', 'marketing_assets', 'profile_updates', 'receipts', 'monitoring_connections', 'monitoring_plants', 'proposal_events', 'monitoring_alarms'] loop
       if not exists (
         select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
       ) then
