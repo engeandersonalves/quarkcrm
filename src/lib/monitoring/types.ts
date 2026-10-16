@@ -1,6 +1,6 @@
 /** Monitoramento de usinas: tipos comuns a todos os fabricantes. */
 
-export type ProviderId = "solis" | "deye" | "solarman" | "sungrow" | "growatt" | "huawei" | "solplanet";
+export type ProviderId = "solis" | "deye" | "solarman" | "sungrow" | "growatt" | "huawei" | "solplanet" | "goodwe" | "livoltek" | "foxess" | "apsystems" | "manual";
 
 export type PlantStatus = "online" | "offline" | "alarm" | "unknown";
 
@@ -25,9 +25,42 @@ export type Credentials = Record<string, string>;
 /** fetch injetável (testes usam uma versão falsa). */
 export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
 
+/** Leituras elétricas de um inversor. */
+export interface DeviceData {
+  sn: string;
+  name: string;
+  model: string | null;
+  status: PlantStatus;
+  powerKw: number | null;
+  todayKwh: number | null;
+  totalKwh: number | null;
+  temperatureC: number | null;
+  frequencyHz: number | null;
+  /** Lado CA, por fase. */
+  ac: { label: string; voltage: number | null; current: number | null }[];
+  /** Lado CC, por string/MPPT. */
+  dc: { label: string; voltage: number | null; current: number | null; powerKw: number | null }[];
+  updatedAt: string | null;
+}
+
+export interface DayValue {
+  day: string; // AAAA-MM-DD
+  kwh: number;
+}
+export interface MonthValue {
+  month: string; // AAAA-MM
+  kwh: number;
+}
+
 export interface ProviderAdapter {
   id: ProviderId;
   fetchPlants: (creds: Credentials, fetch: Fetch) => Promise<PlantData[]>;
+  /** Geração dia a dia de um mês (AAAA-MM). */
+  fetchDays?: (creds: Credentials, plantId: string, month: string, fetch: Fetch) => Promise<DayValue[]>;
+  /** Geração mês a mês de um ano (AAAA). */
+  fetchMonths?: (creds: Credentials, plantId: string, year: string, fetch: Fetch) => Promise<MonthValue[]>;
+  /** Inversores da usina com tensão, corrente, temperatura… */
+  fetchDevices?: (creds: Credentials, plantId: string, fetch: Fetch) => Promise<DeviceData[]>;
 }
 
 /** Erro com mensagem já pronta para o usuário. */

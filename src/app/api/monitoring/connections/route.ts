@@ -17,6 +17,7 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { provider?: string; label?: string; credentials?: Record<string, unknown> };
   const info = providerInfo(String(body.provider ?? ""));
   if (!info) return NextResponse.json({ error: "Escolha um fabricante." }, { status: 400 });
+  if (info.manual) return NextResponse.json({ error: "Usinas de outros fabricantes são cadastradas pela planilha." }, { status: 400 });
 
   // Só os campos conhecidos do fabricante, como texto
   const creds: Record<string, string> = {};

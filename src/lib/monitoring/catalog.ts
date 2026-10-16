@@ -25,6 +25,10 @@ export interface ProviderInfo {
   fields: ProviderField[];
   /** Como conseguir o acesso à API. */
   steps: string[];
+  /** O que o conector traz além da lista de usinas. */
+  features: ("dias" | "meses" | "eletrica")[];
+  /** Sem API: usinas cadastradas à mão e alimentadas por planilha. */
+  manual?: boolean;
 }
 
 export const PROVIDERS: ProviderInfo[] = [
@@ -38,6 +42,7 @@ export const PROVIDERS: ProviderInfo[] = [
       { key: "keyId", label: "API Key ID", type: "text", placeholder: "1300386381676…" },
       { key: "keySecret", label: "API Key Secret", type: "password" },
     ],
+    features: ["dias", "meses", "eletrica"],
     steps: [
       "Entre no SolisCloud (soliscloud.com) com a conta da empresa.",
       "Vá em Conta → Serviço de API e clique em Ativar (ou peça a ativação ao suporte Solis).",
@@ -65,6 +70,7 @@ export const PROVIDERS: ProviderInfo[] = [
       { key: "account", label: "E-mail ou usuário do Deye Cloud", type: "text" },
       { key: "password", label: "Senha do Deye Cloud", type: "password" },
     ],
+    features: ["dias", "meses", "eletrica"],
     steps: [
       "Acesse developer.deyecloud.com e entre com a mesma conta do Deye Cloud.",
       "Crie um aplicativo (Application) e copie o App ID e o App Secret.",
@@ -83,6 +89,7 @@ export const PROVIDERS: ProviderInfo[] = [
       { key: "account", label: "E-mail da conta Solarman", type: "text" },
       { key: "password", label: "Senha da conta Solarman", type: "password" },
     ],
+    features: ["dias", "meses", "eletrica"],
     steps: [
       "Peça a liberação da OpenAPI à Solarman (service@solarmanpv.com) informando o e-mail da conta.",
       "Eles enviam o App ID e o App Secret.",
@@ -113,6 +120,7 @@ export const PROVIDERS: ProviderInfo[] = [
       { key: "account", label: "Usuário do iSolarCloud", type: "text" },
       { key: "password", label: "Senha do iSolarCloud", type: "password" },
     ],
+    features: ["eletrica"],
     steps: [
       "No iSolarCloud (web), abra Configurações → Open API e gere as chaves (App Key, Access Key e RSA Key).",
       "Se a opção não aparecer, solicite o acesso à OpenAPI ao suporte Sungrow do Brasil.",
@@ -139,6 +147,7 @@ export const PROVIDERS: ProviderInfo[] = [
       },
       { key: "token", label: "Token da API", type: "password" },
     ],
+    features: ["dias", "meses", "eletrica"],
     steps: [
       "Entre no servidor Growatt (server.growatt.com) com a conta de instalador.",
       "Abra Configurações / Gerenciamento de conta e gere o Token da API (ou peça ao suporte Growatt).",
@@ -166,6 +175,7 @@ export const PROVIDERS: ProviderInfo[] = [
       { key: "userName", label: "Usuário da API (Northbound)", type: "text" },
       { key: "systemCode", label: "Senha da API (System Code)", type: "password" },
     ],
+    features: ["dias", "meses", "eletrica"],
     steps: [
       "No FusionSolar (conta de empresa), vá em Sistema → Gerenciamento da empresa → API Northbound.",
       "Crie um usuário de API com acesso às usinas e anote o usuário e a senha (System Code).",
@@ -183,9 +193,82 @@ export const PROVIDERS: ProviderInfo[] = [
       { key: "appSecret", label: "App Secret", type: "password" },
       { key: "token", label: "Token Pro", type: "password" },
     ],
+    features: ["dias", "eletrica"],
     steps: [
       "Peça ao suporte Solplanet a liberação da API para a sua conta de instalador.",
       "No portal Solplanet Pro, em Conta → Segurança, copie o App Key, o App Secret e o Token.",
+    ],
+  },
+  {
+    id: "goodwe",
+    name: "GoodWe",
+    platform: "SEMS Portal",
+    color: "#D2232A",
+    brands: "GoodWe",
+    fields: [
+      { key: "account", label: "E-mail do SEMS Portal", type: "text" },
+      { key: "password", label: "Senha do SEMS Portal", type: "password" },
+    ],
+    features: ["eletrica"],
+    steps: [
+      "Use o e-mail e a senha com que você entra no SEMS Portal (semsportal.com) ou no app SEMS.",
+      "Com a conta de instalador, todas as usinas da carteira são importadas.",
+      "Recomendado: crie um usuário de visitante só para a integração.",
+    ],
+  },
+  {
+    id: "livoltek",
+    name: "Livoltek",
+    platform: "Livoltek Portal",
+    color: "#1E9E5B",
+    brands: "Livoltek",
+    fields: [
+      { key: "secuid", label: "Security ID", type: "text" },
+      { key: "key", label: "Chave de API (Key)", type: "password" },
+    ],
+    features: [],
+    steps: [
+      "No Livoltek Portal, abra Conta → API e gere o Security ID e a chave.",
+      "Se não aparecer, peça a liberação da API ao suporte Livoltek.",
+    ],
+  },
+  {
+    id: "foxess",
+    name: "FoxESS",
+    platform: "FoxESS Cloud",
+    color: "#E6501E",
+    brands: "FoxESS",
+    fields: [{ key: "apiKey", label: "Chave de API (API Key)", type: "password" }],
+    features: ["dias", "meses", "eletrica"],
+    steps: ["Entre no foxesscloud.com, abra Perfil → API Management e gere a chave de API.", "Cole a chave aqui."],
+  },
+  {
+    id: "apsystems",
+    name: "APsystems",
+    platform: "EMA (OpenAPI)",
+    color: "#0072BC",
+    brands: "APsystems (microinversores)",
+    fields: [
+      { key: "appId", label: "App ID", type: "text" },
+      { key: "appSecret", label: "App Secret", type: "password" },
+      { key: "sids", label: "IDs dos sistemas (SID)", type: "textarea", hint: "Um por linha ou separados por vírgula. Aparecem no EMA em cada sistema." },
+    ],
+    features: ["dias", "meses"],
+    steps: ["Solicite a OpenAPI no EMA (ou ao suporte APsystems) para receber o App ID e o App Secret.", "Informe os IDs dos sistemas que quer monitorar."],
+  },
+  {
+    id: "manual",
+    name: "Outros fabricantes",
+    platform: "Planilha de geração",
+    color: "#6D6985",
+    brands: "AUXSOL, Canadian (CSI Cloud), Hoymiles, WEG, Intelbras e outros",
+    fields: [],
+    features: ["dias", "meses"],
+    manual: true,
+    steps: [
+      "Estas marcas não têm API pública. Cadastre a usina aqui e importe a geração diária.",
+      "No portal do fabricante, exporte o relatório de geração (Excel/CSV) com data e kWh por dia.",
+      "Na usina, clique em Importar planilha: o app lê as colunas de data e energia sozinho.",
     ],
   },
 ];

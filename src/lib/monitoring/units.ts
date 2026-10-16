@@ -16,22 +16,24 @@ const factor = (unit: unknown, base: "W" | "Wh" | "Wp") => {
   return 1;
 };
 
+const clean = (n: number) => Math.round(n * 1e6) / 1e6;
+
 /** Potência em kW. Unidade vazia = já está em kW. */
 export const toKw = (v: unknown, unit?: unknown) => {
   const n = num(v);
-  return n === null ? null : n * factor(unit, "W");
+  return n === null ? null : clean(n * factor(unit, "W"));
 };
 /** Energia em kWh. */
 export const toKwh = (v: unknown, unit?: unknown) => {
   const n = num(v);
-  return n === null ? null : n * factor(unit, "Wh");
+  return n === null ? null : clean(n * factor(unit, "Wh"));
 };
 /** Potência instalada em kWp ("kWp", "MWp", "kW"…). */
 export const toKwp = (v: unknown, unit?: unknown) => {
   const n = num(v);
   if (n === null) return null;
   const u = String(unit ?? "").trim().toLowerCase().replace(/p$/, "");
-  return n * factor(u, "W");
+  return clean(n * factor(u, "W"));
 };
 
 /** Valor no formato {value, unit} (Sungrow) ou número simples. */

@@ -1,5 +1,6 @@
 import { constants, createCipheriv, createDecipheriv, publicEncrypt, randomBytes } from "node:crypto";
-import { MonitoringError, type Credentials, type Fetch, type PlantData, type PlantStatus, type ProviderAdapter } from "../types.ts";
+import { deviceFrom } from "../electrical.ts";
+import { MonitoringError, type Credentials, type DeviceData, type Fetch, type PlantData, type PlantStatus, type ProviderAdapter } from "../types.ts";
 import { num, toIso, toKw, toKwh, toKwp, valueUnit } from "../units.ts";
 import { arr, call, obj, readJson, str } from "./http.ts";
 
@@ -80,7 +81,7 @@ export function mapSungrowStation(s: Record<string, unknown>): PlantData {
   };
 }
 
-async function fetchPlants(creds: Credentials, fetch: Fetch): Promise<PlantData[]> {
+async function session(creds: Credentials, fetch: Fetch) {
   const host = SUNGROW_HOSTS[creds.server] ?? SUNGROW_HOSTS.intl;
   const appkey = creds.appKey.trim();
   const login = await post(fetch, host, "/openapi/login", { appkey, user_account: creds.account.trim(), user_password: creds.password, lang: "_en_US" }, creds);
@@ -91,6 +92,11 @@ async function fetchPlants(creds: Credentials, fetch: Fetch): Promise<PlantData[
     throw new MonitoringError(`iSolarCloud: ${why}. Confira App Key, Access Key, usuário, senha e o servidor escolhido.`);
   }
   const userId = str(rd.user_id);
+  return { host, appkey, token, userId };
+}
+
+async function fetchPlants(creds: Credentials, fetch: Fetch): Promise<PlantData[]> {
+  const { host, appkey, token, userId } = await session(creds, fetch);
   const out: PlantData[] = [];
   for (let page = 1; page <= 20; page++) {
     const d = await post(fetch, host, "/openapi/getPowerStationList", { appkey, token, user_id: userId, curPage: page, size: 100, lang: "_en_US" }, creds, userId);
@@ -102,4 +108,41 @@ async function fetchPlants(creds: Credentials, fetch: Fetch): Promise<PlantData[
   return out;
 }
 
-export const sungrow: ProviderAdapter = { id: "sungrow", fetchPlants };
+/**
+ * Pontos de medição dos inversores na OpenAPI (Wh/W/V/A/°C/Hz):
+ * p1 geração do dia, p2 total, p4 temperatura, p5–p8 MPPT1/2 (V, A),
+ * p18–p20 tensão das fases, p21–p23 corrente das fases, p24 potência ativa, p27 frequência.
+ */
+const POINTS = ["p1", "p2", "p4", "p5", "p6", "p7", "p8", "p45", "p46", "p47", "p48", "p18", "p19", "p20", "p21", "p22", "p23", "p24", "p27"];
+
+async function fetchDevices(creds: Credentials, plantId: string, fetch: Fetch): Promise<DeviceData[]> {
+  const { host, appkey, token, userId } = await session(creds, fetch);
+  const list = await post(fetch, host, "/openapi/getDeviceList", { appkey, token, user_id: userId, ps_id: plantId, curPage: 1, size: 100, lang: "_en_US" }, creds, userId);
+  const inverters = arr(obj(list.result_data).pageList).filter((d) => Number(d.device_type) === 1);
+  if (!inverters.length) return [];
+  const rt = await post(fetch, host, "/openapi/getDeviceRealTimeData", { appkey, token, user_id: userId, device_type: 1, ps_key_list: inverters.map((d) => str(d.ps_key)), point_id_list: POINTS.map((p) => p.slice(1)), lang: "_en_US" }, creds, userId);
+  const points = arr(obj(rt.result_data).device_point_list).map((x) => obj(x.device_point ?? x));
+  return inverters.map((inv) => {
+    const p = points.find((x) => str(x.ps_key) === str(inv.ps_key)) ?? {};
+    const raw = {
+      upv1: p.p5, ipv1: p.p6, upv2: p.p7, ipv2: p.p8, upv3: p.p45, ipv3: p.p46, upv4: p.p47, ipv4: p.p48,
+      uacr: p.p18, uacs: p.p19, uact: p.p20, iacr: p.p21, iacs: p.p22, iact: p.p23,
+      fac: p.p27, temperature: p.p4,
+    };
+    return deviceFrom(
+      {
+        sn: str(inv.device_sn ?? inv.ps_key),
+        name: str(inv.device_name) || str(inv.device_sn),
+        model: str(inv.device_model_code ?? inv.type_name) || null,
+        status: str(inv.dev_fault_status) === "1" ? "alarm" : str(inv.dev_status) === "0" ? "offline" : "online",
+        powerKw: toKw(p.p24, "W"),
+        todayKwh: toKwh(p.p1, "Wh"),
+        totalKwh: toKwh(p.p2, "Wh"),
+        updatedAt: toIso(p.device_time ?? null),
+      },
+      raw,
+    );
+  });
+}
+
+export const sungrow: ProviderAdapter = { id: "sungrow", fetchPlants, fetchDevices };

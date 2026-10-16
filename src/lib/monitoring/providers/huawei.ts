@@ -1,5 +1,6 @@
-import { MonitoringError, type Credentials, type Fetch, type PlantData, type PlantStatus, type ProviderAdapter } from "../types.ts";
-import { num, toKwh } from "../units.ts";
+import { deviceFrom } from "../electrical.ts";
+import { MonitoringError, type Credentials, type DayValue, type DeviceData, type Fetch, type MonthValue, type PlantData, type PlantStatus, type ProviderAdapter } from "../types.ts";
+import { num, toIso, toKw, toKwh } from "../units.ts";
 import { arr, call, obj, readJson, sleep, str } from "./http.ts";
 
 /** Huawei FusionSolar Northbound API (login → XSRF-TOKEN). */
@@ -21,7 +22,7 @@ function check(d: Record<string, unknown>, what: string) {
   throw new MonitoringError(`FusionSolar: não foi possível ${what}${d.message ? ` (${str(d.message)})` : ""}.`);
 }
 
-async function fetchPlants(creds: Credentials, fetch: Fetch): Promise<PlantData[]> {
+async function login(creds: Credentials, fetch: Fetch) {
   const base = HUAWEI_HOSTS[creds.host] ?? HUAWEI_HOSTS.la5;
   const res = await call(fetch, `${base}/thirdData/login`, {
     method: "POST",
@@ -32,6 +33,16 @@ async function fetchPlants(creds: Credentials, fetch: Fetch): Promise<PlantData[
   check(await readJson(res, "FusionSolar"), "entrar");
   if (!token) throw new MonitoringError("FusionSolar: o servidor não devolveu a sessão. Confira o servidor escolhido.");
   const headers = { "Content-Type": "application/json", "XSRF-TOKEN": token };
+  const post = async (path: string, body: unknown, what: string) => {
+    const d = await readJson(await call(fetch, `${base}/thirdData/${path}`, { method: "POST", headers, body: JSON.stringify(body) }, "FusionSolar"), "FusionSolar");
+    check(d, what);
+    return d;
+  };
+  return { base, headers, post };
+}
+
+async function fetchPlants(creds: Credentials, fetch: Fetch): Promise<PlantData[]> {
+  const { base, headers } = await login(creds, fetch);
 
   // Lista de usinas (API nova /stations; se indisponível, a antiga /getStationList)
   let plants: { code: string; name: string; address: string | null; capacityKwp: number | null }[] = [];
@@ -80,4 +91,64 @@ async function fetchPlants(creds: Credentials, fetch: Fetch): Promise<PlantData[
   });
 }
 
-export const huawei: ProviderAdapter = { id: "huawei", fetchPlants };
+/** Meio-dia (horário de Brasília) do primeiro dia do mês/ano, em ms. */
+const collect = (iso: string) => new Date(`${iso}T12:00:00-03:00`).getTime();
+const localDay = (ms: unknown) => new Date(Number(ms) - 3 * 3600_000).toISOString().slice(0, 10);
+
+async function fetchDays(creds: Credentials, plantId: string, month: string, fetch: Fetch): Promise<DayValue[]> {
+  const { post } = await login(creds, fetch);
+  const d = await post("getKpiStationDay", { stationCodes: plantId, collectTime: collect(`${month}-01`) }, "ler a geração diária");
+  return arr(d.data)
+    .map((r) => {
+      const m = obj(r.dataItemMap);
+      return { day: localDay(r.collectTime), kwh: toKwh(m.inverter_power ?? m.PVYield ?? m.product_power, "kWh") ?? 0 };
+    })
+    .filter((x) => x.day.startsWith(month));
+}
+
+async function fetchMonths(creds: Credentials, plantId: string, year: string, fetch: Fetch): Promise<MonthValue[]> {
+  const { post } = await login(creds, fetch);
+  const d = await post("getKpiStationMonth", { stationCodes: plantId, collectTime: collect(`${year}-01-01`) }, "ler a geração mensal");
+  return arr(d.data)
+    .map((r) => {
+      const m = obj(r.dataItemMap);
+      return { month: localDay(r.collectTime).slice(0, 7), kwh: toKwh(m.inverter_power ?? m.PVYield ?? m.product_power, "kWh") ?? 0 };
+    })
+    .filter((x) => x.month.startsWith(year));
+}
+
+const RUN: Record<string, PlantStatus> = { "0": "offline", "1": "online", "2": "offline" };
+
+async function fetchDevices(creds: Credentials, plantId: string, fetch: Fetch): Promise<DeviceData[]> {
+  const { post } = await login(creds, fetch);
+  const devs = arr((await post("getDevList", { stationCodes: plantId }, "listar os inversores")).data).filter((d) => [1, 38].includes(Number(d.devTypeId)));
+  const out: DeviceData[] = [];
+  for (const type of [1, 38]) {
+    const group = devs.filter((d) => Number(d.devTypeId) === type);
+    if (!group.length) continue;
+    await sleep(400);
+    const kpi = arr((await post("getDevRealKpi", { devIds: group.map((d) => str(d.id)).join(","), devTypeId: type }, "ler os inversores")).data);
+    for (const k of kpi) {
+      const dev = group.find((d) => str(d.id) === str(k.devId)) ?? {};
+      const m = obj(k.dataItemMap);
+      out.push(
+        deviceFrom(
+          {
+            sn: str(dev.esnCode ?? k.sn ?? k.devId),
+            name: str(dev.devName) || str(dev.esnCode),
+            model: str(dev.model ?? dev.invType) || null,
+            status: RUN[str(m.run_state)] ?? "unknown",
+            powerKw: toKw(m.active_power, "kW"),
+            todayKwh: toKwh(m.day_cap, "kWh"),
+            totalKwh: toKwh(m.total_cap, "kWh"),
+            updatedAt: toIso(m.collectTime ?? null),
+          },
+          m,
+        ),
+      );
+    }
+  }
+  return out;
+}
+
+export const huawei: ProviderAdapter = { id: "huawei", fetchPlants, fetchDays, fetchMonths, fetchDevices };

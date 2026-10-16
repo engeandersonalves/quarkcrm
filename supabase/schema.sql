@@ -1039,7 +1039,7 @@ create policy "team_all" on public.receipts for all to authenticated using (publ
 -- -----------------------------------------------------------------------------
 create table if not exists public.monitoring_connections (
   id uuid primary key default gen_random_uuid(),
-  provider text not null check (provider in ('solis', 'deye', 'solarman', 'sungrow', 'growatt', 'huawei', 'solplanet')),
+  provider text not null,
   label text not null,
   status text not null default 'ok' check (status in ('ok', 'error', 'syncing')),
   last_error text,
@@ -1048,6 +1048,9 @@ create table if not exists public.monitoring_connections (
   created_by uuid references public.profiles (id) on delete set null default auth.uid(),
   created_at timestamptz not null default now()
 );
+alter table public.monitoring_connections drop constraint if exists monitoring_connections_provider_check;
+alter table public.monitoring_connections add constraint monitoring_connections_provider_check
+  check (provider in ('solis', 'deye', 'solarman', 'sungrow', 'growatt', 'huawei', 'solplanet', 'goodwe', 'livoltek', 'foxess', 'apsystems', 'manual'));
 alter table public.monitoring_connections enable row level security;
 drop policy if exists "team_read" on public.monitoring_connections;
 create policy "team_read" on public.monitoring_connections for select to authenticated using (public.is_member());

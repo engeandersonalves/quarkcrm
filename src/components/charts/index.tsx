@@ -85,7 +85,7 @@ export function BarChart({
       </div>
       <div className="absolute right-0 bottom-0 left-14 flex gap-[2px]">
         {data.map((d, i) => (
-          <span key={i} className={cx("flex-1 truncate text-center text-[10px]", hover === i ? "font-semibold text-ink-900" : "text-ink-400")}>
+          <span key={i} className={cx("min-w-0 flex-1 text-center text-[10px] whitespace-nowrap", hover === i ? "font-semibold text-ink-900" : "text-ink-400")}>
             {n > 8 && i % 2 === 1 && hover !== i ? "" : d.label}
           </span>
         ))}

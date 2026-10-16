@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
-import { MonitoringError, type Credentials, type Fetch, type PlantData, type PlantStatus, type ProviderAdapter } from "../types.ts";
+import { deviceFrom } from "../electrical.ts";
+import { MonitoringError, type Credentials, type DayValue, type DeviceData, type Fetch, type PlantData, type PlantStatus, type ProviderAdapter } from "../types.ts";
 import { num, toIso, toKw, toKwh } from "../units.ts";
 import { arr, call, obj, pool, readJson, str } from "./http.ts";
 
@@ -70,4 +71,51 @@ async function fetchPlants(creds: Credentials, fetch: Fetch): Promise<PlantData[
   });
 }
 
-export const solplanet: ProviderAdapter = { id: "solplanet", fetchPlants };
+async function fetchDevices(creds: Credentials, plantId: string, fetch: Fetch): Promise<DeviceData[]> {
+  const token = creds.token.trim();
+  const list = await get(fetch, creds, "/pro/getDeviceListPro", { apikey: plantId, token });
+  const items = Array.isArray(list.data) ? (list.data as Record<string, unknown>[]) : arr(obj(list.data).list ?? obj(list.data).inverters);
+  return pool(items, 2, async (inv) => {
+    const sn = str(inv.isno ?? inv.sn ?? inv.isn);
+    let ts: Record<string, unknown> = {};
+    try {
+      const d = await get(fetch, creds, "/pro/getLastTsDataPro", { apikey: plantId, token, isnos: sn });
+      ts = Array.isArray(d.data) ? obj((d.data as unknown[])[0]) : obj(d.data);
+    } catch {
+      ts = {};
+    }
+    // Leituras costumam vir como listas (vac: [V1, V2, V3], vpv: [...], ipv: [...])
+    const flat: Record<string, unknown> = { ...ts };
+    const spread = (field: string, prefix: string) => {
+      const v = ts[field];
+      if (Array.isArray(v)) v.forEach((x, i) => (flat[`${prefix}${i + 1}`] = x));
+    };
+    spread("vac", "uac");
+    spread("iac", "iac");
+    spread("vpv", "upv");
+    spread("ipv", "ipv");
+    return deviceFrom(
+      {
+        sn,
+        name: str(inv.name ?? inv.model) || sn,
+        model: str(inv.model ?? inv.type) || null,
+        status: STATUS[str(inv.status ?? ts.status)] ?? "unknown",
+        powerKw: toKw(ts.pac, "W"),
+        todayKwh: toKwh(ts.etoday ?? ts.eday, "kWh"),
+        totalKwh: toKwh(ts.etotal, "kWh"),
+        updatedAt: toIso(ts.ludt ?? ts.time ?? null),
+      },
+      flat,
+    );
+  });
+}
+
+async function fetchDays(creds: Credentials, plantId: string, month: string, fetch: Fetch): Promise<DayValue[]> {
+  const d = await get(fetch, creds, "/pro/getPlantOutputPro", { apikey: plantId, token: creds.token.trim(), period: "bymonth", date: month });
+  const list = Array.isArray(d.data) ? (d.data as Record<string, unknown>[]) : arr(obj(d.data).powersData ?? obj(d.data).list);
+  return list
+    .map((r, i) => ({ day: str(r.time ?? r.date).length >= 10 ? str(r.time ?? r.date).slice(0, 10) : `${month}-${String(num(r.time ?? r.date) ?? i + 1).padStart(2, "0")}`, kwh: num(r.value ?? r.energy) ?? 0 }))
+    .filter((x) => x.day.startsWith(month));
+}
+
+export const solplanet: ProviderAdapter = { id: "solplanet", fetchPlants, fetchDays, fetchDevices };

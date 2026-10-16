@@ -61,6 +61,7 @@ export async function savePlants(admin: SupabaseClient, conn: ConnectionRow, pla
 
 /** Sincroniza uma conexão: abre as credenciais, consulta o fabricante e grava. */
 export async function syncConnection(admin: SupabaseClient, conn: ConnectionRow) {
+  if (conn.provider === "manual") return { id: conn.id, ok: true as const, plants: 0 };
   await admin.from("monitoring_connections").update({ status: "syncing" }).eq("id", conn.id);
   try {
     const { data: secret, error } = await admin.from("monitoring_secrets").select("payload").eq("connection_id", conn.id).maybeSingle();
@@ -77,8 +78,29 @@ export async function syncConnection(admin: SupabaseClient, conn: ConnectionRow)
 }
 
 export async function syncAll(admin: SupabaseClient) {
-  const { data } = await admin.from("monitoring_connections").select("id, provider, label").order("created_at");
+  const { data } = await admin.from("monitoring_connections").select("id, provider, label").neq("provider", "manual").order("created_at");
   const out = [];
   for (const c of (data ?? []) as ConnectionRow[]) out.push(await syncConnection(admin, c));
   return out;
+}
+
+/** Recalcula hoje/mês/total de uma usina a partir do histórico gravado (usinas por planilha). */
+export async function refreshManualTotals(admin: SupabaseClient, plantId: string) {
+  const { data } = await admin.from("monitoring_daily").select("day, kwh").eq("plant_id", plantId).order("day").limit(20000);
+  const rows = (data ?? []) as { day: string; kwh: number }[];
+  const today = todayIso();
+  const month = today.slice(0, 7);
+  const total = rows.reduce((t, r) => t + Number(r.kwh), 0);
+  const monthKwh = rows.filter((r) => r.day.startsWith(month)).reduce((t, r) => t + Number(r.kwh), 0);
+  const last = rows[rows.length - 1];
+  await admin
+    .from("monitoring_plants")
+    .update({
+      total_kwh: round(total),
+      month_kwh: round(monthKwh),
+      today_kwh: rows.find((r) => r.day === today) ? round(Number(rows.find((r) => r.day === today)!.kwh)) : null,
+      last_update_at: last ? `${last.day}T12:00:00-03:00` : null,
+      synced_at: new Date().toISOString(),
+    })
+    .eq("id", plantId);
 }
