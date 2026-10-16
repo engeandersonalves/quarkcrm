@@ -120,12 +120,15 @@ export function ConnectModal({ open, onClose, onConnected }: { open: boolean; on
             <button
               key={p.id}
               onClick={() => pick(p)}
-              className="group flex items-center gap-3 rounded-2xl bg-ink-50 p-3.5 text-left ring-1 ring-ink-200 transition hover:ring-sun-400 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
+              className={cx(
+                "group flex items-center gap-3 rounded-2xl bg-ink-50 p-3.5 text-left ring-1 ring-ink-200 transition hover:ring-sun-400 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]",
+                p.id === "solarz" && "ring-2 ring-sun-400 sm:col-span-2",
+              )}
             >
               <ProviderMark id={p.id} />
               <span className="min-w-0 flex-1">
                 <span className="block font-display text-[15px] font-semibold text-ink-900">{p.name}</span>
-                <span className="block truncate text-xs text-ink-500">{p.manual ? p.brands : p.platform}</span>
+                <span className="block truncate text-xs text-ink-500">{p.id === "solarz" ? "Recomendado · um login traz as usinas de todos os fabricantes" : p.manual ? p.brands : p.platform}</span>
               </span>
               <span className="text-xs font-semibold text-sun-700 opacity-0 transition group-hover:opacity-100">Conectar →</span>
             </button>

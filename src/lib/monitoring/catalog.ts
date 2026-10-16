@@ -33,6 +33,23 @@ export interface ProviderInfo {
 
 export const PROVIDERS: ProviderInfo[] = [
   {
+    id: "solarz",
+    name: "SolarZ",
+    platform: "SolarZ Monitoramento",
+    color: "#FF7A00",
+    brands: "Todas as usinas que já estão na sua SolarZ, de qualquer fabricante",
+    fields: [
+      { key: "username", label: "Usuário de API", type: "text", placeholder: "Gerado na SolarZ" },
+      { key: "password", label: "Senha do Usuário de API", type: "password" },
+    ],
+    features: ["dias", "meses"],
+    steps: [
+      "Entre na SolarZ (app.solarz.com.br) com a conta de administrador.",
+      "No menu lateral, abra Configurações, desça até Usuário de API e clique em + Gerar Usuário de API.",
+      "Copie o usuário e a senha que aparecem (a senha só é mostrada uma vez). O e-mail e a senha normais da SolarZ não funcionam aqui.",
+    ],
+  },
+  {
     id: "solis",
     name: "Solis",
     platform: "SolisCloud",

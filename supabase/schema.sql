@@ -1050,7 +1050,7 @@ create table if not exists public.monitoring_connections (
 );
 alter table public.monitoring_connections drop constraint if exists monitoring_connections_provider_check;
 alter table public.monitoring_connections add constraint monitoring_connections_provider_check
-  check (provider in ('solis', 'deye', 'solarman', 'sungrow', 'growatt', 'huawei', 'solplanet', 'goodwe', 'livoltek', 'foxess', 'apsystems', 'manual'));
+  check (provider in ('solarz', 'solis', 'deye', 'solarman', 'sungrow', 'growatt', 'huawei', 'solplanet', 'goodwe', 'livoltek', 'foxess', 'apsystems', 'manual'));
 alter table public.monitoring_connections enable row level security;
 drop policy if exists "team_read" on public.monitoring_connections;
 create policy "team_read" on public.monitoring_connections for select to authenticated using (public.is_member());

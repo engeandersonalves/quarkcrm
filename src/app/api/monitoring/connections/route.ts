@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   try {
     plants = await fetchProviderPlants(info.id as ProviderId, creds);
   } catch (e) {
-    const msg = e instanceof MonitoringError ? e.message : `Não foi possível conectar à ${info.platform}.`;
+    const msg = e instanceof MonitoringError ? e.message : `Não foi possível conectar à ${info.platform}: ${e instanceof Error ? e.message : "erro desconhecido"}.`;
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 

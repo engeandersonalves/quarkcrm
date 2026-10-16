@@ -1,6 +1,6 @@
 /** Monitoramento de usinas: tipos comuns a todos os fabricantes. */
 
-export type ProviderId = "solis" | "deye" | "solarman" | "sungrow" | "growatt" | "huawei" | "solplanet" | "goodwe" | "livoltek" | "foxess" | "apsystems" | "manual";
+export type ProviderId = "solarz" | "solis" | "deye" | "solarman" | "sungrow" | "growatt" | "huawei" | "solplanet" | "goodwe" | "livoltek" | "foxess" | "apsystems" | "manual";
 
 export type PlantStatus = "online" | "offline" | "alarm" | "unknown";
 

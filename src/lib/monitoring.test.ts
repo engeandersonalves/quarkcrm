@@ -41,7 +41,7 @@ test("credenciais criptografadas", () => {
   assert.throws(() => openCredentials(sealed, "outro"));
   assert.deepEqual(missingCredentials("growatt", { server: "global" }), ["Token da API"]);
   assert.deepEqual(missingCredentials("sungrow", { server: "intl", appKey: "a", accessKey: "b", account: "c", password: "d" }), []);
-  assert.equal(PROVIDERS.length, 12);
+  assert.equal(PROVIDERS.length, 13);
 });
 
 test("Solis: Content-MD5 e assinatura como no documento oficial", async () => {
@@ -299,4 +299,31 @@ test("relatório: totais, expectativa, economia e CO₂", async () => {
   assert.equal(shiftMonth("2026-01", -1), "2025-12");
   assert.equal(monthLabel("2026-10"), "outubro de 2026");
   assert.equal(daysInMonth("2028-02"), 29);
+});
+
+test("SolarZ: Basic Auth, lista de usinas e geração do mês", async () => {
+  const month = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 7);
+  const { fetch, calls } = fakeFetch((c) => {
+    if (c.url.includes("plantWithInfos/list")) return { body: { content: [], totalPages: 1, last: true } };
+    if (c.url.includes("/plant/list")) return { body: { content: [{ id: 431, name: "Residência Ana", installedPower: 9.9, energyProducedKwh: 18342.5, status: { status: "ONLINE" }, city: "Maceió", state: "AL" }], totalPages: 1 } };
+    return { body: [{ date: `${month}-01`, total: 42.5, totalExpected: 40 }, { date: `${month}-02`, total: 38, totalExpected: 40 }] };
+  });
+  const plants = await ADAPTERS.solarz.fetchPlants({ username: "api-user", password: "s3nha" }, fetch);
+  assert.equal(calls[0].init?.headers && (calls[0].init.headers as Record<string, string>).Authorization, `Basic ${Buffer.from("api-user:s3nha").toString("base64")}`);
+  assert.ok(calls[0].url.includes("page=1"));
+  assert.equal(plants.length, 1);
+  assert.equal(plants[0].externalId, "431");
+  assert.equal(plants[0].capacityKwp, 9.9);
+  assert.equal(plants[0].totalKwh, 18342.5);
+  assert.equal(plants[0].status, "online");
+  assert.equal(plants[0].monthKwh, 80.5);
+  assert.equal(plants[0].address, "Maceió - AL");
+  assert.ok(calls.some((c) => c.url.endsWith(`/openApi/seller/plant/energy/plantId/431/month/${month}`)));
+  const days = await ADAPTERS.solarz.fetchDays!({ username: "a", password: "b" }, "431", month, fetch);
+  assert.deepEqual(days.map((d) => d.kwh), [42.5, 38]);
+});
+
+test("SolarZ: senha recusada explica o Usuário de API", async () => {
+  const { fetch } = fakeFetch(() => ({ status: 401, body: {} }));
+  await assert.rejects(ADAPTERS.solarz.fetchPlants({ username: "a", password: "b" }, fetch), /Usuário de API/);
 });
