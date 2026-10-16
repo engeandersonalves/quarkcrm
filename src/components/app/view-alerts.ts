@@ -37,9 +37,10 @@ export function useProposalViewAlerts() {
     for (const r of data) {
       const before = prev.get(r.id) ?? 0;
       if (r.view_count <= before) continue;
-      const save = productOf(r.inputs) === "save";
+      const prod = productOf(r.inputs);
+      const save = prod === "save" ? "S.A.V.E " : prod === "manutencao" ? "de manutenção " : "";
       const who = r.lead?.name?.split(" ")[0] ?? "O cliente";
-      toast(`👀 ${who} abriu a proposta ${save ? "S.A.V.E " : ""}#${r.number}`, {
+      toast(`👀 ${who} abriu a proposta ${save}#${r.number}`, {
         description: before === 0 ? "Primeira visualização: ótima hora para chamar no WhatsApp." : `Já são ${r.view_count} aberturas.`,
         duration: 9000,
         action: { label: "Ver", onClick: () => router.push(`/propostas/${r.id}`) },

@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CheckSquare, Crown, FileSignature, Megaphone, Zap, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users, Receipt, ScrollText, Activity } from "lucide-react";
+import { BarChart3, CheckSquare, Crown, FileSignature, Megaphone, Zap, CornerDownLeft, FileText, LayoutDashboard, ListTodo, PlugZap, Search, Settings, Sun, UserPlus, Users, Receipt, ScrollText, Activity, Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { productOf } from "@/lib/constants";
@@ -65,6 +65,7 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
       { id: "a-lead", group: "Ações", label: "Novo lead", icon: <UserPlus className="h-4 w-4" />, keywords: "novo lead cliente cadastrar", run: onNewLead },
       { id: "a-solar", group: "Ações", label: "Novo orçamento solar", icon: <Sun className="h-4 w-4" />, keywords: "novo orcamento proposta solar", run: go("/propostas/nova") },
       { id: "a-save", group: "Ações", label: "Novo orçamento S.A.V.E", icon: <PlugZap className="h-4 w-4" />, keywords: "novo orcamento proposta save carregador veicular", run: go("/propostas/nova?tipo=save") },
+      { id: "a-maint", group: "Ações", label: "Novo orçamento de manutenção", icon: <Wrench className="h-4 w-4" />, keywords: "novo orcamento proposta manutencao limpeza placas revisao dps aterramento", run: go("/propostas/nova?tipo=manutencao") },
       { id: "a-task", group: "Ações", label: "Nova tarefa", icon: <ListTodo className="h-4 w-4" />, keywords: "nova tarefa follow up lembrete", run: onNewTask },
     ];
     const pages: Item[] = [
@@ -96,14 +97,16 @@ export function CommandPalette({ open, onClose, onNewLead, onNewTask }: { open: 
       run: go(`/leads/${l.id}`),
     }));
     const proposals: Item[] = (data?.proposals ?? []).map((p) => {
-      const save = productOf({ product: p.product }) === "save";
+      const prod = productOf({ product: p.product });
+      const save = prod === "save";
+      const maint = prod === "manutencao";
       return {
         id: `p-${p.id}`,
         group: "Propostas",
-        label: `${save ? "S.A.V.E" : "Proposta"} #${p.number} · ${p.lead?.name ?? "Sem cliente"}`,
+        label: `${save ? "S.A.V.E" : maint ? "Manutenção" : "Proposta"} #${p.number} · ${p.lead?.name ?? "Sem cliente"}`,
         sub: [p.title, brl(Number(p.final_price), 0)].filter(Boolean).join(" · "),
-        icon: save ? <PlugZap className="h-4 w-4" /> : <FileText className="h-4 w-4" />,
-        keywords: `${p.number} #${p.number} ${p.lead?.name ?? ""} ${p.title ?? ""} ${save ? "save carregador" : "solar"}`,
+        icon: save ? <PlugZap className="h-4 w-4" /> : maint ? <Wrench className="h-4 w-4" /> : <FileText className="h-4 w-4" />,
+        keywords: `${p.number} #${p.number} ${p.lead?.name ?? ""} ${p.title ?? ""} ${save ? "save carregador" : maint ? "manutencao limpeza" : "solar"}`,
         run: go(`/propostas/${p.id}`),
       };
     });

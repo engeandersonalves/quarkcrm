@@ -56,6 +56,7 @@ export const CHARGER_SEGMENTS: Segment[] = ["save", "ambos", "eletroposto"];
 export const PRODUCTS: Record<Product, { label: string; short: string; cls: string }> = {
   solar: { label: "Energia solar", short: "Solar", cls: "bg-amber-50 text-amber-800 ring-amber-600/20" },
   save: { label: "S.A.V.E · Recarga veicular", short: "S.A.V.E", cls: "bg-sky-50 text-sky-800 ring-sky-600/20" },
+  manutencao: { label: "Manutenção solar", short: "Manutenção", cls: "bg-emerald-50 text-emerald-800 ring-emerald-600/20" },
 };
 
-export const productOf = (inputs: { product?: unknown } | null | undefined): Product => (inputs?.product === "save" ? "save" : "solar");
+export const productOf = (inputs: { product?: unknown } | null | undefined): Product => (inputs?.product === "save" ? "save" : inputs?.product === "manutencao" ? "manutencao" : "solar");

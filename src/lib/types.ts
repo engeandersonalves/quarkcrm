@@ -1,7 +1,7 @@
 import type { ConnectionType, ProposalInputs } from "./pricing";
 
 export type Segment = "solar" | "save" | "ambos" | "eletroposto" | "manutencao" | "gestao";
-export type Product = "solar" | "save";
+export type Product = "solar" | "save" | "manutencao";
 export type LeadStatus = "novo" | "contato" | "visita" | "proposta" | "negociacao" | "ganho" | "perdido";
 export type ProposalStatus = "rascunho" | "enviada" | "visualizada" | "aceita" | "recusada";
 export type TaskType = "tarefa" | "ligacao" | "whatsapp" | "visita" | "email" | "reuniao";

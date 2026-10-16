@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator, Receipt, ScrollText, Moon, Activity } from "lucide-react";
+import { BarChart3, CheckSquare, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator, Receipt, ScrollText, Moon, Activity, Wrench } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -245,6 +245,7 @@ function ShellInner({ children }: { children: ReactNode }) {
             <div className="animate-fade-up absolute inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] grid max-h-[calc(100dvh-8rem)] gap-1 overflow-y-auto rounded-3xl bg-white/85 p-2 shadow-lift ring-1 ring-white/70 backdrop-blur-2xl">
               <FabItem icon={<Calculator className="h-5 w-5" />} title="Orçamento solar" text="Calcular e gerar proposta" onClick={() => router.push("/propostas/nova")} />
               <FabItem icon={<PlugZap className="h-5 w-5" />} title="Orçamento S.A.V.E" text="Carregador de veículo elétrico" onClick={() => router.push("/propostas/nova?tipo=save")} />
+              <FabItem icon={<Wrench className="h-5 w-5" />} title="Orçamento de manutenção" text="Limpeza e revisão elétrica" onClick={() => router.push("/propostas/nova?tipo=manutencao")} />
               <FabItem icon={<Flame className="h-5 w-5" />} title="Plano do dia" text="Missões para vender mais hoje" onClick={() => window.dispatchEvent(new Event("quark:briefing"))} />
               <FabItem icon={<Zap className="h-5 w-5" />} title="Orçamento rápido" text="Imagem pronta para o WhatsApp" onClick={() => router.push("/orcamento-rapido")} />
               <FabItem icon={<UserPlus className="h-5 w-5" />} title="Novo lead" text="Cadastrar um cliente" onClick={() => openLead()} />

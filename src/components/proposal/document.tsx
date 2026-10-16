@@ -18,7 +18,7 @@ export interface PublicProposal {
     number: number;
     title: string | null;
     status: string;
-    inputs: Partial<ProposalInputs> & { product?: "solar" | "save"; [key: string]: unknown };
+    inputs: Partial<ProposalInputs> & { product?: "solar" | "save" | "manutencao"; [key: string]: unknown };
     final_price: number;
     power_kwp: number;
     valid_until: string | null;

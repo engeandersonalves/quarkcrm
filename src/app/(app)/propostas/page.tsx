@@ -1,6 +1,6 @@
 "use client";
 
-import { Calculator, Download, PlugZap, Copy, Eye, FileText, MoreHorizontal, Search, Trash2 } from "lucide-react";
+import { Calculator, Download, PlugZap, Copy, Eye, FileText, MoreHorizontal, Search, Trash2, Wrench } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -18,6 +18,8 @@ import type { Product, Proposal, ProposalStatus } from "@/lib/types";
 
 type Filter = "todas" | ProposalStatus;
 
+const tipoOf = (t: string | null): "todos" | Product => (t === "save" || t === "solar" || t === "manutencao" ? t : "todos");
+
 export default function ProposalsPage() {
   return (
     <Suspense>
@@ -31,10 +33,10 @@ function Proposals() {
   const params = useSearchParams();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("todas");
-  const [product, setProduct] = useState<"todos" | Product>(params.get("tipo") === "save" ? "save" : params.get("tipo") === "solar" ? "solar" : "todos");
+  const [product, setProduct] = useState<"todos" | Product>(tipoOf(params.get("tipo")));
   useEffect(() => {
     const t = params.get("tipo");
-    setProduct(t === "save" ? "save" : t === "solar" ? "solar" : "todos");
+    setProduct(tipoOf(t));
   }, [params]);
   const { data, loading } = useLive(
     async () => must(await supabase().from("proposals").select("*, lead:leads(id,name,city,phone)").order("created_at", { ascending: false })) as Proposal[],
@@ -87,21 +89,28 @@ function Proposals() {
       <PageHeader
         icon={<FileText />}
         eyebrow="Vendas"
-        title={product === "save" ? "Propostas S.A.V.E" : product === "solar" ? "Propostas solares" : "Propostas"}
-        subtitle={product === "save" ? "Sistemas de abastecimento de veículo elétrico" : "Todos os orçamentos gerados, com status de envio e visualização"}
+        title={product === "save" ? "Propostas S.A.V.E" : product === "solar" ? "Propostas solares" : product === "manutencao" ? "Propostas de manutenção" : "Propostas"}
+        subtitle={product === "save" ? "Sistemas de abastecimento de veículo elétrico" : product === "manutencao" ? "Limpeza, revisão elétrica e manutenção preventiva" : "Todos os orçamentos gerados, com status de envio e visualização"}
         actions={
           <>
-            {product !== "save" && (
+            {(product === "todos" || product === "solar") && (
               <Link href="/propostas/nova">
                 <Button variant="sun">
                   <Calculator className="h-4 w-4" /> Orçamento solar
                 </Button>
               </Link>
             )}
-            {product !== "solar" && (
+            {(product === "todos" || product === "save") && (
               <Link href="/propostas/nova?tipo=save">
                 <Button>
                   <PlugZap className="h-4 w-4" /> Orçamento S.A.V.E
+                </Button>
+              </Link>
+            )}
+            {(product === "todos" || product === "manutencao") && (
+              <Link href="/propostas/nova?tipo=manutencao">
+                <Button variant={product === "manutencao" ? "sun" : "secondary"}>
+                  <Wrench className="h-4 w-4" /> Manutenção
                 </Button>
               </Link>
             )}
@@ -147,6 +156,7 @@ function Proposals() {
           { value: "todos", label: "Todas" },
           { value: "solar", label: "☀️ Solar" },
           { value: "save", label: "⚡ S.A.V.E" },
+          { value: "manutencao", label: "🔧 Manutenção" },
         ]}
       />
 
@@ -209,6 +219,7 @@ function Proposals() {
                     <p className="truncate font-semibold text-ink-900">{p.lead?.name ?? "—"}</p>
                     <Badge className={PROPOSAL_STATUS[p.status].cls}>{PROPOSAL_STATUS[p.status].label}</Badge>
                     {productOf(p.inputs) === "save" && <Badge className={PRODUCTS.save.cls}>⚡ S.A.V.E</Badge>}
+                    {productOf(p.inputs) === "manutencao" && <Badge className={PRODUCTS.manutencao.cls}>🔧 Manutenção</Badge>}
                   </div>
                   <p className="mt-0.5 truncate text-[13px] text-ink-500">
                     <span className="sm:hidden">#{p.number} · </span>

@@ -1104,13 +1104,58 @@ drop policy if exists "team_read" on public.monitoring_daily;
 create policy "team_read" on public.monitoring_daily for select to authenticated using (public.is_member());
 
 -- -----------------------------------------------------------------------------
+-- Rastreamento detalhado da proposta: seções lidas, tempo de leitura e cliques
+-- -----------------------------------------------------------------------------
+create table if not exists public.proposal_events (
+  id bigint generated always as identity primary key,
+  proposal_id uuid not null references public.proposals (id) on delete cascade,
+  kind text not null check (kind in ('open', 'section', 'time', 'click')),
+  detail text,
+  value int not null default 0,
+  device text,
+  created_at timestamptz not null default now()
+);
+create index if not exists proposal_events_proposal_idx on public.proposal_events (proposal_id, created_at);
+alter table public.proposal_events enable row level security;
+drop policy if exists "team_read" on public.proposal_events;
+create policy "team_read" on public.proposal_events for select to authenticated using (public.is_member());
+
+-- Grava um evento a partir do link público (sem login). Limita o volume por proposta.
+create or replace function public.track_proposal_event(p_token text, p_kind text, p_detail text, p_value int, p_device text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  pid uuid;
+begin
+  if p_kind not in ('open', 'section', 'time', 'click') then
+    return false;
+  end if;
+  select id into pid from public.proposals where public_token = p_token;
+  if pid is null then
+    return false;
+  end if;
+  if (select count(*) from public.proposal_events where proposal_id = pid) >= 3000 then
+    return false;
+  end if;
+  insert into public.proposal_events (proposal_id, kind, detail, value, device)
+  values (pid, p_kind, left(coalesce(p_detail, ''), 60), greatest(0, least(coalesce(p_value, 0), 120)), left(coalesce(p_device, ''), 20));
+  return true;
+end;
+$$;
+revoke all on function public.track_proposal_event(text, text, text, int, text) from public;
+grant execute on function public.track_proposal_event(text, text, text, int, text) to anon, authenticated;
+
+-- -----------------------------------------------------------------------------
 -- Tempo real
 -- -----------------------------------------------------------------------------
 do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers', 'marketing_assets', 'profile_updates', 'receipts', 'monitoring_connections', 'monitoring_plants'] loop
+    foreach t in array array['leads', 'proposals', 'tasks', 'activities', 'settings', 'xp_events', 'profiles', 'documents', 'document_signers', 'marketing_assets', 'profile_updates', 'receipts', 'monitoring_connections', 'monitoring_plants', 'proposal_events'] loop
       if not exists (
         select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
       ) then

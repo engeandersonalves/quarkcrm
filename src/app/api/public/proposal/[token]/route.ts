@@ -6,8 +6,19 @@ import { fireWebhook } from "@/lib/webhooks";
 
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const { action, name } = (await req.json().catch(() => ({}))) as { action?: string; name?: string };
+  const { action, name, kind, detail, value, device } = (await req.json().catch(() => ({}))) as { action?: string; name?: string; kind?: string; detail?: string; value?: number; device?: string };
   const anon = anonSupabase();
+
+  if (action === "event") {
+    // Seções lidas, tempo de leitura e cliques. A própria equipe logada não conta.
+    const {
+      data: { user },
+    } = await (await serverSupabase()).auth.getUser();
+    if (user) return NextResponse.json({ ok: true, skipped: true });
+    if (!["open", "section", "time", "click"].includes(String(kind))) return NextResponse.json({ error: "invalid kind" }, { status: 400 });
+    await anon.rpc("track_proposal_event", { p_token: token, p_kind: kind, p_detail: String(detail ?? "").slice(0, 60), p_value: Math.round(Number(value) || 0), p_device: String(device ?? "").slice(0, 20) });
+    return NextResponse.json({ ok: true });
+  }
 
   if (action === "view") {
     // Visualizações de quem está logado (a própria equipe) não contam.

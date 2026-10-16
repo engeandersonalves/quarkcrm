@@ -1,5 +1,6 @@
 import type { ProposalInputs } from "./pricing.ts";
 import type { SaveInputs } from "./save.ts";
+import type { MaintInputs } from "./maintenance.ts";
 import { DEFAULT_CADENCE, mergeCadence, type CadencePrefs } from "./cadence.ts";
 import type { ContractDefaults } from "./documents.ts";
 
@@ -33,6 +34,8 @@ export interface CompanySettings {
   defaults: Partial<ProposalInputs>;
   /** Padrões do orçamento S.A.V.E (privado: contém custos). */
   saveDefaults: Partial<SaveInputs>;
+  /** Padrões do orçamento de manutenção (privado: contém custos). */
+  maintDefaults: Partial<MaintInputs>;
   /** Kits salvos para preencher orçamentos com um clique (privado: nunca vai para a proposta). */
   kits: KitPreset[];
   /** Preferências do app: abertura, meta, frases e imagens (privado). */
@@ -219,6 +222,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   warranty_structure_years: 12,
   defaults: {},
   saveDefaults: {},
+  maintDefaults: {},
   kits: [],
   app: {
     splash: "daily",
@@ -258,7 +262,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   cadence: DEFAULT_CADENCE,
 };
 
-type StoredDefaults = Partial<ProposalInputs> & { kits?: KitPreset[]; app?: Partial<AppPrefs>; save?: Partial<SaveInputs> };
+type StoredDefaults = Partial<ProposalInputs> & { kits?: KitPreset[]; app?: Partial<AppPrefs>; save?: Partial<SaveInputs>; maint?: Partial<MaintInputs> };
 
 /**
  * Converte o JSON salvo no banco em configurações completas.
@@ -267,7 +271,7 @@ type StoredDefaults = Partial<ProposalInputs> & { kits?: KitPreset[]; app?: Part
  */
 export function mergeSettings(s: Partial<CompanySettings> | null | undefined): CompanySettings {
   const stored = (s?.defaults ?? {}) as StoredDefaults;
-  const { kits, app, save, ...defaults } = stored;
+  const { kits, app, save, maint, ...defaults } = stored;
   const proposal = (s?.proposal ?? {}) as Partial<ProposalPrefs>;
   return {
     ...DEFAULT_SETTINGS,
@@ -275,6 +279,7 @@ export function mergeSettings(s: Partial<CompanySettings> | null | undefined): C
     defaults,
     kits: kits ?? s?.kits ?? [],
     saveDefaults: save ?? {},
+    maintDefaults: maint ?? {},
     app: { ...DEFAULT_SETTINGS.app, ...(s?.app ?? {}), ...(app ?? {}) },
     capture: { ...DEFAULT_CAPTURE, ...((s?.capture ?? {}) as Partial<CapturePrefs>) },
     integrations: { ...DEFAULT_SETTINGS.integrations, ...((s?.integrations ?? {}) as Partial<IntegrationPrefs>) },
@@ -291,8 +296,8 @@ export function mergeSettings(s: Partial<CompanySettings> | null | undefined): C
 
 /** Formato para salvar no banco (inverso de mergeSettings). */
 export function toStoredSettings(s: CompanySettings) {
-  const { kits, app, saveDefaults, defaults, ...rest } = s;
-  return { ...rest, defaults: { ...defaults, kits, app, save: saveDefaults } };
+  const { kits, app, saveDefaults, maintDefaults, defaults, ...rest } = s;
+  return { ...rest, defaults: { ...defaults, kits, app, save: saveDefaults, maint: maintDefaults } };
 }
 
 export function mergeInputs(...parts: (Partial<ProposalInputs> | null | undefined)[]): ProposalInputs {
