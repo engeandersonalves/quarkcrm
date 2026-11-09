@@ -10,6 +10,7 @@ import { Busca } from "./busca";
 import { Login, NovaSenha, nomeDoUsuario } from "./login";
 import { Logo } from "./logo";
 import { Button, cx, Modal, Skeleton } from "./ui";
+import { explicarDiagnostico } from "@/lib/backend";
 
 const NAV = [
   { href: "/", label: "Orçamento", icon: Sparkles },
@@ -29,7 +30,7 @@ function ativo(path: string, href: string) {
 
 /** "Tudo salvo" / "Salvando…" / "Sem internet": a pessoa sempre sabe se o que fez já está na nuvem. */
 function IndicadorSync({ escuro, compacto }: { escuro?: boolean; compacto?: boolean }) {
-  const { modo, sync } = useDados();
+  const { modo, sync, conexao } = useDados();
   if (modo === "local")
     return (
       <Link href="/ajustes" className={cx("inline-flex items-center gap-1.5 text-[12px] font-semibold", escuro ? "text-amber-300" : "text-amber-700")} title="Dados só neste navegador — toque para conectar a nuvem">
@@ -40,10 +41,14 @@ function IndicadorSync({ escuro, compacto }: { escuro?: boolean; compacto?: bool
   const cfg = {
     ok: { icon: <Check className="h-4 w-4" />, texto: "Tudo salvo", cor: escuro ? "text-brand-300" : "text-brand-700" },
     salvando: { icon: <Loader2 className="h-4 w-4 animate-spin" />, texto: `Salvando${sync.pendentes > 1 ? ` ${sync.pendentes}` : ""}…`, cor: escuro ? "text-ink-200" : "text-ink-600" },
-    offline: { icon: <CloudOff className="h-4 w-4" />, texto: `Sem internet · ${sync.pendentes} aguardando`, cor: escuro ? "text-amber-300" : "text-amber-700" },
+    offline: {
+      icon: <CloudOff className="h-4 w-4" />,
+      texto: `${conexao.tipo === "sem_internet" ? "Sem internet" : conexao.tipo === "ok" ? "Reconectando" : "Banco fora do ar"}${sync.pendentes ? ` · ${sync.pendentes} aguardando` : ""}`,
+      cor: escuro ? "text-amber-300" : "text-amber-700",
+    },
   }[sync.estado];
   return (
-    <span className={cx("inline-flex items-center gap-1.5 text-[12px] font-semibold", cfg.cor)} title={sync.estado === "offline" ? "As alterações ficam guardadas e são enviadas sozinhas quando a internet voltar." : undefined} aria-live="polite">
+    <span className={cx("inline-flex items-center gap-1.5 text-[12px] font-semibold", cfg.cor)} title={sync.estado === "offline" ? "As alterações ficam guardadas neste aparelho e são enviadas sozinhas quando a conexão voltar." : undefined} aria-live="polite">
       {cfg.icon}
       {(!compacto || sync.estado !== "ok") && cfg.texto}
     </span>
@@ -99,7 +104,8 @@ function Migracao() {
 
 export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
-  const { dados, modo, session, authPronto, semAcesso, carregando, sair, bancoDesatualizado } = useDados();
+  const { dados, modo, session, authPronto, semAcesso, carregando, sair, bancoDesatualizado, conexao, recarregar } = useDados();
+  const problema = conexao.tipo !== "ok" && conexao.tipo !== "sem_internet" ? explicarDiagnostico(conexao) : null;
   const [mais, setMais] = useState(false);
   const [busca, setBusca] = useState(false);
 
@@ -225,6 +231,17 @@ export function Shell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="mx-auto w-full max-w-[1320px] px-4 pt-5 pb-28 sm:px-6 lg:px-10 lg:pt-9 lg:pb-12 print:max-w-none print:p-0">
+        {problema && (
+          <div role="alert" className="mb-5 flex flex-col gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-[13.5px] text-amber-900 ring-1 ring-amber-300 sm:flex-row sm:items-center print:hidden">
+            <CloudOff className="hidden h-5 w-5 shrink-0 text-amber-600 sm:block" />
+            <span className="flex-1">
+              <b>{problema.titulo}.</b> {problema.texto}
+            </span>
+            <Button variant="secondary" size="sm" onClick={() => void recarregar()}>
+              Tentar de novo
+            </Button>
+          </div>
+        )}
         {bancoDesatualizado && (
           <Link href="/ajustes" className="mb-5 flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-[13.5px] text-amber-900 ring-1 ring-amber-300 print:hidden">
             <DatabaseZap className="h-5 w-5 shrink-0 text-amber-600" />

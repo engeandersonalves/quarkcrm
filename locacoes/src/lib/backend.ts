@@ -58,9 +58,70 @@ export class ErroBanco extends Error {
 
 /** Falha de conexão (sem internet, servidor fora): vale tentar de novo depois. */
 export function ehErroDeRede(e: unknown): boolean {
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
+  // Erro com código do banco (permissão, tabela etc.) nunca é falta de internet.
+  if (e instanceof ErroBanco && e.code) return false;
   const msg = e instanceof Error ? e.message : String(e);
-  return /failed to fetch|networkerror|load failed|network request failed|fetch failed|timeout|ECONN|\b50[234]\b/i.test(msg);
+  if (/failed to fetch|networkerror|load failed|network request failed|fetch failed|network connection was lost|ECONN|\b50[234]\b|\b540\b|upstream connect|AbortError|aborted/i.test(msg)) return true;
+  return typeof navigator !== "undefined" && navigator.onLine === false && !msg;
+}
+
+export type Diagnostico =
+  | { tipo: "ok" }
+  | { tipo: "sem_internet" }
+  | { tipo: "pausado"; url: string }
+  | { tipo: "inacessivel"; url: string }
+  | { tipo: "chave"; url: string };
+
+async function sondar(url: string, init?: RequestInit, ms = 8000): Promise<Response | null> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...init, cache: "no-store", signal: ctrl.signal });
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/**
+ * Quando a nuvem não responde, descobre o motivo de verdade: é a internet do aparelho,
+ * o projeto pausado no Supabase, o endereço errado ou a chave errada?
+ */
+export async function diagnosticarConexao(): Promise<Diagnostico> {
+  const c = conexaoAtual();
+  if (!c) return { tipo: "ok" };
+  const host = c.url.replace(/^https?:\/\//, "");
+  const banco = await sondar(`${c.url}/auth/v1/health`, { headers: { apikey: c.chave } });
+  if (banco) {
+    if (banco.ok) return { tipo: "ok" };
+    if (banco.status === 401 || banco.status === 403) return { tipo: "chave", url: host };
+    if (banco.status === 540 || banco.status >= 500) return { tipo: "pausado", url: host };
+    return { tipo: "ok" };
+  }
+  // O banco não respondeu. O próprio site (mesmo endereço do app) responde? Então a internet está boa.
+  const site = typeof window !== "undefined" ? await sondar(`${window.location.origin}/icon.svg?t=${Date.now()}`, undefined, 6000) : null;
+  if (!site) return { tipo: "sem_internet" };
+  return /\.supabase\.co$/.test(host) ? { tipo: "pausado", url: host } : { tipo: "inacessivel", url: host };
+}
+
+/** Explicação curta para a pessoa, com o que fazer. */
+export function explicarDiagnostico(d: Diagnostico): { titulo: string; texto: string } | null {
+  switch (d.tipo) {
+    case "sem_internet":
+      return { titulo: "Sem internet", texto: "Confira o Wi-Fi ou os dados móveis. O app tenta de novo sozinho." };
+    case "pausado":
+      return {
+        titulo: "O banco de dados não está respondendo",
+        texto: `A internet está funcionando, mas o Supabase (${d.url}) não respondeu. No plano grátis o projeto é pausado depois de alguns dias sem uso: abra supabase.com/dashboard, entre no projeto e clique em “Restore project”. Leva 1 a 2 minutos.`,
+      };
+    case "inacessivel":
+      return { titulo: "Endereço do banco não encontrado", texto: `Não foi possível acessar ${d.url}. Confira a URL do projeto (Project URL, termina em .supabase.co) na Vercel ou em Ajustes → Nuvem.` };
+    case "chave":
+      return { titulo: "Chave do banco recusada", texto: "O Supabase recusou a chave pública. Confira se NEXT_PUBLIC_SUPABASE_ANON_KEY é a chave anon/publishable do mesmo projeto da URL." };
+    default:
+      return null;
+  }
 }
 
 const TABELAS: Tabela[] = ["equipamentos", "clientes", "locacoes", "lancamentos"];
@@ -75,8 +136,11 @@ export interface ConexaoNuvem {
 const CHAVE_CONEXAO = "quark-locacoes:nuvem";
 
 export function limparUrl(url: string) {
-  const u = (url || "").trim();
+  const u = (url || "").trim().replace(/^["']|["']$/g, "");
   if (!u) return "";
+  // Colou o link do painel (supabase.com/dashboard/project/abcd...)? Vira o endereço do projeto.
+  const painel = u.match(/supabase\.com\/dashboard\/project\/([a-z0-9]{10,})/i);
+  if (painel) return `https://${painel[1].toLowerCase()}.supabase.co`;
   try {
     return new URL(u.includes("://") ? u : `https://${u}`).origin;
   } catch {
@@ -86,7 +150,7 @@ export function limparUrl(url: string) {
 
 const ENV: ConexaoNuvem = {
   url: limparUrl(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
-  chave: (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim(),
+  chave: (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim().replace(/^["']|["']$/g, ""),
 };
 
 /** Link "#conectar=…" (gerado em Ajustes) configura a nuvem em outro aparelho. */
@@ -235,7 +299,10 @@ function nuvem(): Backend {
     },
     async versaoSchema() {
       const r = await c.rpc("versao_schema");
-      return r.error ? 0 : Number(r.data) || 0;
+      if (!r.error) return Number(r.data) || 0;
+      // Só é "banco antigo" se a função não existe; falha de conexão não diz nada sobre a versão.
+      if (r.error.code === "PGRST202" || /could not find the function|does not exist/i.test(r.error.message)) return 0;
+      throw new ErroBanco(r.error.message, r.error.code);
     },
     async entrarEquipe() {
       const r = await c.rpc("entrar_equipe");

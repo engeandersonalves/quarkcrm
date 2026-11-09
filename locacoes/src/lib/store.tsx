@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { toast } from "sonner";
 import type { Session } from "@supabase/supabase-js";
 import { confirmar } from "@/components/dialogo";
-import { colunasFaltando, conexaoAtual, criarBackend, ehErroDeRede, ErroBanco, lerLocal, supabase, VERSAO_SCHEMA, type Backend } from "./backend";
+import { colunasFaltando, conexaoAtual, criarBackend, diagnosticarConexao, ehErroDeRede, ErroBanco, explicarDiagnostico, lerLocal, supabase, VERSAO_SCHEMA, type Backend, type Diagnostico } from "./backend";
 import { addDias, codigo, fmtData, hoje, uid } from "./format";
 import { catalogoInicial, mesclarConfig } from "./defaults";
 import { mesclarDados, temDadosReais, type ResultadoMescla } from "./mesclar";
@@ -54,6 +54,8 @@ interface Ctx {
   /** Abriu pelo link "esqueci a senha": precisa definir a nova. */
   recuperandoSenha: boolean;
   sync: Sync;
+  /** Por que a nuvem não responde (internet do aparelho, projeto pausado, endereço ou chave). */
+  conexao: Diagnostico;
   /** O banco da nuvem é de uma versão anterior: é preciso rodar o schema.sql de novo. */
   bancoDesatualizado: boolean;
   /** Dados do modo demonstração encontrados neste aparelho, prontos para irem à nuvem. */
@@ -163,6 +165,21 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const tentativa = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [sync, setSync] = useState<Sync>({ estado: "ok", pendentes: 0 });
+  const [conexao, setConexao] = useState<Diagnostico>({ tipo: "ok" });
+  const ultimoDiagnostico = useRef<{ em: number; d: Diagnostico } | null>(null);
+  /** Descobre o motivo real da falha (no máximo a cada 20 s, para não pesar). */
+  const diagnosticar = useCallback(async (): Promise<Diagnostico> => {
+    const u = ultimoDiagnostico.current;
+    if (u && Date.now() - u.em < 20_000) return u.d;
+    const d = await diagnosticarConexao().catch((): Diagnostico => ({ tipo: "ok" }));
+    ultimoDiagnostico.current = { em: Date.now(), d };
+    setConexao(d);
+    return d;
+  }, []);
+  const conexaoOk = useCallback(() => {
+    ultimoDiagnostico.current = null;
+    setConexao((c) => (c.tipo === "ok" ? c : { tipo: "ok" }));
+  }, []);
 
   const persistirFila = useCallback(() => {
     try {
@@ -202,6 +219,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
         fila.current.shift();
         persistirFila();
         tentativa.current = 0;
+        conexaoOk();
         if (colunasFaltando.size) setBancoDesatualizado(true);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -235,12 +253,13 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     if (offline) {
       tentativa.current++;
       setSync({ estado: "offline", pendentes: fila.current.length });
+      if (nuvem) void diagnosticar();
       timer.current = setTimeout(() => processar(), Math.min(60_000, 3000 * 2 ** Math.min(tentativa.current, 5)));
     } else {
       setSync({ estado: "ok", pendentes: 0 });
     }
     if (recarregarDepois) await recarregarRef.current();
-  }, [persistirFila, nuvem]);
+  }, [persistirFila, nuvem, conexaoOk, diagnosticar]);
 
   const enfileirar = useCallback(
     (op: Op) => {
@@ -288,9 +307,12 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       // O que ainda está na fila continua valendo por cima do que veio do servidor.
       for (const op of fila.current) d = aplicar(d, op);
       setDados(d);
+      conexaoOk();
+      setSync((s) => (s.estado === "offline" && !fila.current.length ? { estado: "ok", pendentes: 0 } : s));
     } catch (e) {
       if (ehErroDeRede(e)) {
         setSync({ estado: "offline", pendentes: fila.current.length });
+        const diag = nuvem ? await diagnosticar() : ({ tipo: "ok" } as Diagnostico);
         // Sem internet: mostra a última cópia deste aparelho, com as alterações pendentes por cima.
         let usouCopia = false;
         try {
@@ -304,7 +326,11 @@ export function DadosProvider({ children }: { children: ReactNode }) {
         } catch {
           /* sem cópia */
         }
-        toast.error("Sem conexão com a nuvem", { description: usouCopia ? "Mostrando a última cópia deste aparelho. O que você alterar é enviado quando a internet voltar." : "Confira a internet. O app tenta de novo sozinho." });
+        const exp = explicarDiagnostico(diag);
+        const copia = usouCopia ? " Enquanto isso, mostrando a última cópia deste aparelho; o que você alterar é enviado depois." : "";
+        // Banco pausado, endereço ou chave errados já aparecem num aviso fixo no topo da tela.
+        if (diag.tipo === "ok" || diag.tipo === "sem_internet")
+          toast.error(exp?.titulo ?? "A conexão com a nuvem falhou", { id: "conexao", description: (exp?.texto ?? "Tentando de novo em alguns segundos.") + copia });
         clearTimeout(timer.current);
         timer.current = setTimeout(() => recarregarRef.current(), 8000);
       } else {
@@ -313,7 +339,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     } finally {
       setCarregando(false);
     }
-  }, [nuvem]);
+  }, [nuvem, conexaoOk, diagnosticar]);
   recarregarRef.current = recarregar;
 
   // Sessão (apenas no modo nuvem)
@@ -627,6 +653,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       semAcesso,
       recuperandoSenha,
       sync,
+      conexao,
       bancoDesatualizado,
       migracao,
       backend: backend.current,
@@ -691,7 +718,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
         setDados(VAZIO);
       },
     }),
-    [dados, carregando, session, authPronto, semAcesso, recuperandoSenha, sync, bancoDesatualizado, migracao, termoCongelado, prepararAssinatura, assinarPresencial, recarregar, gravar, apagar, enfileirar, salvarLocacao, salvarLancamento, importar, proximoNumero, aprovar, voltarEtapa, cancelar, marcarEntregue, marcarRecolhido, renovar, nuvem],
+    [dados, carregando, session, authPronto, semAcesso, recuperandoSenha, sync, conexao, bancoDesatualizado, migracao, termoCongelado, prepararAssinatura, assinarPresencial, recarregar, gravar, apagar, enfileirar, salvarLocacao, salvarLancamento, importar, proximoNumero, aprovar, voltarEtapa, cancelar, marcarEntregue, marcarRecolhido, renovar, nuvem],
   );
 
   return <C.Provider value={value}>{children}</C.Provider>;

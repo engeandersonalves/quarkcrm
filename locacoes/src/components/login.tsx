@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Eye, EyeOff, MailCheck } from "lucide-react";
-import { conexaoAtual, salvarConexao, supabase } from "@/lib/backend";
+import { ArrowLeft, CloudOff, Eye, EyeOff, MailCheck } from "lucide-react";
+import { conexaoAtual, diagnosticarConexao, ehErroDeRede, explicarDiagnostico, salvarConexao, supabase } from "@/lib/backend";
 import { useDados } from "@/lib/store";
 import { Logo } from "./logo";
 import { Button, Field, Input, Modal } from "./ui";
@@ -59,6 +59,7 @@ export function Login() {
   const [tentou, setTentou] = useState(false);
   const [busy, setBusy] = useState(false);
   const [enviado, setEnviado] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<{ titulo: string; texto: string } | null>(null);
   const conexao = conexaoAtual();
 
   // Tudo é conferido aqui antes de ir ao servidor: nenhuma tentativa é gasta à toa.
@@ -82,6 +83,7 @@ export function Login() {
     setTentou(true);
     if (!valido) return;
     setBusy(true);
+    setAviso(null);
     const mail = email.trim().toLowerCase();
     try {
       const c = supabase();
@@ -111,7 +113,11 @@ export function Login() {
         if (r.error) throw r.error;
       }
     } catch (err) {
-      toast.error(traduzirErroAuth(err));
+      // Falha de conexão: descobre se é a internet ou o banco (ex.: projeto pausado no Supabase).
+      if (ehErroDeRede(err)) {
+        const d = await diagnosticarConexao();
+        setAviso(explicarDiagnostico(d) ?? { titulo: "A conexão falhou", texto: "O servidor demorou para responder. Tente de novo." });
+      } else toast.error(traduzirErroAuth(err));
     } finally {
       setBusy(false);
     }
@@ -185,6 +191,14 @@ export function Login() {
                 <Field label="Confirme a senha" hint={erro("senha2") ?? (senha2 && senha2 === senha ? <span className="text-brand-700">As senhas conferem ✓</span> : undefined)}>
                   <CampoSenha required autoComplete="new-password" value={senha2} onChange={(e) => setSenha2(e.target.value)} />
                 </Field>
+              )}
+              {aviso && (
+                <div role="alert" className="flex gap-2.5 rounded-xl bg-amber-50 p-3 text-[13px] text-amber-900 ring-1 ring-amber-300">
+                  <CloudOff className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <p>
+                    <b>{aviso.titulo}.</b> {aviso.texto}
+                  </p>
+                </div>
               )}
               <Button variant="brand" size="lg" loading={busy} type="submit">
                 {modo === "esqueci" ? "Enviar link" : modo === "criar" ? "Criar conta" : "Entrar"}
