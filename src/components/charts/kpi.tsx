@@ -11,7 +11,7 @@ export function KpiCard({ label, value, d, sub, icon, spark, dark, hideDelta }: 
       {dark && <div className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-sun-500/25 blur-2xl" />}
       <div className="relative flex items-center justify-between gap-2">
         <p className={cx("text-xs font-semibold sm:text-[13px]", dark ? "text-ink-400" : "text-ink-500")}>{label}</p>
-        <span className={cx("grid h-7 w-7 place-items-center rounded-lg", dark ? "bg-white/10 text-sun-400" : "bg-sun-50 text-sun-600")}>{icon}</span>
+        <span className={cx("grid h-7 w-7 place-items-center rounded-lg", dark ? "ios-tile rounded-[8px] text-[#FFD60A]" : "bg-sun-50 text-sun-600 dark:ios-tile dark:rounded-[8px] dark:text-[#FFD60A]")}>{icon}</span>
       </div>
       <p className={cx("tnum relative mt-2 truncate font-display text-xl font-semibold tracking-tight sm:text-[26px]", dark && "text-sun-gradient")}>{value}</p>
       <div className="relative mt-1 flex items-center gap-2">

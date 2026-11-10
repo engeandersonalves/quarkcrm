@@ -862,9 +862,7 @@ body:has(.theme-dark) { background: #05040b; }
 body:has(.theme-dark) { background: #000; }
 
 /* Papel de parede: ondas pretas com reflexo */
-.theme-dark .app-aurora {
-  background: #000 url("/ios-wave.svg") center / cover no-repeat;
-}
+.theme-dark .app-aurora { background: #000; }
 .theme-dark .app-aurora::before {
   content: "";
   position: absolute;
@@ -872,7 +870,7 @@ body:has(.theme-dark) { background: #000; }
   transform: none;
   mask-image: none;
   animation: none;
-  background: radial-gradient(120% 80% at 50% 0%, transparent 40%, rgb(0 0 0 / 0.55) 100%);
+  background: none;
 }
 .theme-dark .app-aurora::after { content: none; }
 
@@ -880,7 +878,7 @@ body:has(.theme-dark) { background: #000; }
 .ios-app:not(.theme-dark) .app-aurora {
   background:
     radial-gradient(56rem 38rem at 105% -8%, rgb(155 211 115 / 0.18), transparent 62%),
-    radial-gradient(48rem 34rem at -12% 6%, rgb(10 132 255 / 0.08), transparent 60%),
+    radial-gradient(48rem 34rem at -12% 6%, rgb(243 234 59 / 0.08), transparent 60%),
     #f2f2f7;
 }
 
@@ -895,26 +893,12 @@ body:has(.theme-dark) { background: #000; }
     0 0 0 0.5px rgb(0 0 0 / 0.08),
     0 14px 40px -12px rgb(0 0 0 / 0.25);
 }
-/* Ícone de app: quadrado arredondado com brilho na borda */
-@utility app-icon {
-  position: relative;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  background: linear-gradient(160deg, #3a3a3e 0%, #1f1f22 46%, #111113 100%);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.22),
-    inset 0 -1px 0 rgb(0 0 0 / 0.5),
-    0 0 0 0.5px rgb(255 255 255 / 0.1),
-    0 6px 14px -6px rgb(0 0 0 / 0.8);
-}
-
 @layer utilities {
 :where(.theme-dark) .glass:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
-  background: linear-gradient(180deg, rgb(40 40 44 / 0.62), rgb(24 24 26 / 0.66));
-  -webkit-backdrop-filter: blur(30px) saturate(1.8);
-  backdrop-filter: blur(30px) saturate(1.8);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.09), inset 0 0 0 0.5px rgb(255 255 255 / 0.07), 0 24px 56px -28px rgb(0 0 0 / 0.95);
+  background: #1c1c1e;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.06);
 }
 :where(.theme-dark) .liquid-glass {
   background: linear-gradient(180deg, rgb(58 58 62 / 0.55), rgb(28 28 30 / 0.5));
@@ -936,14 +920,39 @@ body:has(.theme-dark) { background: #000; }
 .theme-dark a.glass:hover:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) {
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), inset 0 0 0 0.5px rgb(255 255 255 / 0.16), 0 24px 56px -26px rgb(0 0 0 / 0.95);
 }
-.theme-dark ::selection { background: rgb(10 132 255 / 0.45); color: #fff; }
+.theme-dark ::selection { background: rgb(255 255 255 / 0.25); color: #fff; }
 .theme-dark .glass table thead tr:not(:where(.palette-classic, .glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#07060F\], .bg-\[\#0E0A1C\], .palette-classic *, .glass-dark *, .bg-ink-950 *, .bg-\[\#1C1234\] *, .bg-\[\#07060F\] *, .bg-\[\#0E0A1C\] *)) { background: rgb(255 255 255 / 0.04); }
 
 /* Painéis escuros (antes roxos) viram vidro preto no tema escuro */
 .theme-dark :is(.glass-dark, .bg-ink-950, .bg-\[\#1C1234\], .bg-\[\#0E0A1C\]):not(:where(.palette-classic *, aside *, [role="dialog"] *)) {
-  background-color: rgb(18 18 20 / 0.72);
-  background-image: radial-gradient(120% 70% at 50% 0%, rgb(255 255 255 / 0.07), transparent 60%), linear-gradient(180deg, rgb(44 44 48 / 0.55), rgb(10 10 12 / 0.7));
-  -webkit-backdrop-filter: blur(30px) saturate(1.8);
-  backdrop-filter: blur(30px) saturate(1.8);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), inset 0 0 0 0.5px rgb(255 255 255 / 0.09), 0 30px 70px -30px rgb(0 0 0 / 1);
+  background-color: #1c1c1e;
+  background-image: radial-gradient(120% 70% at 50% 0%, rgb(255 255 255 / 0.05), transparent 60%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.08);
 }
+
+/* Quadrado dos ícones premium: preto profundo com borda de luz (como os Ajustes) */
+@utility ios-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #2a2a2d 0%, #141416 48%, #0a0a0b 100%);
+  box-shadow:
+    inset 0 0.75px 0 rgb(255 255 255 / 0.28),
+    inset 0 0 0 0.75px rgb(255 255 255 / 0.10),
+    inset 0 -1px 2px rgb(0 0 0 / 0.6),
+    0 1px 3px rgb(0 0 0 / 0.7);
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 52% 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.10), transparent);
+    pointer-events: none;
+  }
+}
+/* OLED: tudo que flutua fica em preto, sem cinza lavado */
+.theme-dark .page-in { animation-name: page-in-dark; }

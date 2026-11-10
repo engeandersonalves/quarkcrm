@@ -26,11 +26,11 @@ export function CinematicBackdrop({ src, className, dim = "strong" }: { src?: st
         className={cx(
           "absolute inset-0",
           dim === "strong"
-            ? "bg-[radial-gradient(ellipse_at_center,rgba(7,8,12,0.35)_0%,rgba(7,8,12,0.85)_70%,#0E0920_100%)]"
-            : "bg-gradient-to-r from-[#0E0920]/95 via-[#0E0920]/70 to-[#0E0920]/20",
+            ? "bg-[radial-gradient(ellipse_at_center,rgba(7,8,12,0.35)_0%,rgba(7,8,12,0.85)_70%,#000000_100%)]"
+            : "bg-gradient-to-r from-[#000000]/95 via-[#000000]/70 to-[#000000]/20",
         )}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0E0920] via-transparent to-[#0E0920]/40" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#000000] via-transparent to-[#000000]/40" />
     </div>
   );
 }
@@ -68,9 +68,9 @@ export function SkylineArt() {
     <svg viewBox="0 0 412 200" preserveAspectRatio="xMidYMax slice" className="absolute inset-0 h-full w-full" aria-hidden>
       <defs>
         <linearGradient id="nightSky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#0E0920" />
-          <stop offset="0.6" stopColor="#1C1234" />
-          <stop offset="1" stopColor="#2A2046" />
+          <stop offset="0" stopColor="#000000" />
+          <stop offset="0.6" stopColor="#0B0B0C" />
+          <stop offset="1" stopColor="#1C1C1E" />
         </linearGradient>
         <radialGradient id="glow" cx="0.72" cy="0.35" r="0.5">
           <stop offset="0" stopColor="#F3EA3B" stopOpacity="0.35" />
@@ -85,7 +85,7 @@ export function SkylineArt() {
       ))}
       {buildings.map(([x, h, w], i) => (
         <g key={i}>
-          <rect x={x} y={200 - h} width={w} height={h} fill={i % 2 ? "#120C24" : "#160F2C"} />
+          <rect x={x} y={200 - h} width={w} height={h} fill={i % 2 ? "#0E0E10" : "#141416"} />
           {Array.from({ length: Math.floor(h / 9) }, (_, r) =>
             Array.from({ length: Math.floor(w / 7) }, (_, c) =>
               (r * 7 + c * 3 + i) % 4 === 0 ? <rect key={`${r}-${c}`} x={x + 3 + c * 7} y={200 - h + 5 + r * 9} width="3" height="4" fill="#9BD373" opacity="0.7" /> : null,

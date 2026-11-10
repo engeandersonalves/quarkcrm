@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Building2, Calculator, Check, Code2, Copy, ExternalLink, FileText, GripVertical, ImageIcon, Package, PlugZap, Plus, RotateCcw, Sparkles, Trash2, UserRound, UsersRound, Webhook, Zap, Settings } from "lucide-react";
+import { ChevronRight, Bell, Building2, Calculator, Check, Code2, Copy, ExternalLink, FileText, GripVertical, ImageIcon, Package, PlugZap, Plus, RotateCcw, Sparkles, Trash2, UserRound, UsersRound, Webhook, Zap, Settings } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { GlyphTile, type GlyphId } from "@/components/app/ios-glyphs";
 import { useApp } from "@/components/app/app-context";
 import { CinematicBackdrop } from "@/components/app/cinematic";
 import { IntegrationsTab } from "@/components/app/integrations-tab";
@@ -20,19 +21,19 @@ import { supabase } from "@/lib/supabase/client";
 
 type Tab = "empresa" | "orcamento" | "kits" | "save" | "proposta" | "app" | "alertas" | "cadencias" | "captura" | "integracoes" | "equipe" | "perfil";
 
-const TABS: { id: Tab; label: string; icon: typeof Building2 }[] = [
-  { id: "empresa", label: "Empresa", icon: Building2 },
-  { id: "orcamento", label: "Orçamento", icon: Calculator },
-  { id: "kits", label: "Kits salvos", icon: Package },
-  { id: "save", label: "S.A.V.E", icon: PlugZap },
-  { id: "proposta", label: "Proposta", icon: FileText },
-  { id: "app", label: "App & inspiração", icon: Sparkles },
-  { id: "alertas", label: "Alertas", icon: Bell },
-  { id: "cadencias", label: "Cadências", icon: Zap },
-  { id: "captura", label: "Captura", icon: Code2 },
-  { id: "integracoes", label: "Integrações", icon: Webhook },
-  { id: "equipe", label: "Equipe", icon: UsersRound },
-  { id: "perfil", label: "Meu perfil", icon: UserRound },
+const TABS: { id: Tab; label: string; icon: typeof Building2; glyph: GlyphId }[] = [
+  { id: "empresa", label: "Empresa", icon: Building2, glyph: "equipe" },
+  { id: "orcamento", label: "Orçamento", icon: Calculator, glyph: "calculadora" },
+  { id: "kits", label: "Kits salvos", icon: Package, glyph: "pacote" },
+  { id: "save", label: "S.A.V.E", icon: PlugZap, glyph: "plugue" },
+  { id: "proposta", label: "Proposta", icon: FileText, glyph: "propostas" },
+  { id: "app", label: "App & inspiração", icon: Sparkles, glyph: "estrela" },
+  { id: "alertas", label: "Alertas", icon: Bell, glyph: "sino" },
+  { id: "cadencias", label: "Cadências", icon: Zap, glyph: "raio" },
+  { id: "captura", label: "Captura", icon: Code2, glyph: "codigo" },
+  { id: "integracoes", label: "Integrações", icon: Webhook, glyph: "integracao" },
+  { id: "equipe", label: "Equipe", icon: UsersRound, glyph: "leads" },
+  { id: "perfil", label: "Meu perfil", icon: UserRound, glyph: "pessoa" },
 ];
 
 export default function SettingsPage() {
@@ -99,18 +100,22 @@ export default function SettingsPage() {
         }
       />
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <nav className="scrollbar-none -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:sticky lg:top-8 lg:mx-0 lg:flex-col lg:self-start lg:overflow-visible lg:px-0">
-          {TABS.map((t) => (
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <nav className="scrollbar-none -mx-4 flex gap-1.5 overflow-x-auto px-4 lg:sticky lg:top-8 lg:mx-0 lg:block lg:self-start lg:overflow-hidden lg:rounded-[20px] lg:bg-white lg:px-0 lg:shadow-soft dark:lg:bg-[#1C1C1E] dark:lg:shadow-none">
+          {TABS.map((t, i) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cx(
-                "flex h-10 shrink-0 items-center gap-2.5 rounded-xl px-3.5 text-sm font-semibold transition",
-                tab === t.id ? "bg-ink-900 text-white shadow-soft" : "text-ink-500 hover:bg-white hover:text-ink-900",
+                "relative flex h-10 shrink-0 items-center gap-2.5 rounded-full px-2 pr-3.5 text-sm font-semibold transition lg:h-[46px] lg:w-full lg:gap-3 lg:rounded-none lg:px-3 lg:text-[15px] lg:font-normal",
+                tab === t.id ? "bg-ink-900 text-white shadow-soft lg:bg-ink-100 lg:text-ink-900 lg:shadow-none dark:lg:bg-[#2C2C2E]" : "bg-white/60 text-ink-600 hover:text-ink-900 lg:bg-transparent lg:text-ink-900 dark:bg-[#1C1C1E] dark:lg:bg-transparent",
               )}
             >
-              <t.icon className="h-4 w-4" /> {t.label}
+              <GlyphTile id={t.glyph} size="xs" className="lg:hidden" />
+              <GlyphTile id={t.glyph} size="sm" className="hidden lg:grid" />
+              <span className="lg:flex-1 lg:text-left">{t.label}</span>
+              <ChevronRight className="hidden h-4 w-4 text-ink-400 lg:block dark:text-[#5A5A5F]" strokeWidth={2.6} />
+              {i < TABS.length - 1 && <span className="pointer-events-none absolute right-0 bottom-0 left-[54px] hidden h-[0.5px] bg-ink-900/10 lg:block dark:bg-white/[0.14]" />}
             </button>
           ))}
         </nav>

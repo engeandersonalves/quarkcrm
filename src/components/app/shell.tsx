@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, ChevronRight, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator, Receipt, ScrollText, Moon, Activity, Wrench } from "lucide-react";
+import { BarChart3, CheckSquare, ChevronRight, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, Search, Sun, Trophy, Users, Calculator, Receipt, ScrollText, Moon, Activity } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -22,15 +22,15 @@ import { AvatarPicker, OpeningFlow } from "./onboarding";
 import { useNavBadges, type NavBadges } from "./nav-badges";
 import { useProposalViewAlerts } from "./view-alerts";
 import { useTheme, type Theme } from "./theme";
-import { AppIcon, IOS } from "./app-icon";
+import { Glyph, GlyphTile, type GlyphId } from "./ios-glyphs";
 
 type NavKey = "tasks" | "leads" | "proposals" | "documents" | "alarms";
 interface NavItem {
   href: string;
   label: string;
   icon: typeof Sun;
-  /** Cor do símbolo no ícone (estilo iOS). */
-  color: string;
+  /** Ícone premium (estilo Ajustes do iOS). */
+  glyph: GlyphId;
   badge?: NavKey;
   hint?: string;
   /** Só aparece para o master (administrador). */
@@ -42,39 +42,39 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Vendas",
     items: [
-      { href: "/", label: "Painel", icon: LayoutDashboard, color: IOS.blue },
-      { href: "/leads", label: "Leads", icon: Users, color: IOS.green, badge: "leads", hint: "leads novos sem contato" },
-      { href: "/propostas", label: "Propostas", icon: FileText, color: IOS.orange, badge: "proposals", hint: "propostas vistas aguardando resposta" },
-      { href: "/tarefas", label: "Tarefas", icon: CheckSquare, color: IOS.red, badge: "tasks", hint: "tarefas para hoje" },
+      { href: "/", label: "Painel", icon: LayoutDashboard, glyph: "painel" },
+      { href: "/leads", label: "Leads", icon: Users, glyph: "leads", badge: "leads", hint: "leads novos sem contato" },
+      { href: "/propostas", label: "Propostas", icon: FileText, glyph: "propostas", badge: "proposals", hint: "propostas vistas aguardando resposta" },
+      { href: "/tarefas", label: "Tarefas", icon: CheckSquare, glyph: "tarefas", badge: "tasks", hint: "tarefas para hoje" },
     ],
   },
   {
     title: "Ferramentas",
     items: [
-      { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap, color: IOS.yellow },
-      { href: "/documentos", label: "Documentos", icon: FileSignature, color: IOS.indigo, badge: "documents", hint: "aguardando assinatura" },
-      { href: "/contratos", label: "Contratos", icon: ScrollText, color: IOS.teal },
-      { href: "/recibos", label: "Recibos", icon: Receipt, color: IOS.mint },
-      { href: "/marketing", label: "Marketing", icon: Megaphone, color: IOS.pink },
+      { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap, glyph: "raio" },
+      { href: "/documentos", label: "Documentos", icon: FileSignature, glyph: "documentos", badge: "documents", hint: "aguardando assinatura" },
+      { href: "/contratos", label: "Contratos", icon: ScrollText, glyph: "contratos" },
+      { href: "/recibos", label: "Recibos", icon: Receipt, glyph: "recibos" },
+      { href: "/marketing", label: "Marketing", icon: Megaphone, glyph: "marketing" },
     ],
   },
   {
     title: "Pós-venda",
-    items: [{ href: "/monitoramento", label: "Monitoramento", icon: Activity, color: IOS.lime, badge: "alarms", hint: "alarmes ativos nas usinas" }],
+    items: [{ href: "/monitoramento", label: "Monitoramento", icon: Activity, glyph: "sol", badge: "alarms", hint: "alarmes ativos nas usinas" }],
   },
   {
     title: "Desempenho",
     items: [
-      { href: "/relatorios", label: "Relatórios", icon: BarChart3, color: IOS.purple },
+      { href: "/relatorios", label: "Relatórios", icon: BarChart3, glyph: "relatorios" },
     ],
   },
 ];
 
 const MOBILE_TABS: NavItem[] = [
-  { href: "/", label: "Início", icon: LayoutDashboard, color: IOS.blue },
-  { href: "/leads", label: "Leads", icon: Users, color: IOS.green, badge: "leads" },
-  { href: "/propostas", label: "Propostas", icon: FileText, color: IOS.orange, badge: "proposals" },
-  { href: "/tarefas", label: "Tarefas", icon: CheckSquare, color: IOS.red, badge: "tasks" },
+  { href: "/", label: "Início", icon: LayoutDashboard, glyph: "painel" },
+  { href: "/leads", label: "Leads", icon: Users, glyph: "leads", badge: "leads" },
+  { href: "/propostas", label: "Propostas", icon: FileText, glyph: "propostas", badge: "proposals" },
+  { href: "/tarefas", label: "Tarefas", icon: CheckSquare, glyph: "tarefas", badge: "tasks" },
 ];
 
 interface QuickCtx {
@@ -194,7 +194,7 @@ function ShellInner({ children }: { children: ReactNode }) {
         />
 
         {/* Topbar mobile */}
-        <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-black/[0.06] bg-[#F2F2F7]/75 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-2xl backdrop-saturate-200 lg:hidden dark:border-white/[0.08] dark:bg-black/60">
+        <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-black/[0.06] bg-[#F2F2F7]/75 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-2xl backdrop-saturate-200 lg:hidden dark:border-white/[0.06] dark:bg-black/80">
           <Link href="/" className="flex items-center" aria-label={settings.company_name || "Quark Energia"}>
             <BrandLogo variant={theme === "dark" ? "white" : "color"} className="h-7" />
           </Link>
@@ -241,18 +241,18 @@ function ShellInner({ children }: { children: ReactNode }) {
           <div className="fixed inset-0 z-30 lg:hidden" onClick={() => setFab(false)}>
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" />
             <div className="liquid-glass animate-fade-up absolute inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-[28px] py-1.5">
-              <FabItem icon={Calculator} color={IOS.yellow} title="Orçamento solar" text="Calcular e gerar proposta" onClick={() => router.push("/propostas/nova")} />
-              <FabItem icon={PlugZap} color={IOS.green} title="Orçamento S.A.V.E" text="Carregador de veículo elétrico" onClick={() => router.push("/propostas/nova?tipo=save")} />
-              <FabItem icon={Wrench} color={IOS.blue} title="Orçamento de manutenção" text="Limpeza e revisão elétrica" onClick={() => router.push("/propostas/nova?tipo=manutencao")} />
-              <FabItem icon={Flame} color={IOS.orange} title="Plano do dia" text="Missões para vender mais hoje" onClick={() => window.dispatchEvent(new Event("quark:briefing"))} />
-              <FabItem icon={Zap} color={IOS.yellow} title="Orçamento rápido" text="Imagem pronta para o WhatsApp" onClick={() => router.push("/orcamento-rapido")} />
-              <FabItem icon={UserPlus} color={IOS.green} title="Novo lead" text="Cadastrar um cliente" onClick={() => openLead()} />
-              <FabItem icon={ListTodo} color={IOS.blue} title="Nova tarefa" text="Agendar um follow-up" onClick={() => openTask()} />
-              <FabItem icon={Megaphone} color={IOS.pink} title="Marketing" text="Artes para Instagram e status" onClick={() => router.push("/marketing")} />
-              <FabItem icon={ScrollText} color={IOS.teal} title="Contrato" text="Contrato solar para assinar" onClick={() => router.push("/documentos/novo?tipo=contrato")} />
-              <FabItem icon={Receipt} color={IOS.mint} title="Recibo" text="PDF com a assinatura da Quark" onClick={() => router.push("/recibos")} />
-              <FabItem icon={FileSignature} color={IOS.indigo} title="Procuração ou aluguel" text="Documentos com assinatura digital" onClick={() => router.push("/documentos")} />
-              <FabItem icon={Settings} color={IOS.gray} title="Configurações" text="Empresa, padrões e alertas" onClick={() => router.push("/configuracoes")} last />
+              <FabItem glyph="calculadora" title="Orçamento solar" text="Calcular e gerar proposta" onClick={() => router.push("/propostas/nova")} />
+              <FabItem glyph="plugue" title="Orçamento S.A.V.E" text="Carregador de veículo elétrico" onClick={() => router.push("/propostas/nova?tipo=save")} />
+              <FabItem glyph="chave" title="Orçamento de manutenção" text="Limpeza e revisão elétrica" onClick={() => router.push("/propostas/nova?tipo=manutencao")} />
+              <FabItem glyph="chama" title="Plano do dia" text="Missões para vender mais hoje" onClick={() => window.dispatchEvent(new Event("quark:briefing"))} />
+              <FabItem glyph="raio" title="Orçamento rápido" text="Imagem pronta para o WhatsApp" onClick={() => router.push("/orcamento-rapido")} />
+              <FabItem glyph="novoLead" title="Novo lead" text="Cadastrar um cliente" onClick={() => openLead()} />
+              <FabItem glyph="novaTarefa" title="Nova tarefa" text="Agendar um follow-up" onClick={() => openTask()} />
+              <FabItem glyph="marketing" title="Marketing" text="Artes para Instagram e status" onClick={() => router.push("/marketing")} />
+              <FabItem glyph="contratos" title="Contrato" text="Contrato solar para assinar" onClick={() => router.push("/documentos/novo?tipo=contrato")} />
+              <FabItem glyph="recibos" title="Recibo" text="PDF com a assinatura da Quark" onClick={() => router.push("/recibos")} />
+              <FabItem glyph="documentos" title="Procuração ou aluguel" text="Documentos com assinatura digital" onClick={() => router.push("/documentos")} />
+              <FabItem glyph="engrenagem" title="Configurações" text="Empresa, padrões e alertas" onClick={() => router.push("/configuracoes")} last />
             </div>
           </div>
         )}
@@ -266,7 +266,7 @@ function ShellInner({ children }: { children: ReactNode }) {
   );
 }
 
-function TabLink({ href, label, icon: Icon, active, count = 0, alert }: { href: string; label: string; icon: typeof Sun; active: boolean; count?: number; alert?: boolean }) {
+function TabLink({ href, label, glyph, active, count = 0, alert }: { href: string; label: string; glyph: GlyphId; active: boolean; count?: number; alert?: boolean }) {
   return (
     <Link
       href={href}
@@ -276,7 +276,7 @@ function TabLink({ href, label, icon: Icon, active, count = 0, alert }: { href: 
       )}
     >
       <span className="relative">
-        <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.4 : 2} style={active ? { color: "#0A84FF" } : undefined} />
+        <Glyph id={glyph} mono={!active} className="h-[24px] w-[24px]" />
         {count > 0 && <Badge count={count} alert={alert} className="absolute -top-1.5 -right-3" />}
       </span>
       {label}
@@ -303,8 +303,7 @@ function Badge({ count, alert, className }: { count: number; alert?: boolean; cl
 function Row({
   href,
   onClick,
-  icon,
-  color,
+  glyph,
   label,
   active,
   count = 0,
@@ -316,8 +315,7 @@ function Row({
 }: {
   href?: string;
   onClick?: () => void;
-  icon: typeof Sun;
-  color: string;
+  glyph: GlyphId;
   label: string;
   active?: boolean;
   count?: number;
@@ -329,22 +327,22 @@ function Row({
 }) {
   const body = collapsed ? (
     <span className="relative">
-      <AppIcon icon={icon} color={color} size="md" />
+      <GlyphTile id={glyph} size="md" />
       {count > 0 && <Badge count={count} alert={alert} className="absolute -top-1.5 -right-2" />}
     </span>
   ) : (
     <>
-      <AppIcon icon={icon} color={color} size="sm" />
+      <GlyphTile id={glyph} size="sm" />
       <span className={cx("min-w-0 flex-1 truncate text-[15px]", danger ? "text-[#FF453A]" : "text-white")}>{label}</span>
       {count > 0 && <Badge count={count} alert={alert} />}
       {href && <ChevronRight className="h-4 w-4 shrink-0 text-[#5A5A5F]" strokeWidth={2.6} />}
-      {!last && <span className="pointer-events-none absolute right-0 bottom-0 left-[54px] h-px bg-white/[0.08]" />}
+      {!last && <span className="pointer-events-none absolute right-0 bottom-0 left-[54px] h-[0.5px] bg-white/[0.14]" />}
     </>
   );
   const cls = cx(
     "group relative flex items-center transition-colors duration-150",
-    collapsed ? "mx-auto h-12 w-12 justify-center rounded-[14px]" : "h-[46px] gap-3 pr-3 pl-3",
-    active ? (collapsed ? "bg-white/[0.12] ring-1 ring-white/[0.1]" : "bg-white/[0.1]") : "hover:bg-white/[0.05] active:bg-white/[0.1]",
+    collapsed ? "mx-auto h-12 w-12 justify-center rounded-[14px]" : "h-[48px] gap-3 pr-3 pl-3",
+    active ? (collapsed ? "bg-white/[0.12] ring-1 ring-white/[0.1]" : "bg-[#2C2C2E]") : "hover:bg-white/[0.05] active:bg-white/[0.1]",
   );
   return href ? (
     <Link href={href} title={title ?? (collapsed ? label : undefined)} className={cls} aria-current={active ? "page" : undefined}>
@@ -361,7 +359,7 @@ function Group({ title, collapsed, children }: { title?: string; collapsed: bool
   return (
     <div className={cx(collapsed ? "px-2 pt-3" : "px-3 pt-4")}>
       {collapsed ? <div className="mx-auto mb-2 h-px w-8 bg-white/[0.08]" /> : title && <p className="mb-1.5 px-4 text-[12px] font-medium tracking-[0.02em] text-[#8E8E93] uppercase">{title}</p>}
-      <div className={cx(collapsed ? "grid gap-1.5" : "overflow-hidden rounded-[18px] bg-[#1C1C1E]/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_0_0.5px_rgba(255,255,255,0.06)] backdrop-blur-xl")}>{children}</div>
+      <div className={cx(collapsed ? "grid gap-1.5" : "overflow-hidden rounded-[20px] bg-[#1C1C1E]")}>{children}</div>
     </div>
   );
 }
@@ -400,7 +398,7 @@ function Sidebar({
   return (
     <aside
       className={cx(
-        "palette-classic ios-keep no-print fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-white/[0.07] bg-black/70 text-white backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex",
+        "palette-classic ios-keep no-print fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-white/[0.06] bg-black text-white transition-[width] duration-300 lg:flex",
         collapsed ? "w-[88px]" : "w-[300px]",
       )}
     >
@@ -454,7 +452,7 @@ function Sidebar({
       <nav className="sidebar-scroll relative min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 [mask-image:linear-gradient(180deg,transparent,black_12px,black_calc(100%-18px),transparent)]">
         {/* conta (como o topo dos Ajustes) */}
         <div className={cx(collapsed ? "px-2 pt-3" : "px-3 pt-4")}>
-          <div className={cx("flex items-center gap-3", collapsed ? "flex-col" : "rounded-[18px] bg-[#1C1C1E]/85 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_0_0.5px_rgba(255,255,255,0.06)]")}>
+          <div className={cx("flex items-center gap-3", collapsed ? "flex-col" : "rounded-[20px] bg-[#1C1C1E] p-3")}>
             <button onClick={onAvatar} className="relative shrink-0 rounded-full" title="Meu perfil">
               <Avatar name={profile?.full_name ?? user.email} src={profile?.avatar_url} className={cx("ring-1 ring-white/15", collapsed ? "h-11 w-11" : "h-12 w-12")} />
               {streak > 1 && (
@@ -497,8 +495,7 @@ function Sidebar({
                   <Row
                     key={item.href}
                     href={item.href}
-                    icon={item.icon}
-                    color={item.color}
+                    glyph={item.glyph}
                     label={item.label}
                     active={isActive(item.href)}
                     count={n}
@@ -514,25 +511,25 @@ function Sidebar({
         })}
 
         <Group title="Atalhos" collapsed={collapsed}>
-          <Row onClick={onNewLead} icon={UserPlus} color={IOS.green} label="Novo lead" collapsed={collapsed} />
-          <Row onClick={onNewTask} icon={ListTodo} color={IOS.blue} label="Nova tarefa" collapsed={collapsed} />
-          <Row onClick={() => window.dispatchEvent(new Event("quark:briefing"))} icon={Flame} color={IOS.orange} label="Plano do dia" collapsed={collapsed} last />
+          <Row onClick={onNewLead} glyph="novoLead" label="Novo lead" collapsed={collapsed} />
+          <Row onClick={onNewTask} glyph="novaTarefa" label="Nova tarefa" collapsed={collapsed} />
+          <Row onClick={() => window.dispatchEvent(new Event("quark:briefing"))} glyph="chama" label="Plano do dia" collapsed={collapsed} last />
         </Group>
 
         <Group title="Conta" collapsed={collapsed}>
-          <Row href="/configuracoes" icon={Settings} color={IOS.gray} label="Configurações" active={pathname.startsWith("/configuracoes")} collapsed={collapsed} />
-          <Row onClick={onTheme} icon={theme === "dark" ? Sun : Moon} color={IOS.indigo} label={theme === "dark" ? "Tema claro" : "Tema escuro"} collapsed={collapsed} />
-          <Row onClick={onSignOut} icon={LogOut} color={IOS.red} label="Sair" danger collapsed={collapsed} last />
+          <Row href="/configuracoes" glyph="engrenagem" label="Configurações" active={pathname.startsWith("/configuracoes")} collapsed={collapsed} />
+          <Row onClick={onTheme} glyph="aparencia" label={theme === "dark" ? "Tema claro" : "Tema escuro"} collapsed={collapsed} />
+          <Row onClick={onSignOut} glyph="sair" label="Sair" danger collapsed={collapsed} last />
         </Group>
       </nav>
     </aside>
   );
 }
 
-function FabItem({ icon, color, title, text, onClick, last }: { icon: typeof Sun; color: string; title: string; text: string; onClick: () => void; last?: boolean }) {
+function FabItem({ glyph, title, text, onClick, last }: { glyph: GlyphId; title: string; text: string; onClick: () => void; last?: boolean }) {
   return (
     <button onClick={onClick} className="relative flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition active:bg-black/[0.05] dark:active:bg-white/[0.08]">
-      <AppIcon icon={icon} color={color} size="md" />
+      <GlyphTile id={glyph} size="md" />
       <div className="min-w-0 flex-1">
         <p className="text-[15px] font-semibold text-ink-900">{title}</p>
         <p className="truncate text-[13px] text-ink-500">{text}</p>

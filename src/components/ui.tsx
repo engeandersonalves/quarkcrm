@@ -7,6 +7,8 @@ import { forwardRef, useEffect, useId, useState, type ButtonHTMLAttributes, type
 import { brl, fmtNum } from "@/lib/pricing";
 import { parseNumber } from "@/lib/format";
 import { CharacterArt, presetId } from "./avatars";
+import { usePathname } from "next/navigation";
+import { GlyphTile, glyphForPath } from "./app/ios-glyphs";
 
 const merge = extendTailwindMerge({ extend: { classGroups: { shadow: ["shadow-soft", "shadow-lift", "shadow-glow"] } } });
 /** clsx + tailwind-merge: classes passadas por props sobrescrevem as padrão. */
@@ -63,7 +65,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 /* ------------------------------------------------------------------ Inputs */
 
 const fieldBase =
-  "w-full rounded-[14px] bg-white/80 px-3.5 text-[15px] sm:text-sm text-ink-900 ring-1 ring-ink-900/10 shadow-[inset_0_1px_2px_rgba(28,18,52,0.04)] placeholder:text-ink-400 transition hover:ring-ink-900/20 focus:bg-white focus:shadow-[0_0_0_4px_rgba(127,203,134,0.18)] focus:outline-none focus:ring-2 focus:ring-sun-500 disabled:bg-ink-50/70 disabled:text-ink-500 dark:bg-[rgba(118,118,128,0.18)] dark:ring-white/[0.06] dark:shadow-none dark:focus:bg-[rgba(118,118,128,0.24)] dark:focus:ring-[#0A84FF] dark:focus:shadow-[0_0_0_4px_rgba(10,132,255,0.18)]";
+  "w-full rounded-[14px] bg-white/80 px-3.5 text-[15px] sm:text-sm text-ink-900 ring-1 ring-ink-900/10 shadow-[inset_0_1px_2px_rgba(28,18,52,0.04)] placeholder:text-ink-400 transition hover:ring-ink-900/20 focus:bg-white focus:shadow-[0_0_0_4px_rgba(127,203,134,0.18)] focus:outline-none focus:ring-2 focus:ring-sun-500 disabled:bg-ink-50/70 disabled:text-ink-500 dark:bg-[rgba(118,118,128,0.18)] dark:ring-white/[0.06] dark:shadow-none dark:focus:bg-[rgba(118,118,128,0.24)] dark:focus:ring-white/40 dark:focus:shadow-[0_0_0_4px_rgba(255,255,255,0.08)]";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...rest }, ref) {
   return <input ref={ref} className={cx(fieldBase, "h-11 sm:h-10", className)} {...rest} />;
@@ -233,7 +235,7 @@ export function CardHeader({ title, subtitle, action, icon }: { title: ReactNode
   return (
     <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4">
       <div className="flex min-w-0 items-start gap-3">
-        {icon && <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-sun-100 to-white text-sun-600 ring-1 ring-sun-200/70 shadow-[0_4px_12px_-4px_rgba(127,203,134,0.5)] dark:app-icon dark:rounded-[10px] dark:text-[#FFD60A] dark:ring-0 [&_svg]:dark:drop-shadow-[0_0_6px_rgba(255,214,10,0.45)]">{icon}</div>}
+        {icon && <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-sun-100 to-white text-sun-600 ring-1 ring-sun-200/70 shadow-[0_4px_12px_-4px_rgba(127,203,134,0.5)] dark:ios-tile dark:rounded-[10px] dark:text-[#FFD60A] dark:ring-0">{icon}</div>}
         <div className="min-w-0">
           <h3 className="font-display text-[15px] font-semibold tracking-tight text-ink-900 dark:text-[16px]">{title}</h3>
           {subtitle && <p className="mt-0.5 text-[13px] text-ink-500">{subtitle}</p>}
@@ -259,11 +261,14 @@ export function PageHeader({
   /** Seção do app, acima do título (ex.: "Vendas"). */
   eyebrow?: string;
 }) {
+  const glyph = glyphForPath(usePathname() ?? "");
   return (
     <div className="relative mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex min-w-0 items-center gap-3.5">
-        {icon && (
-          <span className="relative hidden h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#2a1d4d] via-ink-900 to-ink-950 text-[#F3EA3B] shadow-[0_10px_28px_-10px_rgba(28,18,52,0.7)] ring-1 ring-white/10 sm:grid dark:app-icon dark:rounded-[14px] dark:text-[#FFD60A] dark:ring-0 [&_svg]:h-[24px] [&_svg]:w-[24px] [&_svg]:dark:drop-shadow-[0_0_8px_rgba(255,214,10,0.5)]">
+        {glyph ? (
+          <GlyphTile id={glyph} size="lg" className="hidden sm:grid" />
+        ) : icon && (
+          <span className="relative hidden h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#2a1d4d] via-ink-900 to-ink-950 text-[#F3EA3B] shadow-[0_10px_28px_-10px_rgba(28,18,52,0.7)] ring-1 ring-white/10 sm:grid dark:ios-tile dark:rounded-[13px] dark:text-[#FFD60A] dark:ring-0 [&_svg]:h-[24px] [&_svg]:w-[24px]">
             <span className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/15 to-transparent" />
             {icon}
           </span>
@@ -312,7 +317,7 @@ export function Avatar({ name, className, src }: { name: string | null | undefin
 export function Empty({ icon, title, text, action }: { icon: ReactNode; title: string; text?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-white to-ink-100 text-ink-400 ring-1 ring-ink-900/5 shadow-soft dark:app-icon dark:rounded-[16px] dark:text-[#8E8E93] dark:ring-0">{icon}</div>
+      <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-white to-ink-100 text-ink-400 ring-1 ring-ink-900/5 shadow-soft dark:ios-tile dark:rounded-[16px] dark:text-[#AEAEB2] dark:ring-0">{icon}</div>
       <p className="font-display font-semibold text-ink-800">{title}</p>
       {text && <p className="mt-1 max-w-sm text-sm text-ink-500">{text}</p>}
       {action && <div className="mt-5">{action}</div>}
