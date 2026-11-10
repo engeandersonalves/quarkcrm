@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, Plus_Jakarta_Sans, Sora } from "next/font/google";
+import { Inter, Playfair_Display, Plus_Jakarta_Sans, Sora } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "swap" });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const sora = Sora({ subsets: ["latin"], variable: "--font-sora", display: "swap" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", display: "swap", style: ["normal", "italic"] });
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1C1234",
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -24,10 +25,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${jakarta.variable} ${sora.variable} ${playfair.variable}`}>
+    <html lang="pt-BR" className={`${jakarta.variable} ${sora.variable} ${playfair.variable} ${inter.variable}`}>
       <body className="min-h-dvh font-sans">
         {children}
-        <Toaster position="top-center" richColors closeButton toastOptions={{ style: { fontFamily: "var(--font-jakarta)" } }} />
+        <Toaster position="top-center" richColors closeButton toastOptions={{ style: { fontFamily: "-apple-system, BlinkMacSystemFont, \"SF Pro Text\", var(--font-inter), system-ui, sans-serif", borderRadius: 18 } }} />
       </body>
     </html>
   );

@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator, Receipt, ScrollText, Moon, Activity, Wrench } from "lucide-react";
+import { BarChart3, CheckSquare, ChevronRight, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, PlugZap, Search, Settings, Sun, Trophy, UserPlus, Users, ListTodo, Calculator, Receipt, ScrollText, Moon, Activity, Wrench } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -22,12 +22,15 @@ import { AvatarPicker, OpeningFlow } from "./onboarding";
 import { useNavBadges, type NavBadges } from "./nav-badges";
 import { useProposalViewAlerts } from "./view-alerts";
 import { useTheme, type Theme } from "./theme";
+import { AppIcon, IOS } from "./app-icon";
 
 type NavKey = "tasks" | "leads" | "proposals" | "documents" | "alarms";
 interface NavItem {
   href: string;
   label: string;
   icon: typeof Sun;
+  /** Cor do símbolo no ícone (estilo iOS). */
+  color: string;
   badge?: NavKey;
   hint?: string;
   /** Só aparece para o master (administrador). */
@@ -39,39 +42,39 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Vendas",
     items: [
-      { href: "/", label: "Painel", icon: LayoutDashboard },
-      { href: "/leads", label: "Leads", icon: Users, badge: "leads", hint: "leads novos sem contato" },
-      { href: "/propostas", label: "Propostas", icon: FileText, badge: "proposals", hint: "propostas vistas aguardando resposta" },
-      { href: "/tarefas", label: "Tarefas", icon: CheckSquare, badge: "tasks", hint: "tarefas para hoje" },
+      { href: "/", label: "Painel", icon: LayoutDashboard, color: IOS.blue },
+      { href: "/leads", label: "Leads", icon: Users, color: IOS.green, badge: "leads", hint: "leads novos sem contato" },
+      { href: "/propostas", label: "Propostas", icon: FileText, color: IOS.orange, badge: "proposals", hint: "propostas vistas aguardando resposta" },
+      { href: "/tarefas", label: "Tarefas", icon: CheckSquare, color: IOS.red, badge: "tasks", hint: "tarefas para hoje" },
     ],
   },
   {
     title: "Ferramentas",
     items: [
-      { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap },
-      { href: "/documentos", label: "Documentos", icon: FileSignature, badge: "documents", hint: "aguardando assinatura" },
-      { href: "/contratos", label: "Contratos", icon: ScrollText },
-      { href: "/recibos", label: "Recibos", icon: Receipt },
-      { href: "/marketing", label: "Marketing", icon: Megaphone },
+      { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap, color: IOS.yellow },
+      { href: "/documentos", label: "Documentos", icon: FileSignature, color: IOS.indigo, badge: "documents", hint: "aguardando assinatura" },
+      { href: "/contratos", label: "Contratos", icon: ScrollText, color: IOS.teal },
+      { href: "/recibos", label: "Recibos", icon: Receipt, color: IOS.mint },
+      { href: "/marketing", label: "Marketing", icon: Megaphone, color: IOS.pink },
     ],
   },
   {
     title: "Pós-venda",
-    items: [{ href: "/monitoramento", label: "Monitoramento", icon: Activity, badge: "alarms", hint: "alarmes ativos nas usinas" }],
+    items: [{ href: "/monitoramento", label: "Monitoramento", icon: Activity, color: IOS.lime, badge: "alarms", hint: "alarmes ativos nas usinas" }],
   },
   {
     title: "Desempenho",
     items: [
-      { href: "/relatorios", label: "Relatórios", icon: BarChart3 },
+      { href: "/relatorios", label: "Relatórios", icon: BarChart3, color: IOS.purple },
     ],
   },
 ];
 
 const MOBILE_TABS: NavItem[] = [
-  { href: "/", label: "Início", icon: LayoutDashboard },
-  { href: "/leads", label: "Leads", icon: Users, badge: "leads" },
-  { href: "/propostas", label: "Propostas", icon: FileText, badge: "proposals" },
-  { href: "/tarefas", label: "Tarefas", icon: CheckSquare, badge: "tasks" },
+  { href: "/", label: "Início", icon: LayoutDashboard, color: IOS.blue },
+  { href: "/leads", label: "Leads", icon: Users, color: IOS.green, badge: "leads" },
+  { href: "/propostas", label: "Propostas", icon: FileText, color: IOS.orange, badge: "proposals" },
+  { href: "/tarefas", label: "Tarefas", icon: CheckSquare, color: IOS.red, badge: "tasks" },
 ];
 
 interface QuickCtx {
@@ -174,7 +177,7 @@ function ShellInner({ children }: { children: ReactNode }) {
 
   return (
     <Quick.Provider value={{ openLead, openTask }}>
-      <div className={cx("min-h-dvh transition-[padding] duration-300 print:pl-0", collapsed ? "lg:pl-[88px]" : "lg:pl-[276px]", theme === "dark" && "theme-dark")}>
+      <div className={cx("ios-app min-h-dvh transition-[padding] duration-300 print:pl-0", collapsed ? "lg:pl-[88px]" : "lg:pl-[300px]", theme === "dark" && "theme-dark")}>
         <div className="app-aurora" aria-hidden />
         <Sidebar
           collapsed={collapsed}
@@ -191,7 +194,7 @@ function ShellInner({ children }: { children: ReactNode }) {
         />
 
         {/* Topbar mobile */}
-        <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-white/60 bg-white/55 px-4 shadow-[0_1px_0_rgba(28,18,52,0.05)] pt-[env(safe-area-inset-top)] backdrop-blur-xl lg:hidden dark:border-white/[0.06] dark:bg-[#07060F]/75 dark:shadow-none">
+        <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between border-b border-black/[0.06] bg-[#F2F2F7]/75 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-2xl backdrop-saturate-200 lg:hidden dark:border-white/[0.08] dark:bg-black/60">
           <Link href="/" className="flex items-center" aria-label={settings.company_name || "Quark Energia"}>
             <BrandLogo variant={theme === "dark" ? "white" : "color"} className="h-7" />
           </Link>
@@ -200,14 +203,14 @@ function ShellInner({ children }: { children: ReactNode }) {
             <button onClick={() => router.push(`/perfil/${user.id}`)} className="ml-0.5 rounded-full" aria-label="Meu perfil">
               <Avatar name={profile?.full_name ?? user.email} src={profile?.avatar_url} className="h-8 w-8 text-[10px]" />
             </button>
-            <button onClick={() => setPalette(true)} className="grid h-9 w-8 place-items-center rounded-xl text-ink-600" aria-label="Buscar">
-              <Search className="h-[18px] w-[18px]" />
+            <button onClick={() => setPalette(true)} className="ml-1 grid h-8 w-8 place-items-center rounded-full bg-[rgba(118,118,128,0.14)] text-ink-700 dark:bg-[rgba(118,118,128,0.26)] dark:text-white" aria-label="Buscar">
+              <Search className="h-4 w-4" strokeWidth={2.4} />
             </button>
-            <button onClick={toggleTheme} className="grid h-9 w-8 place-items-center rounded-xl text-ink-500" aria-label={theme === "dark" ? "Tema claro" : "Tema escuro"}>
-              {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+            <button onClick={toggleTheme} className="ml-1 grid h-8 w-8 place-items-center rounded-full bg-[rgba(118,118,128,0.14)] text-ink-700 dark:bg-[rgba(118,118,128,0.26)] dark:text-white" aria-label={theme === "dark" ? "Tema claro" : "Tema escuro"}>
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
-            <button onClick={signOut} className="grid h-9 w-8 place-items-center rounded-xl text-ink-500" aria-label="Sair">
-              <LogOut className="h-[18px] w-[18px]" />
+            <button onClick={signOut} className="ml-1 grid h-8 w-8 place-items-center rounded-full bg-[rgba(118,118,128,0.14)] text-ink-700 dark:bg-[rgba(118,118,128,0.26)] dark:text-white" aria-label="Sair">
+              <LogOut className="h-4 w-4" />
             </button>
           </div>
         </header>
@@ -218,43 +221,38 @@ function ShellInner({ children }: { children: ReactNode }) {
           </div>
         </main>
 
-        {/* Bottom nav mobile */}
-        <nav className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/65 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_-12px_rgba(28,18,52,0.18)] backdrop-blur-2xl backdrop-saturate-150 lg:hidden dark:border-white/[0.06] dark:bg-[#07060F]/80 dark:shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.8)]">
-          <div className="relative grid h-16 grid-cols-5">
-            {MOBILE_TABS.slice(0, 2).map((item) => (
-              <TabLink key={item.href} {...item} active={isActive(item.href)} count={item.badge ? badges[item.badge] : 0} alert={item.badge === "tasks" && badges.late > 0} />
-            ))}
-            <div className="relative flex items-start justify-center">
-              <button
-                onClick={() => setFab((v) => !v)}
-                aria-label="Criar"
-                className={cx("absolute -top-5 grid h-14 w-14 place-items-center rounded-2xl bg-sun-gradient text-ink-950 shadow-glow ring-4 ring-ink-50 transition-transform", fab && "rotate-45")}
-              >
-                <Plus className="h-6 w-6" strokeWidth={2.5} />
-              </button>
+        {/* Dock flutuante de vidro líquido (celular) */}
+        <nav className="no-print pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(12px,env(safe-area-inset-bottom))] lg:hidden">
+          <div className="pointer-events-auto mx-auto flex max-w-md items-center gap-2.5">
+            <div className="liquid-glass flex h-[62px] flex-1 items-center gap-0.5 rounded-full px-1">
+              {MOBILE_TABS.map((item) => (
+                <TabLink key={item.href} {...item} active={isActive(item.href)} count={item.badge ? badges[item.badge] : 0} alert={item.badge === "tasks" && badges.late > 0} />
+              ))}
             </div>
-            {MOBILE_TABS.slice(2, 4).map((item) => (
-              <TabLink key={item.href} {...item} active={isActive(item.href)} count={item.badge ? badges[item.badge] : 0} alert={item.badge === "tasks" && badges.late > 0} />
-            ))}
+            <button onClick={() => setFab((v) => !v)} aria-label="Criar" className="liquid-glass grid h-[62px] w-[62px] shrink-0 place-items-center rounded-full transition active:scale-95">
+              <span className={cx("grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-[#F3EA3B] to-[#9BD373] text-[#111] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_6px_18px_-6px_rgba(155,211,115,0.9)] transition-transform duration-300", fab && "rotate-45")}>
+                <Plus className="h-6 w-6" strokeWidth={2.6} />
+              </span>
+            </button>
           </div>
         </nav>
 
         {fab && (
           <div className="fixed inset-0 z-30 lg:hidden" onClick={() => setFab(false)}>
-            <div className="absolute inset-0 bg-ink-950/40 backdrop-blur-[2px]" />
-            <div className="animate-fade-up absolute inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] grid max-h-[calc(100dvh-8rem)] gap-1 overflow-y-auto rounded-3xl bg-white/85 p-2 shadow-lift ring-1 ring-white/70 backdrop-blur-2xl">
-              <FabItem icon={<Calculator className="h-5 w-5" />} title="Orçamento solar" text="Calcular e gerar proposta" onClick={() => router.push("/propostas/nova")} />
-              <FabItem icon={<PlugZap className="h-5 w-5" />} title="Orçamento S.A.V.E" text="Carregador de veículo elétrico" onClick={() => router.push("/propostas/nova?tipo=save")} />
-              <FabItem icon={<Wrench className="h-5 w-5" />} title="Orçamento de manutenção" text="Limpeza e revisão elétrica" onClick={() => router.push("/propostas/nova?tipo=manutencao")} />
-              <FabItem icon={<Flame className="h-5 w-5" />} title="Plano do dia" text="Missões para vender mais hoje" onClick={() => window.dispatchEvent(new Event("quark:briefing"))} />
-              <FabItem icon={<Zap className="h-5 w-5" />} title="Orçamento rápido" text="Imagem pronta para o WhatsApp" onClick={() => router.push("/orcamento-rapido")} />
-              <FabItem icon={<UserPlus className="h-5 w-5" />} title="Novo lead" text="Cadastrar um cliente" onClick={() => openLead()} />
-              <FabItem icon={<ListTodo className="h-5 w-5" />} title="Nova tarefa" text="Agendar um follow-up" onClick={() => openTask()} />
-              <FabItem icon={<Megaphone className="h-5 w-5" />} title="Marketing" text="Artes para Instagram e status" onClick={() => router.push("/marketing")} />
-              <FabItem icon={<ScrollText className="h-5 w-5" />} title="Contrato" text="Contrato solar para assinar" onClick={() => router.push("/documentos/novo?tipo=contrato")} />
-              <FabItem icon={<Receipt className="h-5 w-5" />} title="Recibo" text="PDF com a assinatura da Quark" onClick={() => router.push("/recibos")} />
-              <FabItem icon={<FileSignature className="h-5 w-5" />} title="Procuração ou aluguel" text="Documentos com assinatura digital" onClick={() => router.push("/documentos")} />
-              <FabItem icon={<Settings className="h-5 w-5" />} title="Configurações" text="Empresa, padrões e alertas" onClick={() => router.push("/configuracoes")} />
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" />
+            <div className="liquid-glass animate-fade-up absolute inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-[28px] py-1.5">
+              <FabItem icon={Calculator} color={IOS.yellow} title="Orçamento solar" text="Calcular e gerar proposta" onClick={() => router.push("/propostas/nova")} />
+              <FabItem icon={PlugZap} color={IOS.green} title="Orçamento S.A.V.E" text="Carregador de veículo elétrico" onClick={() => router.push("/propostas/nova?tipo=save")} />
+              <FabItem icon={Wrench} color={IOS.blue} title="Orçamento de manutenção" text="Limpeza e revisão elétrica" onClick={() => router.push("/propostas/nova?tipo=manutencao")} />
+              <FabItem icon={Flame} color={IOS.orange} title="Plano do dia" text="Missões para vender mais hoje" onClick={() => window.dispatchEvent(new Event("quark:briefing"))} />
+              <FabItem icon={Zap} color={IOS.yellow} title="Orçamento rápido" text="Imagem pronta para o WhatsApp" onClick={() => router.push("/orcamento-rapido")} />
+              <FabItem icon={UserPlus} color={IOS.green} title="Novo lead" text="Cadastrar um cliente" onClick={() => openLead()} />
+              <FabItem icon={ListTodo} color={IOS.blue} title="Nova tarefa" text="Agendar um follow-up" onClick={() => openTask()} />
+              <FabItem icon={Megaphone} color={IOS.pink} title="Marketing" text="Artes para Instagram e status" onClick={() => router.push("/marketing")} />
+              <FabItem icon={ScrollText} color={IOS.teal} title="Contrato" text="Contrato solar para assinar" onClick={() => router.push("/documentos/novo?tipo=contrato")} />
+              <FabItem icon={Receipt} color={IOS.mint} title="Recibo" text="PDF com a assinatura da Quark" onClick={() => router.push("/recibos")} />
+              <FabItem icon={FileSignature} color={IOS.indigo} title="Procuração ou aluguel" text="Documentos com assinatura digital" onClick={() => router.push("/documentos")} />
+              <FabItem icon={Settings} color={IOS.gray} title="Configurações" text="Empresa, padrões e alertas" onClick={() => router.push("/configuracoes")} last />
             </div>
           </div>
         )}
@@ -270,28 +268,101 @@ function ShellInner({ children }: { children: ReactNode }) {
 
 function TabLink({ href, label, icon: Icon, active, count = 0, alert }: { href: string; label: string; icon: typeof Sun; active: boolean; count?: number; alert?: boolean }) {
   return (
-    <Link href={href} className={cx("flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition active:scale-95", active ? "text-ink-900" : "text-ink-400")}>
-      <span className={cx("relative grid h-8 w-14 place-items-center rounded-full transition-all duration-300", active && "bg-gradient-to-br from-[#F3EA3B]/45 to-[#9BD373]/45 shadow-[0_6px_16px_-8px_rgba(127,203,134,0.9)] ring-1 ring-white/70")}>
-        <Icon className={cx("h-[21px] w-[21px]", active && "text-ink-900")} strokeWidth={active ? 2.3 : 2} />
-        {count > 0 && <Badge count={count} alert={alert} className="absolute -top-1.5 right-0.5" />}
+    <Link
+      href={href}
+      className={cx(
+        "relative flex h-[54px] flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-semibold tracking-normal transition-all duration-300 active:scale-95",
+        active ? "bg-black/[0.06] text-ink-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:bg-white/[0.13] dark:text-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.16)]" : "text-ink-500 dark:text-[#8E8E93]",
+      )}
+    >
+      <span className="relative">
+        <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.4 : 2} style={active ? { color: "#0A84FF" } : undefined} />
+        {count > 0 && <Badge count={count} alert={alert} className="absolute -top-1.5 -right-3" />}
       </span>
       {label}
     </Link>
   );
 }
 
-/** Sinalizador estilo app de celular. */
+/** Sinalizador vermelho, como nos apps do iPhone. */
 function Badge({ count, alert, className }: { count: number; alert?: boolean; className?: string }) {
   return (
     <span
       className={cx(
-        "grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10px] leading-none font-bold tabular-nums shadow-[0_4px_12px_-2px_rgba(0,0,0,0.35)] ring-2",
-        alert ? "bg-[#FF3B5C] text-white ring-[#FF3B5C]/25" : "bg-gradient-to-br from-[#F3EA3B] to-[#9BD373] text-[#1C1234] ring-black/10",
+        "grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#FF3B30] px-[5px] text-[11px] leading-none font-semibold text-white tabular-nums shadow-[0_2px_6px_rgba(255,59,48,0.45)]",
+        alert && "animate-pulse",
         className,
       )}
     >
       {count > 99 ? "99+" : count}
     </span>
+  );
+}
+
+/** Linha de lista agrupada (estilo Ajustes do iOS). */
+function Row({
+  href,
+  onClick,
+  icon,
+  color,
+  label,
+  active,
+  count = 0,
+  alert,
+  collapsed,
+  last,
+  title,
+  danger,
+}: {
+  href?: string;
+  onClick?: () => void;
+  icon: typeof Sun;
+  color: string;
+  label: string;
+  active?: boolean;
+  count?: number;
+  alert?: boolean;
+  collapsed: boolean;
+  last?: boolean;
+  title?: string;
+  danger?: boolean;
+}) {
+  const body = collapsed ? (
+    <span className="relative">
+      <AppIcon icon={icon} color={color} size="md" />
+      {count > 0 && <Badge count={count} alert={alert} className="absolute -top-1.5 -right-2" />}
+    </span>
+  ) : (
+    <>
+      <AppIcon icon={icon} color={color} size="sm" />
+      <span className={cx("min-w-0 flex-1 truncate text-[15px]", danger ? "text-[#FF453A]" : "text-white")}>{label}</span>
+      {count > 0 && <Badge count={count} alert={alert} />}
+      {href && <ChevronRight className="h-4 w-4 shrink-0 text-[#5A5A5F]" strokeWidth={2.6} />}
+      {!last && <span className="pointer-events-none absolute right-0 bottom-0 left-[54px] h-px bg-white/[0.08]" />}
+    </>
+  );
+  const cls = cx(
+    "group relative flex items-center transition-colors duration-150",
+    collapsed ? "mx-auto h-12 w-12 justify-center rounded-[14px]" : "h-[46px] gap-3 pr-3 pl-3",
+    active ? (collapsed ? "bg-white/[0.12] ring-1 ring-white/[0.1]" : "bg-white/[0.1]") : "hover:bg-white/[0.05] active:bg-white/[0.1]",
+  );
+  return href ? (
+    <Link href={href} title={title ?? (collapsed ? label : undefined)} className={cls} aria-current={active ? "page" : undefined}>
+      {body}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} title={title ?? (collapsed ? label : undefined)} className={cx(cls, "w-full text-left")}>
+      {body}
+    </button>
+  );
+}
+
+function Group({ title, collapsed, children }: { title?: string; collapsed: boolean; children: ReactNode }) {
+  return (
+    <div className={cx(collapsed ? "px-2 pt-3" : "px-3 pt-4")}>
+      {collapsed ? <div className="mx-auto mb-2 h-px w-8 bg-white/[0.08]" /> : title && <p className="mb-1.5 px-4 text-[12px] font-medium tracking-[0.02em] text-[#8E8E93] uppercase">{title}</p>}
+      <div className={cx(collapsed ? "grid gap-1.5" : "overflow-hidden rounded-[18px] bg-[#1C1C1E]/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_0_0.5px_rgba(255,255,255,0.06)] backdrop-blur-xl")}>{children}</div>
+    </div>
   );
 }
 
@@ -324,23 +395,17 @@ function Sidebar({
   const { xp, streak } = useReward();
   const lvl = xp != null ? levelOf(xp) : null;
   const pathname = usePathname();
-  const first = (profile?.full_name ?? "").split(" ")[0] || "Você";
+  const name = profile?.full_name || "Você";
 
   return (
     <aside
       className={cx(
-        "palette-classic no-print fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-white/[0.06] text-ink-300 transition-[width] duration-300 lg:flex",
-        collapsed ? "w-[88px]" : "w-[276px]",
+        "palette-classic ios-keep no-print fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-white/[0.07] bg-black/70 text-white backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex",
+        collapsed ? "w-[88px]" : "w-[300px]",
       )}
-      style={{ background: theme === "dark" ? "linear-gradient(180deg, #0B0918 0%, #07060F 55%, #05040B 100%)" : "linear-gradient(180deg, #16102C 0%, #0D0A1C 45%, #08070F 100%)" }}
     >
-      {/* brilhos de fundo */}
-      <div className={cx("pointer-events-none absolute -top-28 -left-24 h-72 w-72 rounded-full blur-[90px]", theme === "dark" ? "bg-[#5B34D6]/15" : "bg-[#5B34D6]/35")} />
-      <div className="pointer-events-none absolute top-1/2 -right-32 h-72 w-72 rounded-full bg-[#9BD373]/10 blur-[90px]" />
-      <div className="pointer-events-none absolute -bottom-24 -left-10 h-60 w-60 rounded-full bg-[#F3EA3B]/10 blur-[90px]" />
-
       {/* topo */}
-      <div className={cx("relative flex shrink-0 items-center pt-6 pb-5", collapsed ? "flex-col gap-4 px-3" : "justify-between px-5")}>
+      <div className={cx("relative flex shrink-0 items-center pt-6 pb-4", collapsed ? "flex-col gap-4 px-3" : "justify-between px-5")}>
         <Link href="/" className="flex items-end gap-2" aria-label={settings.company_name || "Quark Energia"}>
           {collapsed ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -348,13 +413,13 @@ function Sidebar({
           ) : (
             <>
               <BrandLogo className="h-9" />
-              <span className="mb-0.5 rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.18em] text-brand-lime">CRM</span>
+              <span className="mb-0.5 rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-bold tracking-[0.16em] text-brand-lime">CRM</span>
             </>
           )}
         </Link>
         <button
           onClick={onToggle}
-          className="grid h-8 w-8 place-items-center rounded-lg text-ink-500 ring-1 ring-white/[0.08] transition hover:bg-white/[0.08] hover:text-white"
+          className="liquid-glass grid h-8 w-8 place-items-center rounded-full text-[#AEAEB2] transition hover:text-white"
           aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
           title={collapsed ? "Expandir menu" : "Recolher menu"}
         >
@@ -363,174 +428,127 @@ function Sidebar({
       </div>
 
       {/* busca + orçamento */}
-      <div className={cx("relative grid shrink-0 gap-2.5 pb-3", collapsed ? "px-3" : "px-4")}>
+      <div className={cx("relative grid shrink-0 gap-2.5 pb-1", collapsed ? "px-3" : "px-4")}>
         <button
           onClick={onSearch}
           title="Buscar (Ctrl K)"
-          className={cx(
-            "flex h-10 items-center gap-2.5 rounded-xl bg-white/[0.05] text-sm text-ink-400 ring-1 ring-white/[0.08] backdrop-blur-md transition hover:bg-white/[0.09] hover:text-white",
-            collapsed ? "justify-center" : "px-3",
-          )}
+          className={cx("liquid-glass flex h-10 items-center gap-2 rounded-full text-[15px] text-[#8E8E93] transition hover:text-white", collapsed ? "justify-center" : "px-3.5")}
         >
-          <Search className="h-4 w-4" />
+          <Search className="h-[17px] w-[17px]" strokeWidth={2.4} />
           {!collapsed && (
             <>
-              Buscar…
-              <kbd className="ml-auto rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-ink-300">Ctrl K</kbd>
+              Buscar
+              <kbd className="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#AEAEB2]">⌘K</kbd>
             </>
           )}
         </button>
         <Link
           href="/propostas/nova"
           title="Novo orçamento"
-          className="anam-shine relative flex h-11 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-[#F3EA3B] via-[#C7E36B] to-[#9BD373] text-sm font-bold text-[#1C1234] shadow-[0_12px_30px_-12px_rgba(243,234,59,0.7)] transition hover:brightness-105 active:scale-[0.98]"
+          className="anam-shine relative flex h-11 items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-[#F3EA3B] via-[#C7E36B] to-[#9BD373] text-[15px] font-semibold text-[#111] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_12px_30px_-12px_rgba(243,234,59,0.7)] transition hover:brightness-105 active:scale-[0.98]"
         >
           <Calculator className="h-4 w-4" /> {!collapsed && "Novo orçamento"}
         </Link>
       </div>
 
-      {/* navegação (rola quando não cabe) */}
-      <nav className="sidebar-scroll relative min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3 [mask-image:linear-gradient(180deg,transparent,black_14px,black_calc(100%-18px),transparent)]">
-        {SECTIONS.map((sec) => (
-          <div key={sec.title} className="px-3 pt-3">
-            {collapsed ? (
-              <div className="mx-auto mb-2 h-px w-8 bg-white/[0.08]" />
-            ) : (
-              <p className="mb-1.5 px-3 text-[10px] font-bold tracking-[0.2em] text-ink-500 uppercase">{sec.title}</p>
+      <nav className="sidebar-scroll relative min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 [mask-image:linear-gradient(180deg,transparent,black_12px,black_calc(100%-18px),transparent)]">
+        {/* conta (como o topo dos Ajustes) */}
+        <div className={cx(collapsed ? "px-2 pt-3" : "px-3 pt-4")}>
+          <div className={cx("flex items-center gap-3", collapsed ? "flex-col" : "rounded-[18px] bg-[#1C1C1E]/85 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_0_0.5px_rgba(255,255,255,0.06)]")}>
+            <button onClick={onAvatar} className="relative shrink-0 rounded-full" title="Meu perfil">
+              <Avatar name={profile?.full_name ?? user.email} src={profile?.avatar_url} className={cx("ring-1 ring-white/15", collapsed ? "h-11 w-11" : "h-12 w-12")} />
+              {streak > 1 && (
+                <span className="absolute -right-1 -bottom-1 flex items-center rounded-full bg-[#2C2C2E] px-1 text-[9px] font-bold text-[#FF9F0A] ring-1 ring-black">
+                  <Flame className="h-2.5 w-2.5" />
+                  {streak}
+                </span>
+              )}
+            </button>
+            {!collapsed && (
+              <Link href={`/perfil/${user.id}`} className="flex min-w-0 flex-1 items-center gap-2" title="Meu perfil">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[17px] font-semibold text-white">{name}</p>
+                  {lvl ? (
+                    <>
+                      <p className="truncate text-[12px] text-[#8E8E93]">
+                        Nív. {lvl.level.n} · {lvl.level.title}
+                      </p>
+                      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
+                        <div className="h-full rounded-full bg-gradient-to-r from-[#FFD60A] to-[#30D158] transition-all duration-700" style={{ width: `${Math.max(4, lvl.progress * 100)}%` }} />
+                      </div>
+                    </>
+                  ) : (
+                    <p className="truncate text-[12px] text-[#8E8E93]">Perfil e conquistas</p>
+                  )}
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-[#5A5A5F]" strokeWidth={2.6} />
+              </Link>
             )}
-            <div className="grid gap-0.5">
-              {sec.items.filter((item) => !item.admin || profile?.role === "admin").map((item) => {
-                const active = isActive(item.href);
+          </div>
+        </div>
+
+        {SECTIONS.map((sec) => {
+          const items = sec.items.filter((item) => !item.admin || profile?.role === "admin");
+          return (
+            <Group key={sec.title} title={sec.title} collapsed={collapsed}>
+              {items.map((item, i) => {
                 const n = item.badge ? badges[item.badge] : 0;
-                const alert = item.badge === "tasks" && badges.late > 0;
                 return (
-                  <Link
+                  <Row
                     key={item.href}
                     href={item.href}
+                    icon={item.icon}
+                    color={item.color}
+                    label={item.label}
+                    active={isActive(item.href)}
+                    count={n}
+                    alert={item.badge === "tasks" && badges.late > 0}
+                    collapsed={collapsed}
+                    last={i === items.length - 1}
                     title={collapsed ? `${item.label}${n ? ` · ${n} ${item.hint ?? ""}` : ""}` : n ? `${n} ${item.hint ?? ""}` : undefined}
-                    className={cx(
-                      "group relative flex h-11 items-center gap-3 rounded-xl text-[14px] font-medium transition-all duration-200",
-                      collapsed ? "justify-center" : "px-3",
-                      active
-                        ? "bg-gradient-to-r from-white/[0.13] to-white/[0.03] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ring-1 ring-white/[0.08]"
-                        : "text-ink-300 hover:bg-white/[0.05] hover:text-white",
-                    )}
-                  >
-                    {active && <span className="absolute top-1/2 -left-3 h-6 w-1 -translate-y-1/2 rounded-r-full bg-gradient-to-b from-[#F3EA3B] to-[#9BD373] shadow-[0_0_12px_rgba(243,234,59,0.8)]" />}
-                    <span className="relative grid h-8 w-8 shrink-0 place-items-center">
-                      <item.icon
-                        className={cx("h-[19px] w-[19px] transition-transform duration-200 group-hover:scale-110", active ? "text-[#F3EA3B]" : "text-ink-500 group-hover:text-ink-200")}
-                        strokeWidth={active ? 2.3 : 2}
-                      />
-                      {collapsed && n > 0 && <Badge count={n} alert={alert} className="absolute -top-1 -right-2" />}
-                    </span>
-                    {!collapsed && (
-                      <>
-                        <span className="truncate">{item.label}</span>
-                        {n > 0 && <Badge count={n} alert={alert} className="ml-auto" />}
-                      </>
-                    )}
-                  </Link>
+                  />
                 );
               })}
-            </div>
-          </div>
-        ))}
+            </Group>
+          );
+        })}
 
-        {/* atalhos */}
-        <div className={cx("pt-4", collapsed ? "px-3" : "px-4")}>
-          {!collapsed && <p className="mb-2 px-2 text-[10px] font-bold tracking-[0.2em] text-ink-500 uppercase">Atalhos</p>}
-          <div className={cx("grid gap-2", collapsed ? "grid-cols-1" : "grid-cols-3")}>
-            {[
-              { label: "Lead", icon: UserPlus, run: onNewLead, title: "Novo lead" },
-              { label: "Tarefa", icon: ListTodo, run: onNewTask, title: "Nova tarefa" },
-              { label: "Plano", icon: Flame, run: () => window.dispatchEvent(new Event("quark:briefing")), title: "Plano do dia" },
-            ].map((a) => (
-              <button
-                key={a.label}
-                onClick={a.run}
-                title={a.title}
-                className="group flex flex-col items-center gap-1 rounded-xl bg-white/[0.04] py-2.5 text-[11px] font-semibold text-ink-400 ring-1 ring-white/[0.06] transition hover:bg-white/[0.08] hover:text-white"
-              >
-                <a.icon className={cx("h-[18px] w-[18px] transition group-hover:scale-110", a.label === "Plano" && "text-[#F3EA3B]")} />
-                {!collapsed && a.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <Group title="Atalhos" collapsed={collapsed}>
+          <Row onClick={onNewLead} icon={UserPlus} color={IOS.green} label="Novo lead" collapsed={collapsed} />
+          <Row onClick={onNewTask} icon={ListTodo} color={IOS.blue} label="Nova tarefa" collapsed={collapsed} />
+          <Row onClick={() => window.dispatchEvent(new Event("quark:briefing"))} icon={Flame} color={IOS.orange} label="Plano do dia" collapsed={collapsed} last />
+        </Group>
+
+        <Group title="Conta" collapsed={collapsed}>
+          <Row href="/configuracoes" icon={Settings} color={IOS.gray} label="Configurações" active={pathname.startsWith("/configuracoes")} collapsed={collapsed} />
+          <Row onClick={onTheme} icon={theme === "dark" ? Sun : Moon} color={IOS.indigo} label={theme === "dark" ? "Tema claro" : "Tema escuro"} collapsed={collapsed} />
+          <Row onClick={onSignOut} icon={LogOut} color={IOS.red} label="Sair" danger collapsed={collapsed} last />
+        </Group>
       </nav>
-
-      {/* perfil */}
-      <div className="relative shrink-0 border-t border-white/[0.06] bg-white/[0.02] p-3 backdrop-blur-xl">
-        <div className={cx("flex items-center gap-3 rounded-2xl p-2", collapsed ? "flex-col" : "bg-white/[0.04] ring-1 ring-white/[0.06]")}>
-          <button onClick={onAvatar} className="relative shrink-0 rounded-full" title="Meu perfil">
-            <span className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-[#F3EA3B] to-[#9BD373] opacity-80" />
-            <Avatar name={profile?.full_name ?? user.email} src={profile?.avatar_url} className="relative h-10 w-10 ring-2 ring-[#0D0A1C]" />
-            {streak > 1 && (
-              <span className="absolute -right-1 -bottom-1 flex items-center rounded-full bg-[#1C1234] px-1 text-[9px] font-bold text-[#FFB36B] ring-1 ring-white/10">
-                <Flame className="h-2.5 w-2.5" />
-                {streak}
-              </span>
-            )}
-          </button>
-          {!collapsed && (
-            <Link href={`/perfil/${user.id}`} className="min-w-0 flex-1" title="Meu perfil">
-              <p className="truncate text-sm font-semibold text-white">{first}</p>
-              {lvl ? (
-                <>
-                  <p className="truncate text-[11px] font-semibold text-[#F3EA3B]">
-                    Nív. {lvl.level.n} · {lvl.level.title}
-                  </p>
-                  <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
-                    <div className="h-full rounded-full bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] transition-all duration-700" style={{ width: `${Math.max(4, lvl.progress * 100)}%` }} />
-                  </div>
-                </>
-              ) : (
-                <p className="truncate text-[11px] text-ink-500">{user.email}</p>
-              )}
-            </Link>
-          )}
-          <div className={cx("flex", collapsed ? "flex-col gap-1" : "gap-0.5")}>
-            <Link
-              href="/configuracoes"
-              title="Configurações"
-              className={cx("grid h-8 w-8 place-items-center rounded-lg transition hover:bg-white/10 hover:text-white", pathname.startsWith("/configuracoes") ? "text-[#F3EA3B]" : "text-ink-500")}
-            >
-              <Settings className="h-4 w-4" />
-            </Link>
-            <button onClick={onTheme} className="grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition hover:bg-white/10 hover:text-white" title={theme === "dark" ? "Tema claro" : "Tema escuro"}>
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
-            <button onClick={onSignOut} className="grid h-8 w-8 place-items-center rounded-lg text-ink-500 transition hover:bg-white/10 hover:text-white" title="Sair">
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }
 
-function FabItem({ icon, title, text, onClick }: { icon: ReactNode; title: string; text: string; onClick: () => void }) {
+function FabItem({ icon, color, title, text, onClick, last }: { icon: typeof Sun; color: string; title: string; text: string; onClick: () => void; last?: boolean }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-3 rounded-2xl p-3 text-left transition active:bg-ink-50">
-      <div className="grid h-11 w-11 place-items-center rounded-xl bg-sun-50 text-sun-600 ring-1 ring-sun-200/70">{icon}</div>
-      <div>
-        <p className="text-sm font-semibold text-ink-900">{title}</p>
-        <p className="text-xs text-ink-500">{text}</p>
+    <button onClick={onClick} className="relative flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition active:bg-black/[0.05] dark:active:bg-white/[0.08]">
+      <AppIcon icon={icon} color={color} size="md" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-semibold text-ink-900">{title}</p>
+        <p className="truncate text-[13px] text-ink-500">{text}</p>
       </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-ink-300 dark:text-[#5A5A5F]" strokeWidth={2.6} />
+      {!last && <span className="pointer-events-none absolute right-0 bottom-0 left-[64px] h-px bg-black/[0.07] dark:bg-white/[0.08]" />}
     </button>
   );
 }
-
-
 
 function XpChip() {
   const { xp, streak } = useReward();
   if (xp == null) return null;
   const { level } = levelOf(xp);
   return (
-    <Link href="/perfil" className="flex h-8 items-center gap-1.5 rounded-full bg-ink-900 px-2.5 text-[11px] font-bold text-white" aria-label={`Nível ${level.n}: ${level.title}`}>
+    <Link href="/perfil" className="flex h-8 items-center gap-1.5 rounded-full bg-[#1C1C1E] px-2.5 text-[11px] font-bold text-white dark:bg-[rgba(118,118,128,0.26)]" aria-label={`Nível ${level.n}: ${level.title}`}>
       <Trophy className="h-3.5 w-3.5 text-brand-yellow" />
       <span className="text-sun-gradient">{level.title}</span>
       {streak > 1 && (
