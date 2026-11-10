@@ -36,7 +36,13 @@ export type GlyphId =
   | "pessoa"
   | "equipe"
   | "estrela"
-  | "alerta";
+  | "alerta"
+  | "escudo"
+  | "casa"
+  | "calendario"
+  | "folha"
+  | "cifrao"
+  | "celular";
 
 type Grad = [string, string];
 const C = {
@@ -316,6 +322,65 @@ const GLYPHS: Record<GlyphId, { g: Grad; draw: (f: string, d: string) => ReactNo
     ),
   },
   estrela: { g: C.amarelo, draw: (f) => <path d="m12 2.4 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.3l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z" fill={f} strokeLinejoin="round" /> },
+  escudo: {
+    g: C.verde,
+    draw: (f, d) => (
+      <>
+        <path d="M12 2.2 4 5.3v6c0 5 3.4 9.1 8 10.5 4.6-1.4 8-5.5 8-10.5v-6z" fill={f} />
+        <path d="m8.3 12.2 2.6 2.6 5-5.3" fill="none" stroke={d} strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+  },
+  casa: {
+    g: C.laranja,
+    draw: (f, d) => (
+      <>
+        <path d="M3.2 10.6 12 3.4l8.8 7.2c.5.4.2 1.2-.4 1.2H19v8.2c0 .6-.4 1-1 1h-4v-6h-4v6H6c-.6 0-1-.4-1-1v-8.2H3.6c-.6 0-.9-.8-.4-1.2z" fill={f} />
+        <rect x="10" y="15" width="4" height="7" rx=".6" fill={d} opacity=".45" />
+      </>
+    ),
+  },
+  calendario: {
+    g: C.vermelho,
+    draw: (f, d) => (
+      <>
+        <rect x="3" y="4.5" width="18" height="17" rx="4" fill={f} />
+        <rect x="3" y="4.5" width="18" height="5" rx="2.5" fill={d} opacity=".35" />
+        <rect x="7" y="2.5" width="2" height="4.5" rx="1" fill={f} />
+        <rect x="15" y="2.5" width="2" height="4.5" rx="1" fill={f} />
+        {[0, 1, 2].flatMap((r) => [0, 1, 2].map((c) => <rect key={`${r}${c}`} x={6.8 + c * 4} y={11.6 + r * 3.1} width="2.4" height="2" rx=".6" fill={d} opacity={r === 1 && c === 1 ? 1 : 0.55} />))}
+      </>
+    ),
+  },
+  folha: {
+    g: C.verde,
+    draw: (f, d) => (
+      <>
+        <path d="M20.5 3.5C11 3.5 4 8 4 15.2c0 1.6.4 3 1 4.3C6.8 12.8 12 9.3 15.5 8c-4 2.4-7.6 6.2-9.3 12.2 1.4.9 3 1.3 4.8 1.3 6.6 0 10.3-6.7 9.5-18z" fill={f} />
+        <path d="M6.2 20.2c1.8-6 5.3-9.8 9.3-12.2" fill="none" stroke={d} strokeWidth="1.4" strokeLinecap="round" opacity=".5" />
+      </>
+    ),
+  },
+  cifrao: {
+    g: C.amarelo,
+    draw: (f, d) => (
+      <>
+        <circle cx="12" cy="12" r="9.5" fill={f} />
+        <path d="M14.8 8.6c-.5-1-1.6-1.6-2.9-1.6-1.7 0-2.9 1-2.9 2.3 0 3.1 6 1.7 6 4.8 0 1.4-1.3 2.4-3.1 2.4-1.5 0-2.7-.7-3.2-1.8M12 5.4v13.2" fill="none" stroke={d} strokeWidth="1.9" strokeLinecap="round" />
+      </>
+    ),
+  },
+  celular: {
+    g: C.roxo,
+    draw: (f, d) => (
+      <>
+        <rect x="6" y="2" width="12" height="20" rx="3.4" fill={f} />
+        <rect x="8" y="5" width="8" height="12" rx="1.4" fill={d} opacity=".45" />
+        <path d="m9.2 13.6 1.9-2.4 1.6 1.4 2.2-3.2" fill="none" stroke={d} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="10.5" y="18.6" width="3" height="1.2" rx=".6" fill={d} />
+      </>
+    ),
+  },
   alerta: {
     g: C.laranja,
     draw: (f, d) => (

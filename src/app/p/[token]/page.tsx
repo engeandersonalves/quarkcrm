@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { BfProposalFrame } from "@/components/bf/proposal-frame";
+import { BlackProposal } from "@/components/bf/proposal-black";
+import { bfPhase } from "@/lib/black-friday";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { ProposalDocument, type PublicProposal } from "@/components/proposal/document";
@@ -40,6 +42,8 @@ export default async function PublicProposalPage({ params }: { params: Promise<{
   const data = await load(token);
   if (!data) notFound();
   const product = productOf(data.proposal.inputs);
+  // Durante a Black Friday, a proposta solar ganha o layout próprio da campanha
+  if (product !== "manutencao" && product !== "save" && bfPhase().phase !== "encerrada") return <BlackProposal data={data} token={token} />;
   return (
     <BfProposalFrame>
       {product === "manutencao" ? <MaintenanceDocument data={data} token={token} /> : product === "save" ? <SaveDocument data={data} token={token} /> : <ProposalDocument data={data} token={token} />}

@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { BfProposalFrame } from "@/components/bf/proposal-frame";
+import { BlackProposal } from "@/components/bf/proposal-black";
+import { bfPhase } from "@/lib/black-friday";
 import { ProposalDocument, type PublicProposal } from "@/components/proposal/document";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Exemplo de proposta", robots: { index: false } };
 
@@ -51,5 +55,6 @@ const example: PublicProposal = {
 };
 
 export default function ExamplePage() {
+  if (bfPhase().phase !== "encerrada") return <BlackProposal data={example} token={null} />;
   return <BfProposalFrame><ProposalDocument data={example} token={null} /></BfProposalFrame>;
 }
