@@ -13,7 +13,7 @@ import { MAINT_ICONS } from "./icons";
 
 /** Capa padrão (módulos fotovoltaicos). */
 const DEFAULT_MAINT_COVER = "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=2000&q=75";
-import { BfInvestBanner } from "@/components/bf/badges";
+import { BfInvestBanner, BfPerks, BfStickyBar, BfTape } from "@/components/bf/badges";
 const NAVY = "var(--q-navy, #1C1234)"; // roxo da marca (fundos); a campanha pode trocar
 const NAVY_INK = "var(--q-ink, #1C1234)"; // roxo da marca em textos
 const GREEN = "#2C7A52";
@@ -122,6 +122,7 @@ export function MaintenanceDocument({ data, token }: { data: PublicProposal; tok
               </dl>
             </div>
           </header>
+          <BfPerks name={data.lead.name.split(" ")[0]} />
           <BrandRule />
 
           {/* faixa de confiança */}
@@ -221,6 +222,7 @@ export function MaintenanceDocument({ data, token }: { data: PublicProposal; tok
             )}
           </section>
 
+          <BfTape />
           {/* ================================================= INVESTIMENTO */}
           <section data-track="investimento" className="relative overflow-hidden px-6 py-12 text-white sm:px-14 sm:py-14" style={{ background: NAVY }}>
             <LeafMark className="right-[-8%] bottom-[-12%] w-[380px] opacity-[0.07]" />
@@ -405,6 +407,7 @@ export function MaintenanceDocument({ data, token }: { data: PublicProposal; tok
       </div>
 
       {!accepted && !expired && token && (
+        <BfStickyBar onAccept={openAccept} waHref={contactPhone ? whatsappUrl(contactPhone, waText) : null} onWa={() => click("whatsapp")}>
         <div className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-ink-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
           <div className="flex gap-2">
             {contactPhone && (
@@ -419,6 +422,7 @@ export function MaintenanceDocument({ data, token }: { data: PublicProposal; tok
             </Button>
           </div>
         </div>
+        </BfStickyBar>
       )}
 
       {token && (

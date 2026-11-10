@@ -4,9 +4,12 @@
  */
 
 /** Horário de Brasília (UTC−3). */
-export const BF_START = "2026-11-13T00:00:00-03:00";
+/** Antecipada: no ar desde 10/11 (as artes falavam em 13/11). */
+export const BF_START = "2026-11-10T00:00:00-03:00";
 export const BF_END = "2026-11-27T23:59:59-03:00";
-export const BF_LABEL = "13 a 27 de novembro";
+export const BF_LABEL = "até 27 de novembro";
+/** Data final curta, para selos. */
+export const BF_END_SHORT = "27/11";
 
 /** WhatsApp usado quando a empresa não tiver um em Configurações. */
 export const BF_WHATSAPP = "5582991831476";
@@ -105,7 +108,7 @@ export const CONDITIONS = [
 ];
 
 export const BF_FAQ = [
-  { q: "Até quando vale a Black Friday?", a: `As condições valem de ${BF_LABEL} ou enquanto houver equipamentos da tabela em estoque.` },
+  { q: "Até quando vale a Black Friday?", a: `As condições valem ${BF_LABEL} ou enquanto houver equipamentos da tabela em estoque.` },
   { q: "Os valores dos kits já incluem instalação?", a: "Sim. Os kits incluem equipamentos, projeto de engenharia, homologação na distribuidora e instalação em até 30 dias após a assinatura do contrato." },
   { q: "Como funciona o financiamento sem entrada?", a: "Você pode parcelar em até 72x sem entrada e começar a pagar em até 120 dias. Sujeito a análise de crédito." },
   { q: "Em quanto tempo o sistema fica pronto?", a: "Instalamos em até 30 dias contados da assinatura do contrato. A vistoria e a ligação seguem os prazos da distribuidora." },

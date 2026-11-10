@@ -6,6 +6,7 @@ import {
   BF_FAQ,
   BF_INSTAGRAM,
   BF_LABEL,
+  BF_START,
   BF_WHATSAPP,
   CONDITIONS,
   MOTOS,
@@ -261,7 +262,7 @@ export function BlackFridayLanding({ whatsapp, companyName }: { whatsapp: string
                 <span className={cx("absolute inline-flex h-full w-full rounded-full opacity-70", live ? "animate-ping bg-[#6FBF8E]" : "bg-[#F3E93B]")} />
                 <span className={cx("relative inline-flex h-2 w-2 rounded-full", live ? "bg-[#6FBF8E]" : "bg-[#F3E93B]")} />
               </span>
-              {phase === "antes" ? `Começa dia 13 · ${BF_LABEL}` : phase === "durante" ? "Ofertas no ar agora" : "Campanha encerrada"}
+              {phase === "antes" ? `Em breve · ${BF_LABEL}` : phase === "durante" ? `Black antecipada no ar · ${BF_LABEL}` : "Campanha encerrada"}
             </p>
             <h1 className="mt-5 text-[84px] leading-[0.84] font-bold tracking-[-0.065em] sm:text-[150px]">
               Black
@@ -652,7 +653,7 @@ export function BlackFridayLanding({ whatsapp, companyName }: { whatsapp: string
       <footer className="mx-auto mt-14 flex max-w-6xl flex-col items-center gap-3 px-4 text-center text-[13px] text-white/45 sm:px-6">
         <Image src="/bf/logo.png" alt={companyName} width={806} height={194} className="h-8 w-auto opacity-80" />
         <p>
-          {companyName} · {BF_INSTAGRAM} · Black Friday de {BF_LABEL}
+          {companyName} · {BF_INSTAGRAM} · Black Friday {BF_LABEL}
         </p>
         <p className="max-w-2xl text-[12px] text-white/35">Ofertas válidas no período da campanha ou enquanto durarem os equipamentos da tabela. Financiamento e parcelamento sujeitos a análise de crédito. Prazo de instalação contado da assinatura do contrato; vistoria e ligação seguem os prazos da distribuidora. Imagens ilustrativas.</p>
       </footer>
@@ -695,6 +696,8 @@ function ShortLeft({ target }: { target: number }) {
 
 /* ====================================================== calendário */
 
+const BF_FIRST_DAY = Number(BF_START.slice(8, 10));
+
 function Calendar30({ onCta }: { onCta: () => void }) {
   // Novembro de 2026 começa num domingo
   const days = Array.from({ length: 30 }, (_, i) => i + 1);
@@ -720,7 +723,7 @@ function Calendar30({ onCta }: { onCta: () => void }) {
             </span>
           ))}
           {days.map((d) => {
-            const bf = d >= 13 && d <= 27;
+            const bf = d >= BF_FIRST_DAY && d <= 27;
             const after = d > 27;
             return (
               <span key={d} className={cx("grid h-10 place-items-center rounded-[12px] text-[15px] font-bold sm:h-12", bf ? "bg-[#6FBF8E] text-[#0A0D0B]" : after ? "bg-white/10 text-white" : "text-white/25")}>

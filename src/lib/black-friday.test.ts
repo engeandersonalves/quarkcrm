@@ -10,8 +10,8 @@ test("fase da campanha e alvo da contagem", () => {
   assert.deepEqual(bfPhase(e + 1000), { phase: "encerrada", target: null });
 });
 
-test("começa dia 13 e termina dia 27 no horário de Brasília", () => {
-  assert.equal(new Date(BF_START).toISOString(), "2026-11-13T03:00:00.000Z");
+test("antecipada: começa dia 10 e termina dia 27 no horário de Brasília", () => {
+  assert.equal(new Date(BF_START).toISOString(), "2026-11-10T03:00:00.000Z");
   assert.equal(new Date(BF_END).toISOString(), "2026-11-28T02:59:59.000Z");
 });
 

@@ -32,7 +32,7 @@ export interface PublicProposal {
 }
 
 /** Foto padrão da capa (usina solar). Troque em Configurações → Proposta. */
-import { BfCoverStamp, BfInvestBanner } from "@/components/bf/badges";
+import { BfCoverStamp, BfInvestBanner, BfPerks, BfStickyBar, BfTape } from "@/components/bf/badges";
 
 const DEFAULT_COVER = "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=2000&q=75";
 const MODULE_AREA_M2 = 2.6;
@@ -149,6 +149,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
               </dl>
             </div>
           </header>
+          <BfPerks name={firstName} />
           <BrandRule />
 
           {accepted && (
@@ -425,6 +426,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             </Section>
           )}
 
+          <BfTape />
           {/* ================================================= INVESTIMENTO */}
           <section className="print-break relative overflow-hidden px-6 py-14 text-white sm:px-14 sm:py-16" style={{ background: NAVY }}>
             <LeafMark className="right-[-8%] bottom-[-12%] w-[420px] opacity-[0.07]" />
@@ -585,6 +587,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
 
       {/* Barra fixa no celular */}
       {!accepted && !expired && token && (
+        <BfStickyBar onAccept={() => setAcceptOpen(true)} waHref={contactPhone ? whatsappUrl(contactPhone, waText) : null}>
         <div className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-ink-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:hidden">
           <div className="flex gap-2">
             {contactPhone && (
@@ -599,6 +602,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             </Button>
           </div>
         </div>
+        </BfStickyBar>
       )}
 
       {token && (
