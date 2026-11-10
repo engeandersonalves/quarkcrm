@@ -1,11 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit } from "next/font/google";
 import { BlackFridayLanding } from "@/components/bf/landing";
 import { loadCompany } from "@/lib/public-company";
 
 export const dynamic = "force-dynamic";
-
-const outfit = Outfit({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-outfit", display: "swap" });
 
 export const metadata: Metadata = {
   title: { absolute: "Black Friday Quark · Energia solar, wallbox e moto elétrica" },
@@ -23,7 +20,7 @@ export const viewport: Viewport = { themeColor: "#050706" };
 export default async function BlackFridayPage() {
   const company = await loadCompany();
   return (
-    <div translate="no" className={`notranslate ${outfit.variable}`}>
+    <div translate="no" className="notranslate">
       <BlackFridayLanding whatsapp={company.whatsapp ?? null} companyName={company.company_name || "Quark Energia"} />
     </div>
   );

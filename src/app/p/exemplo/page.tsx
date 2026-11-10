@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BfProposalFrame } from "@/components/bf/proposal-frame";
 import { ProposalDocument, type PublicProposal } from "@/components/proposal/document";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
 
@@ -50,5 +51,5 @@ const example: PublicProposal = {
 };
 
 export default function ExamplePage() {
-  return <ProposalDocument data={example} token={null} />;
+  return <BfProposalFrame><ProposalDocument data={example} token={null} /></BfProposalFrame>;
 }

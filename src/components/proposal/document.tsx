@@ -32,10 +32,13 @@ export interface PublicProposal {
 }
 
 /** Foto padrão da capa (usina solar). Troque em Configurações → Proposta. */
+import { BfCoverStamp, BfInvestBanner } from "@/components/bf/badges";
+
 const DEFAULT_COVER = "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=2000&q=75";
 const MODULE_AREA_M2 = 2.6;
 const CAR_KG_CO2_PER_KM = 0.12;
-const NAVY = "#1C1234"; // roxo da marca Quark
+const NAVY = "var(--q-navy, #1C1234)"; // roxo da marca (fundos); a campanha pode trocar
+const NAVY_INK = "var(--q-ink, #1C1234)"; // roxo da marca em textos
 /** Botão principal no degradê da marca (amarelo → verde) com texto roxo. */
 export const CTA_STYLE = { backgroundImage: "linear-gradient(135deg, #F3EA3B 0%, #9BD373 55%, #6CC690 100%)", color: "#1C1234" } as const;
 
@@ -113,6 +116,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             <div className="absolute inset-0 bg-gradient-to-r from-[#120B24]/95 via-[#120B24]/75 to-[#120B24]/20" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#120B24] via-transparent to-transparent" />
             <LeafMark className="right-[-6%] bottom-[18%] w-[46%] max-w-[420px] opacity-[0.12]" />
+            <BfCoverStamp />
 
             <div className="relative flex items-start justify-between gap-6 px-6 pt-8 sm:px-14 sm:pt-12">
               <Brand settings={s} />
@@ -207,7 +211,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
                 ].map(([t, d], i) => (
                   <li key={t} className="border-t-2 pt-4" style={{ borderColor: i === 3 ? "#3F9C6A" : NAVY }}>
                     <p className="text-xs font-semibold tracking-[0.14em] text-ink-400 uppercase">Etapa {i + 1}</p>
-                    <p className="mt-1 font-display text-lg font-semibold" style={{ color: NAVY }}>
+                    <p className="mt-1 font-display text-lg font-semibold" style={{ color: NAVY_INK }}>
                       {t}
                     </p>
                     <p className="mt-1.5 text-sm leading-relaxed text-ink-600">{d}</p>
@@ -426,6 +430,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
             <LeafMark className="right-[-8%] bottom-[-12%] w-[420px] opacity-[0.07]" />
             <BrandRule className="absolute inset-x-0 top-0" />
             <SectionTitle num={num()} kicker="Investimento" title="Condições comerciais" dark />
+            <BfInvestBanner />
             <div className="relative mt-8 grid gap-8 md:grid-cols-[1fr_1.2fr] md:items-start">
               <div>
                 <p className="text-sm text-white/60">Valor total do sistema, à vista</p>
@@ -538,7 +543,7 @@ export function ProposalDocument({ data, token }: { data: PublicProposal; token:
           <section className="no-print border-t border-ink-100 px-6 py-12 sm:px-14">
             <div className="flex flex-col gap-6 rounded-2xl border border-ink-200 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
               <div>
-                <p className="font-display text-2xl font-semibold tracking-tight" style={{ color: NAVY }}>
+                <p className="font-display text-2xl font-semibold tracking-tight" style={{ color: NAVY_INK }}>
                   {accepted ? "Proposta aceita. Obrigado pela confiança." : "Pronto para seguir?"}
                 </p>
                 <p className="mt-1 max-w-md text-sm text-ink-500">
@@ -730,7 +735,7 @@ function Bar({ label, value, max, color }: { label: string; value: number; max: 
     <div>
       <div className="mb-2 flex items-baseline justify-between gap-3">
         <span className="text-sm text-ink-600">{label}</span>
-        <span className="tnum font-display text-xl font-semibold" style={{ color: color === "#94A3B8" ? NAVY : color }}>
+        <span className="tnum font-display text-xl font-semibold" style={{ color: color === "#94A3B8" ? NAVY_INK : color }}>
           {brl(value, 0)}
         </span>
       </div>
@@ -774,7 +779,7 @@ export function Product({ image, render, kicker, title, specs }: { image?: strin
       </div>
       <div className="p-5 sm:p-6">
         <p className="text-xs font-semibold tracking-[0.18em] text-[#2C7A52] uppercase">{kicker}</p>
-        <p className="mt-1 font-display text-xl font-semibold" style={{ color: NAVY }}>
+        <p className="mt-1 font-display text-xl font-semibold" style={{ color: NAVY_INK }}>
           {title}
         </p>
         <dl className="mt-4 divide-y divide-ink-100 text-sm">
@@ -794,7 +799,7 @@ export function MiniSpec({ label, value, sub }: { label: string; value: string; 
   return (
     <div className="bg-white p-5">
       <p className="text-[11px] font-semibold tracking-[0.12em] text-ink-500 uppercase">{label}</p>
-      <p className="tnum mt-1 font-display text-lg font-semibold" style={{ color: NAVY }}>
+      <p className="tnum mt-1 font-display text-lg font-semibold" style={{ color: NAVY_INK }}>
         {value}
       </p>
       <p className="mt-0.5 text-xs text-ink-500">{sub}</p>
@@ -805,7 +810,7 @@ export function MiniSpec({ label, value, sub }: { label: string; value: string; 
 function Warranty({ years, title, text }: { years: number; title: string; text: string }) {
   return (
     <div className="bg-white p-5">
-      <p className="tnum font-display text-4xl font-semibold tracking-tight" style={{ color: NAVY }}>
+      <p className="tnum font-display text-4xl font-semibold tracking-tight" style={{ color: NAVY_INK }}>
         {years}
         <span className="ml-1 text-sm font-medium text-ink-400">{years === 1 ? "ano" : "anos"}</span>
       </p>

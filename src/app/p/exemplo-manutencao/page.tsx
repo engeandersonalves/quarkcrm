@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BfProposalFrame } from "@/components/bf/proposal-frame";
 import { MaintenanceDocument } from "@/components/maintenance/document";
 import type { PublicProposal } from "@/components/proposal/document";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
@@ -35,5 +36,5 @@ const example: PublicProposal = {
 };
 
 export default function ExampleMaintenancePage() {
-  return <MaintenanceDocument data={example} token={null} />;
+  return <BfProposalFrame><MaintenanceDocument data={example} token={null} /></BfProposalFrame>;
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BfProposalFrame } from "@/components/bf/proposal-frame";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { ProposalDocument, type PublicProposal } from "@/components/proposal/document";
@@ -38,7 +39,10 @@ export default async function PublicProposalPage({ params }: { params: Promise<{
   const { token } = await params;
   const data = await load(token);
   if (!data) notFound();
-  if (productOf(data.proposal.inputs) === "manutencao") return <MaintenanceDocument data={data} token={token} />;
-  if (productOf(data.proposal.inputs) === "save") return <SaveDocument data={data} token={token} />;
-  return <ProposalDocument data={data} token={token} />;
+  const product = productOf(data.proposal.inputs);
+  return (
+    <BfProposalFrame>
+      {product === "manutencao" ? <MaintenanceDocument data={data} token={token} /> : product === "save" ? <SaveDocument data={data} token={token} /> : <ProposalDocument data={data} token={token} />}
+    </BfProposalFrame>
+  );
 }

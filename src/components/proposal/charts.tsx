@@ -63,7 +63,7 @@ export function GenerationChart({ data }: { data: { month: string; generation: n
           <polyline
             points={data.map((d, i) => `${pad.l + i * bw + bw / 2},${y(d.consumption)}`).join(" ")}
             fill="none"
-            stroke="#1C1234"
+            style={{ stroke: "var(--q-ink, #1C1234)" }}
             strokeWidth={2}
             strokeDasharray="6 5"
             strokeLinecap="round"

@@ -13,7 +13,9 @@ import { ChargeSimulator } from "./charge-sim";
 
 /** Foto padrão da capa (recarga de veículo elétrico). Troque em Configurações → Proposta. */
 const DEFAULT_SAVE_COVER = "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=2000&q=75";
-const NAVY = "#1C1234";
+import { BfInvestBanner } from "@/components/bf/badges";
+const NAVY = "var(--q-navy, #1C1234)"; // roxo da marca (fundos); a campanha pode trocar
+const NAVY_INK = "var(--q-ink, #1C1234)"; // roxo da marca em textos
 
 export function SaveDocument({ data, token }: { data: PublicProposal; token: string | null }) {
   const s = mergeSettings(data.settings);
@@ -212,7 +214,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
               <SpeedBar label={`Seu carregador (${kwLabel})`} hours={hours} max={socketHours} color={NAVY} />
             </div>
             <p className="mt-6 text-sm leading-relaxed text-ink-600">
-              Até <b style={{ color: NAVY }}>{fmtNum(timesFaster)}× mais rápido</b> que a tomada comum: o carro fica pronto durante a noite ou em poucas horas de uso da garagem.
+              Até <b style={{ color: NAVY_INK }}>{fmtNum(timesFaster)}× mais rápido</b> que a tomada comum: o carro fica pronto durante a noite ou em poucas horas de uso da garagem.
             </p>
             <Explain title="por que “até”" className="mt-6">
               Cada modelo de carro tem um limite de potência que aceita ao carregar em casa. Se o seu veículo aceitar menos que {kwLabel}, ele carrega na velocidade máxima dele, com
@@ -236,6 +238,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
             <LeafMark className="right-[-8%] bottom-[-12%] w-[420px] opacity-[0.07]" />
             <BrandRule className="absolute inset-x-0 top-0" />
             <SectionTitle num={num()} kicker="Investimento" title="Condições comerciais" dark />
+            <BfInvestBanner />
             <div className="relative mt-8 grid gap-8 md:grid-cols-[1fr_1.2fr] md:items-start">
               <div>
                 <p className="text-sm text-white/60">Valor total, com equipamentos e instalação</p>
@@ -301,7 +304,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
           <section className="border-t border-ink-100 bg-[#F6F5FA]/70 px-6 py-10 sm:px-14">
             <div className="grid gap-6 sm:grid-cols-[1.4fr_1fr]">
               <div>
-                <p className="font-display text-xl font-semibold" style={{ color: NAVY }}>
+                <p className="font-display text-xl font-semibold" style={{ color: NAVY_INK }}>
                   {s.company_name}
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-ink-600">{s.about}</p>
@@ -340,7 +343,7 @@ export function SaveDocument({ data, token }: { data: PublicProposal; token: str
           <section className="no-print border-t border-ink-100 px-6 py-12 sm:px-14">
             <div className="flex flex-col gap-6 rounded-2xl border border-ink-200 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
               <div>
-                <p className="font-display text-2xl font-semibold tracking-tight" style={{ color: NAVY }}>
+                <p className="font-display text-2xl font-semibold tracking-tight" style={{ color: NAVY_INK }}>
                   {accepted ? "Proposta aceita. Obrigado pela confiança." : "Pronto para carregar em casa?"}
                 </p>
                 <p className="mt-1 max-w-md text-sm text-ink-500">
@@ -437,7 +440,7 @@ function SpeedBar({ label, hours, max, color }: { label: string; hours: number; 
         <span className="flex items-center gap-2 text-sm text-ink-600">
           <Icon className="h-4 w-4" style={{ color }} /> {label}
         </span>
-        <span className="tnum font-display text-xl font-semibold" style={{ color: color === NAVY ? NAVY : "#475569" }}>
+        <span className="tnum font-display text-xl font-semibold" style={{ color: color === NAVY ? NAVY_INK : "var(--q-muted, #475569)" }}>
           {fmtHours(hours)}
         </span>
       </div>
@@ -452,7 +455,7 @@ function SpeedBar({ label, hours, max, color }: { label: string; hours: number; 
 function WarrantyBox({ value, unit, title, text }: { value: number; unit: string; title: string; text: string }) {
   return (
     <div className="bg-white p-6">
-      <p className="tnum font-display text-4xl font-semibold tracking-tight" style={{ color: NAVY }}>
+      <p className="tnum font-display text-4xl font-semibold tracking-tight" style={{ color: NAVY_INK }}>
         {fmtNum(value)}
         <span className="ml-1.5 text-sm font-medium text-ink-400">{unit}</span>
       </p>

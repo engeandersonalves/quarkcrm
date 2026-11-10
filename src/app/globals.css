@@ -967,3 +967,63 @@ body:has(.theme-dark) { background: #000; }
 @keyframes bf-sheet { from { transform: translate3d(0, 40px, 0); opacity: 0; } to { transform: none; opacity: 1; } }
 .bf-sheet { animation: bf-sheet 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
 @media (prefers-reduced-motion: reduce) { .bf-marquee, .bf-float, .bf-rise, .bf-sheet { animation: none; } }
+
+/* =====================================================================
+   Proposta do cliente com o visual da Black Friday (até o fim da campanha)
+   ===================================================================== */
+.bf-doc {
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --color-ink-50: #0a0d0b;
+  --color-ink-100: #1c221f;
+  --color-ink-200: #262c28;
+  --color-ink-300: #343b36;
+  --color-ink-400: #6e7671;
+  --color-ink-500: #8f9892;
+  --color-ink-600: #b3bbb6;
+  --color-ink-700: #d4dad6;
+  --color-ink-800: #eceeed;
+  --color-ink-900: #ffffff;
+  --q-navy: #111513;
+  --q-ink: #ffffff;
+  --q-muted: #8f9892;
+  --q-soft: rgb(111 191 142 / 0.12);
+  font-family: var(--font-sans);
+  background: #050706;
+  color: #fff;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Fundos claros da proposta viram preto/verde-escuro */
+.bf-doc .bg-\[\#F6F5FA\], .bf-doc .bg-ink-50 { background-color: #050706 !important; }
+.bf-doc .bg-white { background-color: #111513 !important; }
+.bf-doc .bg-ink-950, .bf-doc .bg-\[\#120B24\] { background-color: #0a0d0b !important; }
+.bf-doc .from-\[\#120B24\] { --tw-gradient-from: #050706 !important; }
+.bf-doc .via-\[\#120B24\], .bf-doc .via-\[\#2A2046\] { --tw-gradient-via: #0a0d0b !important; }
+.bf-doc .to-\[\#120B24\] { --tw-gradient-to: #050706 !important; }
+.bf-doc .from-\[\#F3F2F8\] { --tw-gradient-from: #111513 !important; }
+.bf-doc .to-\[\#E4E1EE\] { --tw-gradient-to: #1a1f1c !important; }
+.bf-doc .to-white { --tw-gradient-to: #111513 !important; }
+.bf-doc .bg-\[\#FFF5F4\] { background-color: rgb(255 69 58 / 0.1) !important; }
+.bf-doc .text-\[\#1C1234\] { color: #fff !important; }
+.bf-doc .border-\[\#1C1234\] { border-color: #fff !important; }
+.bf-doc .border-white { border-color: #111513 !important; }
+.bf-doc .shadow-\[0_30px_80px_-30px_rgba\(14\,42\,71\,0\.35\)\] { box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06), 0 40px 100px -30px rgb(0 0 0 / 1) !important; }
+/* Cartões: borda fina e cantos maiores, como nas artes */
+.bf-doc .rounded-xl { border-radius: 18px; }
+.bf-doc .rounded-2xl { border-radius: 22px; }
+/* Títulos com a tipografia apertada da campanha */
+.bf-doc h1, .bf-doc h2 { letter-spacing: -0.035em; }
+/* Destaques amarelos viram o degradê amarelo→verde da Black */
+.bf-doc .text-\[\#F3EA3B\] { background: linear-gradient(95deg, #F3E93B 0%, #9FDB7C 45%, #4FC38A 100%); -webkit-background-clip: text; background-clip: text; color: transparent !important; }
+@media print { .bf-doc { background: #050706 !important; } }
+.bf-doc .bg-\[\#F6F5FA\]\/70 { background-color: #0a0d0b !important; }
+.bf-doc .from-\[\#120B24\]\/95 { --tw-gradient-from: rgb(5 7 6 / 0.95) !important; }
+.bf-doc .via-\[\#120B24\]\/75 { --tw-gradient-via: rgb(5 7 6 / 0.75) !important; }
+.bf-doc .to-\[\#120B24\]\/20 { --tw-gradient-to: rgb(5 7 6 / 0.2) !important; }
+.bf-doc svg.text-\[\#F3EA3B\] { background: none; color: #9fdb7c !important; }
+/* Diagramas: rótulos e linhas em roxo-escuro ficam claros no fundo preto */
+.bf-doc text[fill="#1C1234"] { fill: #fff; }
+.bf-doc [stroke="#1C1234"] { stroke: rgb(255 255 255 / 0.55); }
+.bf-doc polygon[fill="#1C1234"] { fill: rgb(255 255 255 / 0.55); }

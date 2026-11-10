@@ -13,7 +13,9 @@ import { MAINT_ICONS } from "./icons";
 
 /** Capa padrão (módulos fotovoltaicos). */
 const DEFAULT_MAINT_COVER = "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=2000&q=75";
-const NAVY = "#1C1234";
+import { BfInvestBanner } from "@/components/bf/badges";
+const NAVY = "var(--q-navy, #1C1234)"; // roxo da marca (fundos); a campanha pode trocar
+const NAVY_INK = "var(--q-ink, #1C1234)"; // roxo da marca em textos
 const GREEN = "#2C7A52";
 
 export function MaintenanceDocument({ data, token }: { data: PublicProposal; token: string | null }) {
@@ -224,6 +226,7 @@ export function MaintenanceDocument({ data, token }: { data: PublicProposal; tok
             <LeafMark className="right-[-8%] bottom-[-12%] w-[380px] opacity-[0.07]" />
             <BrandRule className="absolute inset-x-0 top-0" />
             <SectionTitle num={num()} kicker="Investimento" title="Valor da manutenção" dark />
+            <BfInvestBanner />
             <div className="relative mt-8 grid gap-6 md:grid-cols-[1.2fr_1fr] md:items-center">
               <div>
                 <div className="flex flex-wrap items-center gap-2 text-white/70">
@@ -313,10 +316,10 @@ export function MaintenanceDocument({ data, token }: { data: PublicProposal; tok
           {/* ===================================================== CONDIÇÕES */}
           <section data-track="condicoes" className="border-t border-ink-100 px-6 py-12 sm:px-14">
             <div className="grid gap-6 md:grid-cols-[220px_1fr] md:items-start">
-              <div className="flex items-center gap-3 rounded-2xl p-5" style={{ background: "#F2F8EC" }}>
+              <div className="flex items-center gap-3 rounded-2xl p-5" style={{ background: "var(--q-soft, #F2F8EC)" }}>
                 <ShieldCheck className="h-8 w-8 shrink-0" style={{ color: GREEN }} />
                 <div>
-                  <p className="tnum font-display text-2xl font-semibold" style={{ color: NAVY }}>
+                  <p className="tnum font-display text-2xl font-semibold" style={{ color: NAVY_INK }}>
                     {fmtNum(i.serviceWarrantyDays)} dias
                   </p>
                   <p className="text-xs text-ink-600">de garantia do serviço</p>
@@ -350,7 +353,7 @@ export function MaintenanceDocument({ data, token }: { data: PublicProposal; tok
           <section className="no-print border-t border-ink-100 px-6 py-10 sm:px-14">
             <div className="flex flex-col gap-6 rounded-2xl border border-ink-200 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
               <div>
-                <p className="font-display text-2xl font-semibold tracking-tight" style={{ color: NAVY }}>
+                <p className="font-display text-2xl font-semibold tracking-tight" style={{ color: NAVY_INK }}>
                   {accepted ? "Proposta aceita. Obrigado!" : "Vamos agendar?"}
                 </p>
                 <p className="mt-1 max-w-md text-sm text-ink-500">{accepted ? "Entraremos em contato para combinar a data." : "Aceite online em um clique ou fale com a gente."}</p>
@@ -484,9 +487,9 @@ function SystemMap({ keys, inverterBrand, moduleQty }: { keys: Set<string>; inve
       </defs>
       {has("app") && (
         <g>
-          <rect x={605 + W / 2 - 22} y={4} width={44} height={62} rx={9} fill={NAVY} />
+          <rect x={605 + W / 2 - 22} y={4} width={44} height={62} rx={9} style={{ fill: NAVY }} />
           <rect x={605 + W / 2 - 17} y={12} width={34} height={42} rx={4} fill="#9BD373" />
-          <path d={`M${605 + W / 2 - 9} 40 l6 -8 l5 5 l7 -11`} stroke={NAVY} strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={`M${605 + W / 2 - 9} 40 l6 -8 l5 5 l7 -11`} style={{ stroke: NAVY_INK }} strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
           <path d={`M${605 + W / 2} 72 v14`} stroke="#9BD373" strokeWidth={2} strokeDasharray="3 4" />
           <text x={605 + W / 2 + 32} y={38} fontSize={14} fill={GREEN} fontWeight={700}>
             App
@@ -497,7 +500,7 @@ function SystemMap({ keys, inverterBrand, moduleQty }: { keys: Set<string>; inve
         <g key={nd.t}>
           {idx < nodes.length - 1 && <line x1={nd.x + W} y1={150} x2={nodes[idx + 1].x - 4} y2={150} stroke="#9C97B0" strokeWidth={2} markerEnd="url(#m-arrow)" />}
           <rect x={nd.x} y={92} width={W} height={116} rx={14} fill={nd.on ? "url(#m-on)" : "#FFFFFF"} stroke={nd.on ? "#6CC690" : "#DAD7E4"} strokeWidth={nd.on ? 2 : 1.5} />
-          <text x={nd.x + 16} y={122} fontSize={17} fontWeight={700} fill={NAVY}>
+          <text x={nd.x + 16} y={122} fontSize={17} fontWeight={700} fill="#16122A">
             {nd.t}
           </text>
           <text x={nd.x + 16} y={142} fontSize={13} fill="#6E6987">
