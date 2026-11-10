@@ -38,3 +38,40 @@ test("segmento e resumo do pedido", () => {
   assert.match(txt, /Ligar à tarde/);
   assert.ok(txt.length < 2000);
 });
+
+import { campaignLive, defaultProducts, normalizeCode, stackPct, toProduct, totalPct } from "./store.ts";
+
+test("descontos: soma produto + campanha e empilha o cupom", () => {
+  assert.equal(totalPct(10, 5), 15);
+  assert.equal(totalPct(80, 30), 90);
+  assert.equal(stackPct(10, 10), 19);
+  assert.equal(stackPct(0, 15), 15);
+  assert.equal(normalizeCode(" black 10! "), "BLACK10");
+});
+
+test("campanha só vale dentro do período", () => {
+  const now = Date.parse("2026-11-27T12:00:00Z");
+  assert.equal(campaignLive({ active: true, starts_at: "2026-11-20T00:00:00Z", ends_at: "2026-11-30T00:00:00Z" }, now), true);
+  assert.equal(campaignLive({ active: true, starts_at: "2026-12-01T00:00:00Z", ends_at: "2026-12-30T00:00:00Z" }, now), false);
+  assert.equal(campaignLive({ active: false, starts_at: "2026-11-20T00:00:00Z", ends_at: "2026-11-30T00:00:00Z" }, now), false);
+});
+
+test("catálogo padrão e saneamento de produtos", () => {
+  const all = defaultProducts();
+  assert.ok(all.length >= 30);
+  assert.equal(new Set(all.map((p) => p.id)).size, all.length);
+  assert.ok(all.every((p) => p.discount_pct === 0 && p.sold === 0));
+  const p = toProduct({ id: "x", name: "Moto", category: "zzz", discount_pct: 150, images: ["a.jpg", "", 3], specs: [{ label: "A", value: "1" }, { label: "", value: "2" }] });
+  assert.equal(p?.category, "kit");
+  assert.equal(p?.discount_pct, 90);
+  assert.deepEqual(p?.images, ["a.jpg"]);
+  assert.equal(p?.specs.length, 1);
+  assert.equal(toProduct({ name: "sem id" }), null);
+});
+
+test("resumo com cupom e campanha", () => {
+  const txt = quoteSummary([{ key: "p:1", kind: "kit", title: "Kit X", detail: "", pct: 10 }], "", { code: "BLACK10", discount_pct: 10 }, "Black Friday");
+  assert.match(txt, /10% OFF \+ cupom = 19% OFF/);
+  assert.match(txt, /Cupom: BLACK10/);
+  assert.match(txt, /Campanha: Black Friday/);
+});

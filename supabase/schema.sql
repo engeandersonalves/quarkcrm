@@ -1252,3 +1252,125 @@ begin
     create policy "media_team_delete" on storage.objects for delete to authenticated using (bucket_id = 'media' and public.is_member());
   end if;
 end $$;
+
+-- -----------------------------------------------------------------------------
+-- Loja online: produtos (sem preço, com % OFF), cupons e campanhas
+-- -----------------------------------------------------------------------------
+create table if not exists public.store_products (
+  id uuid primary key default gen_random_uuid(),
+  category text not null default 'kit',
+  place text,
+  name text not null,
+  subtitle text,
+  description text,
+  images text[] not null default '{}',
+  specs jsonb not null default '[]'::jsonb,
+  highlights text[] not null default '{}',
+  badge text,
+  discount_pct int not null default 0,
+  rating numeric(2,1) not null default 5.0,
+  sold int not null default 0,
+  featured boolean not null default false,
+  flash boolean not null default false,
+  active boolean not null default true,
+  position int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.store_products drop constraint if exists store_products_category_check;
+alter table public.store_products add constraint store_products_category_check check (category in ('kit', 'carregador', 'moto', 'material', 'servico'));
+alter table public.store_products drop constraint if exists store_products_discount_check;
+alter table public.store_products add constraint store_products_discount_check check (discount_pct between 0 and 90);
+create index if not exists store_products_order_idx on public.store_products (category, position);
+
+create table if not exists public.store_coupons (
+  code text primary key,
+  discount_pct int not null default 5,
+  description text,
+  public boolean not null default true,
+  expires_at timestamptz,
+  active boolean not null default true,
+  uses int not null default 0,
+  created_at timestamptz not null default now()
+);
+alter table public.store_coupons drop constraint if exists store_coupons_discount_check;
+alter table public.store_coupons add constraint store_coupons_discount_check check (discount_pct between 1 and 90);
+alter table public.store_coupons drop constraint if exists store_coupons_code_check;
+alter table public.store_coupons add constraint store_coupons_code_check check (code ~ '^[A-Z0-9_-]{3,30}$');
+
+create table if not exists public.store_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  theme text not null default 'blackfriday',
+  title text not null,
+  subtitle text,
+  extra_pct int not null default 0,
+  banner text,
+  starts_at timestamptz not null default now(),
+  ends_at timestamptz not null default now() + interval '7 days',
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table public.store_products enable row level security;
+alter table public.store_coupons enable row level security;
+alter table public.store_campaigns enable row level security;
+
+drop policy if exists "store_products_public" on public.store_products;
+create policy "store_products_public" on public.store_products for select using (active or public.is_member());
+drop policy if exists "store_products_admin" on public.store_products;
+create policy "store_products_admin" on public.store_products for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "store_campaigns_public" on public.store_campaigns;
+create policy "store_campaigns_public" on public.store_campaigns for select using ((active and now() between starts_at and ends_at) or public.is_member());
+drop policy if exists "store_campaigns_admin" on public.store_campaigns;
+create policy "store_campaigns_admin" on public.store_campaigns for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- Cupons: a equipe vê todos; o público só pela função abaixo (privados exigem o código)
+drop policy if exists "store_coupons_team" on public.store_coupons;
+create policy "store_coupons_team" on public.store_coupons for select to authenticated using (public.is_member());
+drop policy if exists "store_coupons_admin" on public.store_coupons;
+create policy "store_coupons_admin" on public.store_coupons for all to authenticated using (public.is_admin()) with check (public.is_admin());
+
+create or replace function public.store_public_coupons()
+returns setof jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object('code', code, 'discount_pct', discount_pct, 'description', description, 'expires_at', expires_at)
+  from public.store_coupons
+  where active and public and (expires_at is null or expires_at > now())
+  order by discount_pct desc
+  limit 12;
+$$;
+revoke all on function public.store_public_coupons() from public;
+grant execute on function public.store_public_coupons() to anon, authenticated;
+
+create or replace function public.store_check_coupon(p_code text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object('code', code, 'discount_pct', discount_pct, 'description', description, 'expires_at', expires_at)
+  from public.store_coupons
+  where code = upper(trim(p_code)) and active and (expires_at is null or expires_at > now());
+$$;
+revoke all on function public.store_check_coupon(text) from public;
+grant execute on function public.store_check_coupon(text) to anon, authenticated;
+
+-- Conta o uso quando o pedido de cotação chega com cupom
+create or replace function public.store_use_coupon(p_code text)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.store_coupons set uses = uses + 1
+  where code = upper(trim(p_code)) and active and (expires_at is null or expires_at > now());
+$$;
+revoke all on function public.store_use_coupon(text) from public;
+grant execute on function public.store_use_coupon(text) to anon, authenticated;

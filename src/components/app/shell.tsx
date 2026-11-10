@@ -54,7 +54,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     title: "Ferramentas",
     items: [
       { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap, glyph: "raio" },
-      { href: "/loja", label: "Loja online", icon: Zap, glyph: "pacote", external: true, hint: "abre a loja para o cliente" },
+      { href: "/loja-gestao", label: "Loja online", icon: Zap, glyph: "pacote" },
       { href: "/documentos", label: "Documentos", icon: FileSignature, glyph: "documentos", badge: "documents", hint: "aguardando assinatura" },
       { href: "/contratos", label: "Contratos", icon: ScrollText, glyph: "contratos" },
       { href: "/recibos", label: "Recibos", icon: Receipt, glyph: "recibos" },

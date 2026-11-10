@@ -22,7 +22,7 @@ type Size = "sm" | "md" | "lg" | "icon";
 const variants: Record<Variant, string> = {
   primary: "bg-gradient-to-br from-[#3a2a6b] via-ink-900 to-ink-950 text-white ring-1 ring-white/10 shadow-[0_10px_28px_-12px_rgba(28,18,52,0.75)] hover:brightness-125 dark:bg-none dark:bg-white dark:text-[#0B0818] dark:ring-0 dark:shadow-[0_0_0_1px_rgba(255,255,255,0.1)] dark:hover:brightness-100 dark:hover:shadow-[0_0_36px_-8px_rgba(155,211,115,0.6)]",
   sun: "bg-sun-gradient text-ink-950 shadow-glow ring-1 ring-white/40 hover:brightness-105 hover:shadow-[0_14px_36px_-10px_rgba(155,211,115,0.75)]",
-  secondary: "bg-white/70 text-ink-800 ring-1 ring-ink-900/10 backdrop-blur-md hover:bg-white shadow-soft dark:liquid-glass dark:ring-0 dark:text-white dark:hover:brightness-125",
+  secondary: "bg-white/70 text-ink-800 ring-1 ring-ink-900/10 backdrop-blur-md hover:bg-white shadow-soft dark:bg-white/[0.1] dark:text-white dark:ring-white/[0.12] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] dark:backdrop-blur-xl dark:hover:bg-white/[0.16]",
   outline: "bg-white/30 text-ink-700 ring-1 ring-ink-900/10 backdrop-blur-md hover:bg-white/80 dark:bg-white/[0.06] dark:text-white dark:ring-white/[0.12]",
   ghost: "text-ink-600 hover:bg-ink-900/[0.06] hover:text-ink-900 dark:hover:bg-white/[0.06]",
   danger: "bg-rose-600 text-white hover:bg-rose-700 dark:bg-[#FF453A] dark:hover:brightness-110",

@@ -211,11 +211,16 @@ export const FAQ = [
 ];
 
 export type CartKind = "kit" | "custom" | "charger" | "moto" | "material" | "service";
+/** Tipo do item na cotação a partir da categoria do produto. */
+export const kindOf = (c: "kit" | "carregador" | "moto" | "material" | "servico"): CartKind => ({ kit: "kit", carregador: "charger", moto: "moto", material: "material", servico: "service" } as const)[c];
 export interface CartItem {
   key: string;
   kind: CartKind;
   title: string;
   detail: string;
+  /** Desconto do item (produto + campanha), em %. */
+  pct?: number;
+  image?: string;
 }
 
 export const KIND_LABEL: Record<CartKind, string> = {
@@ -238,9 +243,207 @@ export function segmentOf(items: CartItem[]): "solar" | "eletroposto" | "manuten
 }
 
 /** Resumo do pedido para o lead e para o WhatsApp (até 2000 caracteres). */
-export function quoteSummary(items: CartItem[], extra?: string) {
-  const lines = items.map((i) => `• ${KIND_LABEL[i.kind]}: ${i.title}${i.detail ? ` (${i.detail})` : ""}`);
-  return [`Pedido de cotação pela loja online (${items.length} ${items.length === 1 ? "item" : "itens"}):`, ...lines, extra ? `\nObservação: ${extra}` : ""].join("\n").trim().slice(0, 1990);
+export function quoteSummary(items: CartItem[], extra?: string, coupon?: Pick<Coupon, "code" | "discount_pct"> | null, campaign?: string | null) {
+  const lines = items.map((i) => `• ${KIND_LABEL[i.kind]}: ${i.title}${i.detail ? ` (${i.detail})` : ""}${i.pct ? ` — ${i.pct}% OFF${coupon ? ` + cupom = ${pctText(stackPct(i.pct, coupon.discount_pct))}% OFF` : ""}` : coupon ? ` — cupom ${coupon.discount_pct}% OFF` : ""}`);
+  return [
+    `Pedido de cotação pela loja online (${items.length} ${items.length === 1 ? "item" : "itens"}):`,
+    ...lines,
+    campaign ? `Campanha: ${campaign}` : "",
+    coupon ? `Cupom: ${coupon.code} (${coupon.discount_pct}% OFF)` : "",
+    extra ? `\nObservação: ${extra}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .trim()
+    .slice(0, 1990);
 }
 
 export const fmt = (v: number, d = 0) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+/* ======================================================================
+   Loja estilo marketplace: produtos cadastráveis, cupons e campanhas
+   ====================================================================== */
+
+export type Category = "kit" | "carregador" | "moto" | "material" | "servico";
+
+export const CATEGORIES: { id: Category; label: string; short: string }[] = [
+  { id: "kit", label: "Kits solares", short: "Kits" },
+  { id: "carregador", label: "Eletropostos", short: "Eletropostos" },
+  { id: "moto", label: "Motos elétricas", short: "Motos" },
+  { id: "material", label: "Material elétrico", short: "Material" },
+  { id: "servico", label: "Serviços", short: "Serviços" },
+];
+
+export interface StoreProduct {
+  id: string;
+  category: Category;
+  place: Place | null;
+  name: string;
+  subtitle: string | null;
+  description: string | null;
+  images: string[];
+  specs: { label: string; value: string }[];
+  highlights: string[];
+  badge: string | null;
+  discount_pct: number;
+  rating: number;
+  sold: number;
+  featured: boolean;
+  flash: boolean;
+  active: boolean;
+  position: number;
+}
+
+export interface Coupon {
+  code: string;
+  discount_pct: number;
+  description: string | null;
+  expires_at: string | null;
+  public?: boolean;
+  active?: boolean;
+  uses?: number;
+}
+
+export type CampaignTheme = "blackfriday" | "natal" | "maes" | "pais" | "aniversario" | "verao" | "custom";
+export interface Campaign {
+  id: string;
+  name: string;
+  theme: CampaignTheme;
+  title: string;
+  subtitle: string | null;
+  extra_pct: number;
+  banner: string | null;
+  starts_at: string;
+  ends_at: string;
+  active: boolean;
+}
+
+export const THEMES: Record<CampaignTheme, { label: string; from: string; to: string; ink: string; tag: string }> = {
+  blackfriday: { label: "Black Friday", from: "#000000", to: "#1C1C1E", ink: "#F3EA3B", tag: "BLACK FRIDAY" },
+  natal: { label: "Natal", from: "#7A0E0E", to: "#1F3D1A", ink: "#FFE45C", tag: "NATAL" },
+  maes: { label: "Dia das Mães", from: "#8A1C4A", to: "#2A0F2E", ink: "#FFB3CF", tag: "DIA DAS MÃES" },
+  pais: { label: "Dia dos Pais", from: "#0F2A1F", to: "#111", ink: "#9BD373", tag: "DIA DOS PAIS" },
+  aniversario: { label: "Aniversário da loja", from: "#3A2A00", to: "#111", ink: "#FFD60A", tag: "ANIVERSÁRIO" },
+  verao: { label: "Verão / Sol", from: "#7A3A00", to: "#111", ink: "#FFB340", tag: "ESPECIAL VERÃO" },
+  custom: { label: "Personalizada", from: "#1C1C1E", to: "#000", ink: "#9BD373", tag: "OFERTA" },
+};
+
+/** Desconto total: o do produto + o extra da campanha (limitado a 90%). */
+export const totalPct = (productPct: number, campaignPct = 0) => Math.min(90, Math.max(0, Math.round(productPct || 0) + Math.round(campaignPct || 0)));
+
+/** Descontos em sequência (produto+campanha, depois cupom), como o consultor aplica. */
+export const stackPct = (base: number, coupon = 0) => Math.round((1 - (1 - base / 100) * (1 - coupon / 100)) * 1000) / 10;
+
+/** Código de cupom no formato aceito pelo banco. */
+export const normalizeCode = (c: string) => c.toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 30);
+
+export function campaignLive(c: Pick<Campaign, "active" | "starts_at" | "ends_at"> | null | undefined, now = Date.now()) {
+  if (!c || !c.active) return false;
+  return new Date(c.starts_at).getTime() <= now && now < new Date(c.ends_at).getTime();
+}
+
+/** Catálogo padrão (usado enquanto a loja não tiver produtos cadastrados e no botão "Importar"). */
+export function defaultProducts(): StoreProduct[] {
+  const base = { description: null, images: [] as string[], badge: null, discount_pct: 0, rating: 5, sold: 0, featured: false, flash: false, active: true };
+  let pos = 0;
+  const kits: StoreProduct[] = KITS.map((k) => {
+    const kwp = kitKwp(k.modules);
+    return {
+      ...base,
+      id: `kit-${k.id}`,
+      category: "kit",
+      place: k.place,
+      name: `Kit ${k.name} ${fmt(kwp, 2)} kWp`,
+      subtitle: k.tag,
+      specs: [
+        { label: "Potência", value: `${fmt(kwp, 2)} kWp` },
+        { label: "Placas", value: `${k.modules} × ${MODULE_W} W` },
+        { label: "Geração média", value: `~${fmt(monthlyKwh(kwp))} kWh/mês` },
+        { label: "Área necessária", value: `${areaOf(k.modules)} m²` },
+        ...(k.offgrid ? [{ label: "Baterias", value: "Lítio, para uso à noite" }] : []),
+      ],
+      highlights: KIT_INCLUDES.map((i) => `${i.t}: ${i.d}`),
+      featured: !!k.best,
+      badge: k.best ? "Mais escolhido" : k.offgrid ? "Com baterias" : null,
+      position: pos++,
+    };
+  });
+  const chargers: StoreProduct[] = CHARGERS.map((c) => ({
+    ...base,
+    id: `carregador-${c.id}`,
+    category: "carregador",
+    place: null,
+    name: c.name,
+    subtitle: c.where,
+    specs: [
+      { label: "Potência", value: `${fmt(c.power, c.power % 1 ? 1 : 0)} kW` },
+      { label: "Tipo", value: c.kind === "DC" ? "Corrente contínua (rápido)" : "Corrente alternada" },
+      { label: "Rede", value: c.grid },
+      { label: "Carga de 50 kWh", value: c.hours < 1 ? `~${Math.round(c.hours * 60)} min` : `~${fmt(c.hours, 1)} h` },
+    ],
+    highlights: c.features,
+    badge: c.kind === "DC" ? "Rápido DC" : null,
+    position: pos++,
+  }));
+  const motos: StoreProduct[] = MOTOS.map((m) => ({
+    ...base,
+    id: `moto-${m.id}`,
+    category: "moto",
+    place: null,
+    name: `Moto elétrica ${m.name}`,
+    subtitle: m.highlight,
+    specs: [
+      { label: "Categoria", value: m.kind },
+      { label: "Velocidade máxima", value: `${m.speed} km/h` },
+      { label: "Autonomia", value: `até ${m.range} km` },
+      { label: "Motor", value: `${fmt(m.powerW)} W` },
+      { label: "Recarga", value: m.charge },
+      { label: "Habilitação", value: m.license },
+    ],
+    highlights: ["Recarga na tomada de casa", "Sem óleo, filtro ou vela", "Silenciosa e sem fumaça"],
+    position: pos++,
+  }));
+  const materials: StoreProduct[] = MATERIALS.map((m) => ({ ...base, id: `material-${m.id}`, category: "material", place: null, name: m.name, subtitle: m.text, specs: [], highlights: ["Informe quantidade e medida no pedido"], position: pos++ }));
+  const services: StoreProduct[] = SERVICES.map((s) => ({ ...base, id: `servico-${s.id}`, category: "servico", place: null, name: s.name, subtitle: s.text, specs: [], highlights: [], position: pos++ }));
+  return [...kits, ...chargers, ...motos, ...materials, ...services];
+}
+
+/** Normaliza uma linha do banco (ou de JSON) em produto válido. */
+export function toProduct(r: Record<string, unknown>): StoreProduct | null {
+  if (!r || typeof r.id !== "string" || typeof r.name !== "string") return null;
+  const cat = CATEGORIES.some((c) => c.id === r.category) ? (r.category as Category) : "kit";
+  const arr = (v: unknown) => (Array.isArray(v) ? v.filter((x) => typeof x === "string" && x.trim()) : []) as string[];
+  const specs = Array.isArray(r.specs)
+    ? (r.specs as unknown[])
+        .map((s) => (s && typeof s === "object" ? { label: String((s as Record<string, unknown>).label ?? ""), value: String((s as Record<string, unknown>).value ?? "") } : null))
+        .filter((s): s is { label: string; value: string } => !!s && !!s.label && !!s.value)
+    : [];
+  return {
+    id: r.id,
+    category: cat,
+    place: r.place === "casa" || r.place === "comercio" || r.place === "rural" ? r.place : null,
+    name: r.name,
+    subtitle: typeof r.subtitle === "string" && r.subtitle.trim() ? r.subtitle : null,
+    description: typeof r.description === "string" && r.description.trim() ? r.description : null,
+    images: arr(r.images),
+    specs,
+    highlights: arr(r.highlights),
+    badge: typeof r.badge === "string" && r.badge.trim() ? r.badge : null,
+    discount_pct: Math.max(0, Math.min(90, Number(r.discount_pct) || 0)),
+    rating: Math.max(0, Math.min(5, Number(r.rating) || 0)),
+    sold: Math.max(0, Number(r.sold) || 0),
+    featured: !!r.featured,
+    flash: !!r.flash,
+    active: r.active !== false,
+    position: Number(r.position) || 0,
+  };
+}
+
+/** Texto curto "+1,2 mil vendidos". */
+export function soldLabel(n: number) {
+  if (!n) return "";
+  return n >= 1000 ? `+${fmt(n / 1000, 1)} mil pedidos` : `+${n} pedidos`;
+}
+
+/** "19" ou "19,5" (sem casas decimais desnecessárias). */
+export const pctText = (v: number) => (Number.isInteger(v) ? fmt(v) : fmt(v, 1));
