@@ -370,7 +370,6 @@ export function GlyphTile({ id, size = "sm", className }: { id: GlyphId; size?: 
 const BY_PATH: [string, GlyphId][] = [
   ["/monitoramento/alarmes", "alerta"],
   ["/monitoramento", "sol"],
-  ["/loja-gestao", "pacote"],
   ["/leads", "leads"],
   ["/propostas", "propostas"],
   ["/tarefas", "tarefas"],

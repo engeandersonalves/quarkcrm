@@ -54,7 +54,6 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     title: "Ferramentas",
     items: [
       { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap, glyph: "raio" },
-      { href: "/loja-gestao", label: "Loja online", icon: Zap, glyph: "pacote" },
       { href: "/documentos", label: "Documentos", icon: FileSignature, glyph: "documentos", badge: "documents", hint: "aguardando assinatura" },
       { href: "/contratos", label: "Contratos", icon: ScrollText, glyph: "contratos" },
       { href: "/recibos", label: "Recibos", icon: Receipt, glyph: "recibos" },
@@ -249,7 +248,6 @@ function ShellInner({ children }: { children: ReactNode }) {
               <FabItem glyph="chave" title="Orçamento de manutenção" text="Limpeza e revisão elétrica" onClick={() => router.push("/propostas/nova?tipo=manutencao")} />
               <FabItem glyph="chama" title="Plano do dia" text="Missões para vender mais hoje" onClick={() => window.dispatchEvent(new Event("quark:briefing"))} />
               <FabItem glyph="raio" title="Orçamento rápido" text="Imagem pronta para o WhatsApp" onClick={() => router.push("/orcamento-rapido")} />
-              <FabItem glyph="pacote" title="Loja online" text="Catálogo para enviar ao cliente" onClick={() => window.open(`/loja?v=${user.id}`, "_blank")} />
               <FabItem glyph="novoLead" title="Novo lead" text="Cadastrar um cliente" onClick={() => openLead()} />
               <FabItem glyph="novaTarefa" title="Nova tarefa" text="Agendar um follow-up" onClick={() => openTask()} />
               <FabItem glyph="marketing" title="Marketing" text="Artes para Instagram e status" onClick={() => router.push("/marketing")} />
