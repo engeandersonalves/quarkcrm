@@ -333,7 +333,7 @@ export function commuteCosts({
   kmDay,
   days = 22,
   fuel = 6.3,
-  bus = 5,
+  bus = 4,
   busTrips = 2,
   tariff = 1.1,
 }: {

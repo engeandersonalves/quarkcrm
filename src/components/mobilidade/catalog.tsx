@@ -109,25 +109,6 @@ const P: Record<string, ReactNode> = {
   pin: (
     <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
   ),
-  bus: (
-    <>
-      <rect x="4" y="3" width="16" height="15" rx="3" />
-      <path d="M4 11h16M8 21v-3M16 21v-3M8 14.5h.01M16 14.5h.01M9 6.5h6" />
-    </>
-  ),
-  car: (
-    <>
-      <path d="M5 16V12l2-5h10l2 5v4z" />
-      <path d="M3 12h18M7 19v-3M17 19v-3M7.5 13.5h.01M16.5 13.5h.01" />
-    </>
-  ),
-  moto: (
-    <>
-      <circle cx="5.5" cy="16.5" r="3" />
-      <circle cx="18.5" cy="16.5" r="3" />
-      <path d="M8.5 16.5h5l3-6h-4M15 6h2.5l1 4.5M5.5 16.5 9 10h4" />
-    </>
-  ),
 };
 function Ico({
   n,
@@ -1701,11 +1682,11 @@ function ModelSection({
 
 /* ====================================================== economia */
 
-const COMMUTE_ICON: Record<CommuteId, keyof typeof P> = {
-  carro: "car",
-  onibus: "bus",
-  moto: "moto",
-  scooter: "bolt",
+const COMMUTE_IMG: Record<CommuteId, string> = {
+  carro: "/mob/cmp-carro.webp",
+  onibus: "/mob/cmp-onibus.webp",
+  moto: "/mob/cmp-moto.webp",
+  scooter: "/mob/cmp-scooter.webp",
 };
 
 function Chips<T extends number | string>({
@@ -1749,7 +1730,7 @@ const money = (v: number) =>
 function Savings({ onCta }: { onCta: () => void }) {
   const [km, setKm] = useState(30);
   const [fuel, setFuel] = useState(6.3);
-  const [bus, setBus] = useState(5);
+  const [bus, setBus] = useState(4);
   const [base, setBase] = useState<Exclude<CommuteId, "scooter">>("moto");
   const [on, setOn] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -1829,7 +1810,7 @@ function Savings({ onCta }: { onCta: () => void }) {
               />
               <Chips
                 label="Passagem"
-                options={[4.5, 5, 6]}
+                options={[4, 4.5, 5]}
                 value={bus}
                 onChange={setBus}
                 fmt={money}
@@ -1856,13 +1837,19 @@ function Savings({ onCta }: { onCta: () => void }) {
                   <div className="flex items-center gap-3">
                     <span
                       className={cx(
-                        "grid h-11 w-11 shrink-0 place-items-center rounded-[13px]",
+                        "relative grid h-14 w-[76px] shrink-0 place-items-center overflow-hidden rounded-[16px] ring-1 sm:h-16 sm:w-[92px]",
                         q
-                          ? cx(GRAD, "text-[#0A0D0B]")
-                          : "bg-white/[0.07] text-white/80",
+                          ? "bg-[radial-gradient(circle_at_50%_75%,rgba(111,191,142,0.35),transparent_70%)] ring-[#6FBF8E]/40"
+                          : "bg-[radial-gradient(circle_at_50%_75%,rgba(255,255,255,0.10),transparent_70%)] ring-white/[0.06]",
                       )}
                     >
-                      <Ico n={COMMUTE_ICON[r.id]} className="h-5 w-5" />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={COMMUTE_IMG[r.id]}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-contain p-1 drop-shadow-[0_8px_10px_rgba(0,0,0,0.55)]"
+                      />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p
