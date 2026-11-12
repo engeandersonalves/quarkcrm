@@ -98,7 +98,7 @@ function Ico({ n, className, w = 2.2 }: { n: keyof typeof P; className?: string;
 
 /* ============================================================ acesso */
 
-type Access = { token: string; name: string; visits: number };
+type Access = { token: string; name: string; visits: number; offline?: boolean };
 
 function readAccess(): Access | null {
   try {
@@ -131,6 +131,7 @@ export function MobilidadeCatalog({ whatsapp }: { whatsapp: string | null }) {
     if (!a) return setReady(true);
     setAccess(a);
     setReady(true);
+    if (a.offline) return;
     // Uma visita por sessão do navegador
     const key = `${STORE}-sessao`;
     try {
@@ -215,10 +216,10 @@ function Gate({ onAccess }: { onAccess: (a: Access) => void }) {
       /* sem parâmetros */
     }
     try {
-      const r = await post({ action: "register", catalog: CATALOG_ID, name: f.name.trim(), phone: f.phone, email: f.email.trim(), owner, device: device(), website: f.website, elapsed: Date.now() - opened.current });
-      const j = (await r.json().catch(() => null)) as { token?: string; visits?: number; error?: string } | null;
-      if (!r.ok || !j?.token) throw new Error(j?.error || "Não conseguimos liberar o acesso agora.");
-      onAccess({ token: j.token, name: f.name.trim().split(/\s+/)[0], visits: j.visits ?? 1 });
+      const r = await post({ action: "register", catalog: CATALOG_ID, name: f.name.trim(), phone: f.phone, email: f.email.trim(), owner, device: device(), website: f.website });
+      const j = (await r.json().catch(() => null)) as { token?: string; visits?: number; offline?: boolean; error?: string } | null;
+      if (!r.ok || !j?.token) throw new Error(j?.error || "Não conseguimos liberar o acesso agora. Tente de novo.");
+      onAccess({ token: j.token, name: f.name.trim().split(/\s+/)[0], visits: j.visits ?? 1, offline: j.offline });
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Tente de novo.");
     } finally {

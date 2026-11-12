@@ -1425,3 +1425,6 @@ begin
     alter publication supabase_realtime add table public.catalog_access;
   end if;
 end $$;
+
+-- Atualiza o cache da API do Supabase para as funções novas aparecerem na hora
+notify pgrst, 'reload schema';
