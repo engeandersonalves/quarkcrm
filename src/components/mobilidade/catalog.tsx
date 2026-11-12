@@ -23,9 +23,10 @@ import {
   VERSUS,
   brl0,
   chargeCost,
+  commuteCosts,
   mergeGallery,
+  type CommuteId,
   type GalleryPhoto,
-  fuelSavings,
   recommend,
   type ModelId,
   type Scooter,
@@ -107,6 +108,25 @@ const P: Record<string, ReactNode> = {
   ),
   pin: (
     <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
+  ),
+  bus: (
+    <>
+      <rect x="4" y="3" width="16" height="15" rx="3" />
+      <path d="M4 11h16M8 21v-3M16 21v-3M8 14.5h.01M16 14.5h.01M9 6.5h6" />
+    </>
+  ),
+  car: (
+    <>
+      <path d="M5 16V12l2-5h10l2 5v4z" />
+      <path d="M3 12h18M7 19v-3M17 19v-3M7.5 13.5h.01M16.5 13.5h.01" />
+    </>
+  ),
+  moto: (
+    <>
+      <circle cx="5.5" cy="16.5" r="3" />
+      <circle cx="18.5" cy="16.5" r="3" />
+      <path d="M8.5 16.5h5l3-6h-4M15 6h2.5l1 4.5M5.5 16.5 9 10h4" />
+    </>
   ),
 };
 function Ico({
@@ -1681,107 +1701,267 @@ function ModelSection({
 
 /* ====================================================== economia */
 
+const COMMUTE_ICON: Record<CommuteId, keyof typeof P> = {
+  carro: "car",
+  onibus: "bus",
+  moto: "moto",
+  scooter: "bolt",
+};
+
+function Chips<T extends number | string>({
+  label,
+  options,
+  value,
+  onChange,
+  fmt,
+}: {
+  label: string;
+  options: T[];
+  value: T;
+  onChange: (v: T) => void;
+  fmt: (v: T) => string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-[13px] text-white/55">
+      <span className="w-[66px] shrink-0 sm:w-[84px]">{label}</span>
+      {options.map((v) => (
+        <button
+          key={String(v)}
+          type="button"
+          onClick={() => onChange(v)}
+          className={cx(
+            "h-8 rounded-full px-2.5 font-semibold tabular-nums transition sm:px-3",
+            value === v
+              ? "bg-[#fff] text-[#0A0D0B]"
+              : "bg-white/[0.07] text-white hover:bg-white/[0.12]",
+          )}
+        >
+          {fmt(v)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const money = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 function Savings({ onCta }: { onCta: () => void }) {
   const [km, setKm] = useState(30);
   const [fuel, setFuel] = useState(6.3);
-  const r = fuelSavings({ kmDay: km, fuel });
+  const [bus, setBus] = useState(5);
+  const [base, setBase] = useState<Exclude<CommuteId, "scooter">>("moto");
+  const [on, setOn] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => e.isIntersecting && setOn(true),
+      { threshold: 0.25 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const rows = commuteCosts({ kmDay: km, fuel, bus });
+  const max = Math.max(...rows.map((r) => r.month), 1);
+  const scooter = rows.find((r) => r.id === "scooter")!;
+  const ref0 = rows.find((r) => r.id === base)!;
+  const saved = Math.max(0, ref0.month - scooter.month);
+  const t1 = SCOOTERS[0];
+  const paid = Math.round((saved / t1.installment) * 100);
   const pctFill = ((km - 5) / (120 - 5)) * 100;
+
   return (
     <section id="economia" data-sec="economia" className="scroll-mt-24 pt-20">
-      <div className="grid gap-6 rounded-[36px] bg-[#111513] p-6 ring-1 ring-white/[0.06] sm:p-10 lg:grid-cols-[1fr_1fr] lg:items-center">
-        <div>
-          <Eyebrow>Simulador</Eyebrow>
-          <H2>
-            Quanto você <span className={GT}>deixa de gastar?</span>
-          </H2>
-          <p className="mt-4 text-[16px] text-white/60">
-            Arraste e veja a diferença entre abastecer uma moto a gasolina e
-            carregar a scooter na tomada.
-          </p>
-          <label
-            className="mt-7 block text-[14px] font-semibold text-white/70"
-            htmlFor="km"
-          >
-            Quantos km você roda por dia?
-          </label>
-          <p className="mt-1 text-[48px] leading-none font-bold tracking-[-0.05em] tabular-nums">
-            {km} <span className="text-[20px] text-white/50">km/dia</span>
-          </p>
-          <input
-            id="km"
-            type="range"
-            min={5}
-            max={120}
-            step={5}
-            value={km}
-            onChange={(e) => setKm(Number(e.target.value))}
-            className="mob-range mt-4 w-full"
-            style={{ "--p": `${pctFill}%` } as CSSProperties}
-          />
-          <div className="mt-5 flex flex-wrap items-center gap-2 text-[13px] text-white/55">
-            Gasolina a
-            {[5.9, 6.3, 6.8].map((v) => (
-              <button
-                key={v}
-                onClick={() => setFuel(v)}
-                className={cx(
-                  "h-8 rounded-full px-3 font-semibold tabular-nums",
-                  fuel === v
-                    ? "bg-[#fff] text-[#0A0D0B]"
-                    : "bg-white/[0.07] text-white",
-                )}
-              >
-                {v.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}
-              </button>
-            ))}
+      <div
+        ref={ref}
+        className="relative overflow-hidden rounded-[36px] bg-[#111513] p-6 ring-1 ring-white/[0.06] sm:p-10"
+      >
+        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <div>
+            <Eyebrow>Simulador</Eyebrow>
+            <H2>
+              Ônibus, moto ou carro? <span className={GT}>Faça a conta.</span>
+            </H2>
+            <p className="mt-4 text-[16px] text-white/60">
+              Arraste e compare quanto custa por mês ir e voltar de cada jeito.
+              A scooter carrega na tomada de casa.
+            </p>
+
+            <div className="relative mt-6 h-[170px] sm:h-[210px]">
+              <div className="absolute inset-x-[15%] bottom-2 h-10 rounded-[50%] bg-[#6FBF8E]/25 blur-2xl" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/mob/t1-perfil.webp"
+                alt="Scooter elétrica T1"
+                className="relative mx-auto h-full w-auto object-contain drop-shadow-[0_30px_40px_rgba(0,0,0,0.6)]"
+              />
+            </div>
+
+            <label
+              className="mt-6 block text-[14px] font-semibold text-white/70"
+              htmlFor="km"
+            >
+              Quantos km você roda por dia?
+            </label>
+            <p className="mt-1 text-[48px] leading-none font-bold tracking-[-0.05em] tabular-nums">
+              {km} <span className="text-[20px] text-white/50">km/dia</span>
+            </p>
+            <input
+              id="km"
+              type="range"
+              min={5}
+              max={120}
+              step={5}
+              value={km}
+              onChange={(e) => setKm(Number(e.target.value))}
+              className="mob-range mt-4 w-full"
+              style={{ "--p": `${pctFill}%` } as CSSProperties}
+            />
+            <div className="mt-5 grid gap-2.5">
+              <Chips
+                label="Gasolina"
+                options={[5.9, 6.3, 6.8]}
+                value={fuel}
+                onChange={setFuel}
+                fmt={money}
+              />
+              <Chips
+                label="Passagem"
+                options={[4.5, 5, 6]}
+                value={bus}
+                onChange={setBus}
+                fmt={money}
+              />
+            </div>
           </div>
-        </div>
-        <div className="grid gap-2.5">
-          <div className="flex items-center justify-between rounded-[22px] bg-[#050706]/70 p-5 ring-1 ring-white/[0.06]">
-            <div>
-              <p className="text-[13px] text-white/50">
-                Moto a gasolina (35 km/l)
+
+          <div className="grid gap-2.5">
+            <p className="text-[13px] font-bold tracking-[0.14em] text-white/45 uppercase">
+              Custo por mês · 22 dias
+            </p>
+            {rows.map((r) => {
+              const q = r.id === "scooter";
+              return (
+                <div
+                  key={r.id}
+                  className={cx(
+                    "rounded-[22px] p-4 ring-1 sm:p-5",
+                    q
+                      ? "bg-[#0d1a13] ring-[#6FBF8E]/40"
+                      : "bg-[#050706]/70 ring-white/[0.06]",
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={cx(
+                        "grid h-11 w-11 shrink-0 place-items-center rounded-[13px]",
+                        q
+                          ? cx(GRAD, "text-[#0A0D0B]")
+                          : "bg-white/[0.07] text-white/80",
+                      )}
+                    >
+                      <Ico n={COMMUTE_ICON[r.id]} className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={cx(
+                          "text-[15px] leading-tight font-bold",
+                          q && "text-[#A9DE86]",
+                        )}
+                      >
+                        {r.label}
+                      </p>
+                      <p className="text-[12px] leading-tight text-white/45">
+                        {r.detail}
+                      </p>
+                    </div>
+                    <p
+                      className={cx(
+                        "text-[24px] font-bold tracking-[-0.03em] tabular-nums sm:text-[28px]",
+                        !q && "text-white/80",
+                      )}
+                    >
+                      {brl0(r.month)}
+                    </p>
+                  </div>
+                  <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div
+                      className={cx(
+                        "h-full rounded-full transition-[width] duration-[1200ms] ease-out",
+                        q
+                          ? "bg-[linear-gradient(90deg,#1FA06A,#9FDB7C,#F3E93B)]"
+                          : r.id === "carro"
+                            ? "bg-[#FF5A3C]"
+                            : "bg-white/35",
+                      )}
+                      style={{
+                        width: on
+                          ? `${Math.max(3, (r.month / max) * 100)}%`
+                          : "3%",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="mt-1 rounded-[26px] bg-[linear-gradient(135deg,#6FBF8E,#A9DE86)] p-6 text-[#0A0D0B]">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="mr-1 text-[13px] font-bold tracking-[0.12em] uppercase opacity-70">
+                  Trocando
+                </span>
+                {(["onibus", "moto", "carro"] as const).map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setBase(id)}
+                    className={cx(
+                      "h-8 rounded-full px-3 text-[13px] font-bold transition",
+                      base === id
+                        ? "bg-[#0A0D0B] text-white"
+                        : "bg-[#0A0D0B]/10 hover:bg-[#0A0D0B]/20",
+                    )}
+                  >
+                    {id === "onibus"
+                      ? "o ônibus"
+                      : id === "moto"
+                        ? "a moto"
+                        : "o carro"}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-[13px] font-bold tracking-[0.12em] uppercase opacity-70">
+                Fica no seu bolso
               </p>
-              <p className="text-[30px] font-bold text-white/45 line-through decoration-[#FF453A] decoration-[3px]">
-                {brl0(r.gas)}
+              <p className="mt-1 text-[56px] leading-none font-bold tracking-[-0.05em] tabular-nums">
+                {brl0(saved)}
+              </p>
+              <p className="mt-1 text-[15px] font-semibold opacity-75">
+                por mês · {brl0(saved * 12)} por ano
+              </p>
+              <p className="mt-3 rounded-[14px] bg-[#0A0D0B]/10 px-3 py-2 text-[14px] font-semibold">
+                {paid >= 100
+                  ? `A economia paga a parcela da ${t1.name} (21x de ${brl0(t1.installment)}) e ainda sobra ${brl0(saved - t1.installment)} por mês.`
+                  : `A economia já paga ${paid}% da parcela da ${t1.name} (21x de ${brl0(t1.installment)}).`}
               </p>
             </div>
-            <span className="text-[12px] text-white/40">por mês</span>
-          </div>
-          <div className="flex items-center justify-between rounded-[22px] bg-[#050706]/70 p-5 ring-1 ring-white/[0.06]">
-            <div>
-              <p className="text-[13px] text-white/50">
-                Scooter Quark na tomada
-              </p>
-              <p className="text-[30px] font-bold">{brl0(r.electric)}</p>
-            </div>
-            <span className="text-[12px] text-white/40">por mês</span>
-          </div>
-          <div className="rounded-[26px] bg-[linear-gradient(135deg,#6FBF8E,#A9DE86)] p-6 text-[#0A0D0B]">
-            <p className="text-[13px] font-bold tracking-[0.12em] uppercase opacity-70">
-              Fica no seu bolso
-            </p>
-            <p className="mt-1 text-[56px] leading-none font-bold tracking-[-0.05em]">
-              {brl0(r.saved)}
-            </p>
-            <p className="mt-1 text-[15px] font-semibold opacity-75">
-              por mês · {brl0(r.year)} por ano
+            <button
+              onClick={onCta}
+              className="mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white/[0.07] text-[15px] font-bold ring-1 ring-white/10"
+            >
+              Descobrir a scooter ideal pra mim{" "}
+              <Ico n="arrow" className="h-4 w-4" />
+            </button>
+            <p className="text-[11px] text-white/35">
+              Estimativa com 22 dias por mês. Ônibus: 2 passagens por dia. Moto:
+              35 km/l + R$ 0,10/km de manutenção. Carro: 11 km/l + R$ 0,25/km.
+              Scooter: tarifa de R$ 1,10/kWh, 50 km por carga + R$ 0,03/km. Sem
+              IPVA, seguro, licenciamento e estacionamento, que deixariam moto e
+              carro ainda mais caros. Valores reais variam com o uso.
             </p>
           </div>
-          <button
-            onClick={onCta}
-            className="mt-1 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white/[0.07] text-[15px] font-bold ring-1 ring-white/10"
-          >
-            Descobrir a scooter ideal pra mim{" "}
-            <Ico n="arrow" className="h-4 w-4" />
-          </button>
-          <p className="text-[11px] text-white/35">
-            Estimativa com 22 dias rodados por mês, tarifa de R$ 1,10/kWh e 50
-            km por carga de 1,28 kWh. Valores reais variam com o uso.
-          </p>
         </div>
       </div>
     </section>

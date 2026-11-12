@@ -58,6 +58,8 @@ export const SCOOTERS: Scooter[] = [
     forWho: "trabalha, entrega ou estuda e quer economizar todo dia.",
     image: "/mob/t1.jpg",
     gallery: [
+      { src: "/mob/t1-perfil.webp", caption: "Perfil", fit: "contain" },
+      { src: "/mob/t1-frente.webp", caption: "De frente", fit: "contain" },
       { src: "/mob/t1.jpg", caption: "Destaque", fit: "cut" },
       { src: "/mob/t1-lateral.jpg", caption: "Vista lateral", fit: "cut" },
     ],
@@ -182,6 +184,9 @@ export const SCOOTERS: Scooter[] = [
     forWho: "roda o dia inteiro e não quer se preocupar com bateria.",
     image: "/mob/mz.jpg",
     gallery: [
+      { src: "/mob/mz-perfil.webp", caption: "Perfil", fit: "contain" },
+      { src: "/mob/mz-frente.webp", caption: "De frente", fit: "contain" },
+      { src: "/mob/mz-traseira.webp", caption: "Traseira", fit: "contain" },
       { src: "/mob/mz.jpg", caption: "Destaque", fit: "cut" },
       { src: "/mob/mz-lateral.jpg", caption: "Vista lateral", fit: "cut" },
     ],
@@ -307,6 +312,68 @@ export function fuelSavings({
     saved: Math.max(0, gas - electric),
     year: Math.max(0, gas - electric) * 12,
   };
+}
+
+export type CommuteId = "onibus" | "moto" | "carro" | "scooter";
+
+export interface CommuteCost {
+  id: CommuteId;
+  label: string;
+  detail: string;
+  month: number;
+}
+
+/**
+ * Quanto custa ir e voltar todo mês de cada jeito (estimativa).
+ * Ônibus: passagens por dia (ida e volta). Moto e carro: combustível + manutenção por km
+ * (óleo, pneus, revisões). Scooter: energia na tomada + manutenção por km.
+ * Não entram IPVA, seguro, licenciamento e estacionamento (moto e carro ficariam ainda mais caros).
+ */
+export function commuteCosts({
+  kmDay,
+  days = 22,
+  fuel = 6.3,
+  bus = 5,
+  busTrips = 2,
+  tariff = 1.1,
+}: {
+  kmDay: number;
+  days?: number;
+  fuel?: number;
+  bus?: number;
+  busTrips?: number;
+  tariff?: number;
+}): CommuteCost[] {
+  const km = Math.max(0, kmDay) * days;
+  const motoKmL = 35;
+  const carKmL = 11;
+  const e = fuelSavings({ kmDay, days, fuel, tariff });
+  return [
+    {
+      id: "carro",
+      label: "Carro",
+      detail: `gasolina (${carKmL} km/l) + manutenção`,
+      month: (km / carKmL) * fuel + km * 0.25,
+    },
+    {
+      id: "onibus",
+      label: "Ônibus",
+      detail: `${busTrips} passagens por dia`,
+      month: busTrips * bus * days,
+    },
+    {
+      id: "moto",
+      label: "Moto a gasolina",
+      detail: `gasolina (${motoKmL} km/l) + manutenção`,
+      month: (km / motoKmL) * fuel + km * 0.1,
+    },
+    {
+      id: "scooter",
+      label: "Scooter elétrica Quark",
+      detail: "energia na tomada + manutenção",
+      month: e.electric + km * 0.03,
+    },
+  ];
 }
 
 /** Quiz "qual combina com você": devolve o modelo indicado. */
