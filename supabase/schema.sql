@@ -1428,3 +1428,22 @@ end $$;
 
 -- Atualiza o cache da API do Supabase para as funções novas aparecerem na hora
 notify pgrst, 'reload schema';
+
+-- Fotos extras dos produtos do catálogo (vários ângulos), enviadas pela equipe no CRM
+create table if not exists public.catalog_photos (
+  id uuid primary key default gen_random_uuid(),
+  catalog text not null,
+  model text not null,
+  url text not null,
+  caption text,
+  position int not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists catalog_photos_idx on public.catalog_photos (catalog, model, position);
+alter table public.catalog_photos enable row level security;
+drop policy if exists "catalog_photos_public" on public.catalog_photos;
+create policy "catalog_photos_public" on public.catalog_photos for select using (true);
+drop policy if exists "catalog_photos_team" on public.catalog_photos;
+create policy "catalog_photos_team" on public.catalog_photos for all to authenticated using (public.is_member()) with check (public.is_member());
+
+notify pgrst, 'reload schema';

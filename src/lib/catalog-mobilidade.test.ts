@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { SCOOTERS, chargeCost, fuelSavings, recommend } from "./catalog-mobilidade.ts";
+import { SCOOTERS, chargeCost, fuelSavings, mergeGallery, recommend } from "./catalog-mobilidade.ts";
 
 test("preços do catálogo batem: 21 parcelas = total a prazo (arredondado)", () => {
   for (const s of SCOOTERS) assert.ok(Math.abs(s.installment * s.installments - s.total) <= 21, s.name);
@@ -22,4 +22,15 @@ test("quiz recomenda o modelo certo", () => {
   assert.equal(recommend({ use: "trabalho", km: "curto", style: "pratico" }), "t1");
   assert.equal(recommend({ use: "passeio", km: "medio", style: "classico" }), "cappuccino");
   assert.equal(recommend({ use: "longo", km: "longo", style: "esportivo" }), "mz");
+});
+
+test("galeria: fotos enviadas vêm primeiro, sem repetir", () => {
+  const base = SCOOTERS[1].gallery;
+  assert.ok(base.length >= 3);
+  const g = mergeGallery(base, [{ url: "https://x/1.jpg", caption: " Frente " }, { url: base[0].src, caption: null }]);
+  assert.equal(g[0].src, "https://x/1.jpg");
+  assert.equal(g[0].caption, "Frente");
+  assert.equal(g[0].fit, "cover");
+  assert.equal(g.length, base.length + 1);
+  for (const s of SCOOTERS) assert.ok(s.gallery.length >= 2, s.name);
 });
