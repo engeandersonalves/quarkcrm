@@ -1027,3 +1027,8 @@ body:has(.theme-dark) { background: #000; }
 .bf-doc text[fill="#1C1234"] { fill: #fff; }
 .bf-doc [stroke="#1C1234"] { stroke: rgb(255 255 255 / 0.55); }
 .bf-doc polygon[fill="#1C1234"] { fill: rgb(255 255 255 / 0.55); }
+
+/* Controle deslizante do simulador do catálogo */
+.mob-range { -webkit-appearance: none; appearance: none; height: 8px; border-radius: 999px; background: linear-gradient(90deg, #4FC38A, #9FDB7C, #F3E93B) 0 / var(--p, 50%) 100% no-repeat, rgb(255 255 255 / 0.1); outline: none; }
+.mob-range::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; border-radius: 999px; background: #fff; box-shadow: 0 4px 14px rgb(0 0 0 / 0.6); cursor: grab; }
+.mob-range::-moz-range-thumb { width: 30px; height: 30px; border: 0; border-radius: 999px; background: #fff; box-shadow: 0 4px 14px rgb(0 0 0 / 0.6); }

@@ -24,7 +24,7 @@ import { useProposalViewAlerts } from "./view-alerts";
 import { useTheme, type Theme } from "./theme";
 import { Glyph, GlyphTile, type GlyphId } from "./ios-glyphs";
 
-type NavKey = "tasks" | "leads" | "proposals" | "documents" | "alarms";
+type NavKey = "tasks" | "leads" | "proposals" | "documents" | "alarms" | "catalog";
 interface NavItem {
   href: string;
   label: string;
@@ -54,6 +54,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     title: "Ferramentas",
     items: [
       { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap, glyph: "raio" },
+      { href: "/catalogos", label: "Catálogo Mobilidade", icon: Zap, glyph: "celular", badge: "catalog", hint: "acessos ao catálogo hoje" },
       { href: "/documentos", label: "Documentos", icon: FileSignature, glyph: "documentos", badge: "documents", hint: "aguardando assinatura" },
       { href: "/contratos", label: "Contratos", icon: ScrollText, glyph: "contratos" },
       { href: "/recibos", label: "Recibos", icon: Receipt, glyph: "recibos" },

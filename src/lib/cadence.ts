@@ -44,6 +44,7 @@ export const INTEREST: Record<Segment, string> = {
   eletroposto: "investir em um eletroposto",
   manutencao: "limpeza e manutenção da sua usina solar",
   gestao: "gestão energética",
+  mobilidade: "scooter elétrica",
 };
 
 /** Preenche as variáveis da mensagem com os dados do lead. */

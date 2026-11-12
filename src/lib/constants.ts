@@ -46,6 +46,7 @@ export const SEGMENTS: Record<Segment, { label: string; short: string; cls: stri
   eletroposto: { label: "Eletroposto (investimento)", short: "Eletroposto", cls: "bg-emerald-50 text-emerald-800 ring-emerald-600/20" },
   manutencao: { label: "Limpeza e manutenção de usina", short: "Manutenção", cls: "bg-cyan-50 text-cyan-800 ring-cyan-600/20" },
   gestao: { label: "Gestão energética", short: "Gestão", cls: "bg-rose-50 text-rose-800 ring-rose-600/20" },
+  mobilidade: { label: "Mobilidade elétrica (scooters)", short: "Mobilidade", cls: "bg-lime-50 text-lime-800 ring-lime-600/20" },
 };
 
 /** Segmentos que usam os dados de conta de luz / energia solar. */

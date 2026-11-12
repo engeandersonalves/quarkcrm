@@ -133,7 +133,7 @@ create table if not exists public.leads (
 alter table public.leads add column if not exists segment text not null default 'solar';
 -- Segmentos: solar, carregador (save), ambos, eletroposto, manutenção de usina e gestão energética.
 alter table public.leads drop constraint if exists leads_segment_check;
-alter table public.leads add constraint leads_segment_check check (segment in ('solar', 'save', 'ambos', 'eletroposto', 'manutencao', 'gestao'));
+alter table public.leads add constraint leads_segment_check check (segment in ('solar', 'save', 'ambos', 'eletroposto', 'manutencao', 'gestao', 'mobilidade'));
 create index if not exists leads_status_idx on public.leads (status);
 create index if not exists leads_created_idx on public.leads (created_at desc);
 
@@ -423,7 +423,7 @@ begin
     nullif(p ->> 'consumption_kwh', '')::numeric,
     left(coalesce(nullif(trim(p ->> 'source'), ''), 'Site'), 40),
     left(nullif(trim(p ->> 'notes'), ''), 2000),
-    case when p ->> 'segment' in ('solar', 'save', 'ambos', 'eletroposto', 'manutencao', 'gestao') then p ->> 'segment' else 'solar' end,
+    case when p ->> 'segment' in ('solar', 'save', 'ambos', 'eletroposto', 'manutencao', 'gestao', 'mobilidade') then p ->> 'segment' else 'solar' end,
     left(nullif(trim(p ->> 'roof_type'), ''), 60),
     case when p ->> 'connection_type' in ('mono', 'bi', 'tri') then p ->> 'connection_type' else null end,
     case when p ->> 'temperature' in ('frio', 'morno', 'quente') then p ->> 'temperature' else 'morno' end,
@@ -1250,5 +1250,178 @@ begin
     create policy "media_team_update" on storage.objects for update to authenticated using (bucket_id = 'media' and public.is_member());
     drop policy if exists "media_team_delete" on storage.objects;
     create policy "media_team_delete" on storage.objects for delete to authenticated using (bucket_id = 'media' and public.is_member());
+  end if;
+end $$;
+
+-- -----------------------------------------------------------------------------
+-- Catálogos com acesso por cadastro (ex.: Quark Mobilidade · Black Friday).
+-- Quem abre informa nome, telefone e e-mail; cada visita e clique fica registrado.
+-- -----------------------------------------------------------------------------
+create table if not exists public.catalog_access (
+  id uuid primary key default gen_random_uuid(),
+  catalog text not null,
+  token uuid not null default gen_random_uuid() unique,
+  lead_id uuid references public.leads (id) on delete set null,
+  owner_id uuid references public.profiles (id) on delete set null,
+  name text not null,
+  phone text not null,
+  email text,
+  visits int not null default 1,
+  seconds int not null default 0,
+  interest text,
+  device text,
+  first_at timestamptz not null default now(),
+  last_at timestamptz not null default now()
+);
+create index if not exists catalog_access_recent_idx on public.catalog_access (catalog, last_at desc);
+create unique index if not exists catalog_access_phone_idx on public.catalog_access (catalog, (regexp_replace(phone, '\D', '', 'g')));
+
+create table if not exists public.catalog_events (
+  id bigint generated always as identity primary key,
+  access_id uuid not null references public.catalog_access (id) on delete cascade,
+  kind text not null,
+  detail text,
+  value int not null default 0,
+  at timestamptz not null default now()
+);
+create index if not exists catalog_events_access_idx on public.catalog_events (access_id, at desc);
+
+alter table public.catalog_access enable row level security;
+alter table public.catalog_events enable row level security;
+drop policy if exists "catalog_access_team" on public.catalog_access;
+create policy "catalog_access_team" on public.catalog_access for select to authenticated using (public.is_member());
+drop policy if exists "catalog_access_admin_delete" on public.catalog_access;
+create policy "catalog_access_admin_delete" on public.catalog_access for delete to authenticated using (public.is_admin());
+drop policy if exists "catalog_events_team" on public.catalog_events;
+create policy "catalog_events_team" on public.catalog_events for select to authenticated using (public.is_member());
+
+-- Cadastro de quem abre o catálogo: cria (ou reaproveita) o lead e devolve o token de acesso.
+create or replace function public.catalog_register(p jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_catalog text := left(coalesce(nullif(trim(p ->> 'catalog'), ''), 'catalogo'), 60);
+  v_phone text := left(trim(coalesce(p ->> 'phone', '')), 30);
+  v_digits text := regexp_replace(coalesce(p ->> 'phone', ''), '\D', '', 'g');
+  v_email text := lower(left(nullif(trim(p ->> 'email'), ''), 160));
+  v_name text := left(trim(coalesce(p ->> 'name', '')), 120);
+  v_access public.catalog_access;
+  v_lead jsonb;
+  v_lead_id uuid;
+  v_owner uuid;
+begin
+  if v_name = '' or length(v_digits) < 10 then
+    raise exception 'nome e telefone são obrigatórios';
+  end if;
+  if v_email is not null and v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
+    raise exception 'e-mail inválido';
+  end if;
+
+  select * into v_access from public.catalog_access
+  where catalog = v_catalog and regexp_replace(phone, '\D', '', 'g') = v_digits;
+
+  if found then
+    update public.catalog_access set
+      visits = visits + 1, last_at = now(), name = v_name, email = coalesce(v_email, email),
+      device = coalesce(left(p ->> 'device', 20), device)
+    where id = v_access.id
+    returning * into v_access;
+    insert into public.catalog_events (access_id, kind, detail) values (v_access.id, 'open', 'cadastro');
+    if v_access.lead_id is not null then
+      insert into public.activities (lead_id, type, content)
+      values (v_access.lead_id, 'nota', 'Abriu o catálogo ' || v_catalog || ' de novo (' || v_access.visits || 'ª visita)');
+    end if;
+    return jsonb_build_object('token', v_access.token, 'visits', v_access.visits, 'returning', true);
+  end if;
+
+  v_lead := public.create_public_lead(jsonb_build_object(
+    'name', v_name, 'phone', v_phone, 'email', v_email,
+    'segment', coalesce(nullif(p ->> 'segment', ''), 'mobilidade'),
+    'source', left(coalesce(nullif(p ->> 'source', ''), 'Catálogo'), 40),
+    'temperature', 'morno', 'owner', p ->> 'owner',
+    'notes', 'Abriu o catálogo ' || v_catalog
+  ));
+  v_lead_id := nullif(v_lead ->> 'id', '')::uuid;
+  begin
+    v_owner := nullif(p ->> 'owner', '')::uuid;
+    perform 1 from public.profiles where id = v_owner and active;
+    if not found then v_owner := null; end if;
+  exception when others then v_owner := null;
+  end;
+
+  insert into public.catalog_access (catalog, lead_id, owner_id, name, phone, email, device)
+  values (v_catalog, v_lead_id, v_owner, v_name, v_phone, v_email, left(p ->> 'device', 20))
+  returning * into v_access;
+  insert into public.catalog_events (access_id, kind, detail) values (v_access.id, 'open', 'cadastro');
+  return jsonb_build_object('token', v_access.token, 'visits', 1, 'returning', false, 'lead', v_lead);
+end;
+$$;
+revoke all on function public.catalog_register(jsonb) from public;
+grant execute on function public.catalog_register(jsonb) to anon, authenticated;
+
+-- Visitante que já se cadastrou volta pelo mesmo navegador: conta mais uma visita.
+create or replace function public.catalog_visit(p_token uuid, p_device text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v public.catalog_access;
+begin
+  update public.catalog_access set visits = visits + 1, last_at = now(), device = coalesce(left(p_device, 20), device)
+  where token = p_token returning * into v;
+  if not found then return null; end if;
+  insert into public.catalog_events (access_id, kind, detail) values (v.id, 'open', 'retorno');
+  if v.lead_id is not null then
+    insert into public.activities (lead_id, type, content)
+    values (v.lead_id, 'nota', 'Abriu o catálogo ' || v.catalog || ' de novo (' || v.visits || 'ª visita)');
+  end if;
+  return jsonb_build_object('name', v.name, 'visits', v.visits);
+end;
+$$;
+revoke all on function public.catalog_visit(uuid, text) from public;
+grant execute on function public.catalog_visit(uuid, text) to anon, authenticated;
+
+-- Seções vistas, tempo de leitura e cliques (interesse em modelos, WhatsApp).
+create or replace function public.catalog_track(p_token uuid, p_kind text, p_detail text default null, p_value int default 0)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v public.catalog_access;
+  v_kind text := left(coalesce(p_kind, ''), 20);
+begin
+  if v_kind not in ('section', 'time', 'click', 'interest') then return; end if;
+  select * into v from public.catalog_access where token = p_token;
+  if not found then return; end if;
+  -- Proteção contra excesso de eventos: no máximo 400 por acesso
+  if (select count(*) from public.catalog_events where access_id = v.id) >= 400 then return; end if;
+  insert into public.catalog_events (access_id, kind, detail, value)
+  values (v.id, v_kind, left(p_detail, 80), greatest(0, least(coalesce(p_value, 0), 3600)));
+  if v_kind = 'time' then
+    update public.catalog_access set seconds = seconds + greatest(0, least(coalesce(p_value, 0), 600)), last_at = now() where id = v.id;
+  elsif v_kind = 'interest' then
+    update public.catalog_access set interest = left(p_detail, 80), last_at = now() where id = v.id;
+    if v.lead_id is not null then
+      insert into public.activities (lead_id, type, content) values (v.lead_id, 'nota', 'Quer a scooter ' || left(p_detail, 80) || ' (catálogo ' || v.catalog || ')');
+      update public.leads set temperature = 'quente' where id = v.lead_id;
+    end if;
+  end if;
+end;
+$$;
+revoke all on function public.catalog_track(uuid, text, text, int) from public;
+grant execute on function public.catalog_track(uuid, text, text, int) to anon, authenticated;
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'catalog_access') then
+    alter publication supabase_realtime add table public.catalog_access;
   end if;
 end $$;
