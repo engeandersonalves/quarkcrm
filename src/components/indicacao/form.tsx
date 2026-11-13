@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useRef, useState, type ReactNode } from "react";
+import { rewardLabel, rewardSuffix, type ReferralReward } from "@/lib/referral";
 
 const cx = (...c: (string | false | null | undefined)[]) =>
   c.filter(Boolean).join(" ");
@@ -277,6 +278,58 @@ function Tile({
   );
 }
 
+function RewardBanner({
+  value,
+  suffix,
+  note,
+}: {
+  value: string;
+  suffix: string;
+  note?: string;
+}) {
+  return (
+    <div
+      className={cx(
+        "bf-rise relative mt-6 overflow-hidden rounded-[28px] p-[1.5px]",
+        GRAD,
+      )}
+    >
+      <div className="relative flex items-center gap-4 rounded-[27px] bg-[#0b120d] p-4 sm:p-5">
+        <div className="pointer-events-none absolute -top-10 -right-8 h-36 w-36 rounded-full bg-[#9FDB7C]/25 blur-3xl" />
+        <span
+          className={cx(
+            "grid h-14 w-14 shrink-0 place-items-center rounded-[18px] text-[#0A0D0B] shadow-[0_12px_30px_-10px_rgba(159,219,124,0.9)]",
+            GRAD,
+          )}
+        >
+          <Ico n="gift" className="h-7 w-7" w={2} />
+        </span>
+        <div className="relative min-w-0">
+          <p className="text-[12px] font-bold tracking-[0.16em] text-[#A9DE86] uppercase">
+            Indicou, fechou, ganhou
+          </p>
+          <p className="mt-0.5 leading-none">
+            <span
+              className={cx(
+                "text-[40px] font-bold tracking-[-0.05em] tabular-nums sm:text-[48px]",
+                GT,
+              )}
+            >
+              {value}
+            </span>
+            {suffix && (
+              <span className="ml-1.5 text-[15px] font-semibold text-white/75">
+                {suffix}
+              </span>
+            )}
+          </p>
+          {note && <p className="mt-1 text-[13px] text-white/55">{note}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ----------------------------------------------------------------- tela */
 
 interface Form {
@@ -309,8 +362,10 @@ const EMPTY: Form = {
 
 export function ReferralForm({
   company,
+  reward,
 }: {
   company: { company_name: string | null; whatsapp: string | null };
+  reward?: ReferralReward | null;
 }) {
   const params = useSearchParams();
   const seller = params.get("v") ?? "";
@@ -324,6 +379,7 @@ export function ReferralForm({
   const [done, setDone] = useState<string | null>(null);
   const started = useRef(Date.now());
   const brand = company.company_name || "Quark Energia";
+  const prize = reward ? rewardLabel(reward) : null;
   const set = <K extends keyof Form>(k: K, v: Form[K]) =>
     setF((s) => ({ ...s, [k]: v }));
 
@@ -439,6 +495,13 @@ export function ReferralForm({
               <span className={GT}>Indicação recebida.</span>
             </h1>
             <p className="mx-auto mt-4 max-w-md text-[17px] text-white/65">
+              {prize && (
+                <>
+                  Se {done} fechar, você ganha{" "}
+                  <b className="text-[#A9DE86]">{prize}</b>
+                  {rewardSuffix(reward!) ? ` ${rewardSuffix(reward!)}` : ""}.{" "}
+                </>
+              )}
               A nossa equipe vai falar com {done} pelo WhatsApp, com todo
               cuidado, e fazer um estudo gratuito de economia. A gente te avisa
               como andou.
@@ -468,8 +531,22 @@ export function ReferralForm({
           </section>
         ) : (
           <>
+            {prize && step === 0 && (
+              <RewardBanner
+                value={prize}
+                suffix={rewardSuffix(reward!)}
+                note={reward!.note}
+              />
+            )}
+            {prize && step > 0 && (
+              <p className="mt-6 flex items-center justify-center gap-2 rounded-full bg-white/[0.05] px-4 py-2 text-[13px] font-semibold text-white/75 ring-1 ring-white/10">
+                <Ico n="gift" className="h-4 w-4 text-[#A9DE86]" /> Ganhe{" "}
+                <b className="text-[#A9DE86]">{prize}</b>{" "}
+                {rewardSuffix(reward!)} {reward!.note}
+              </p>
+            )}
             {step === 0 && (
-              <section className="bf-rise pt-10">
+              <section className={cx("bf-rise", prize ? "pt-8" : "pt-10")}>
                 <h1 className="text-[44px] leading-[0.92] font-bold tracking-[-0.05em] sm:text-[56px]">
                   Indique quem
                   <br />
@@ -484,8 +561,12 @@ export function ReferralForm({
                   {[
                     [
                       "gift",
-                      "Você indica, a gente agradece",
-                      "E te avisamos de cada passo da sua indicação.",
+                      prize
+                        ? `Ganhe ${prize} ${rewardSuffix(reward!)}`.trim()
+                        : "Você indica, a gente agradece",
+                      prize
+                        ? reward!.note || "E te avisamos de cada passo."
+                        : "E te avisamos de cada passo da sua indicação.",
                     ],
                     [
                       "shield",
@@ -578,11 +659,7 @@ export function ReferralForm({
                       className={INPUT}
                     />
                   </Field>
-                  <Field
-                    label="Seu WhatsApp"
-                    icon="phone"
-                    hint="opcional"
-                  >
+                  <Field label="Seu WhatsApp" icon="phone" hint="opcional">
                     <input
                       inputMode="tel"
                       autoComplete="tel"
