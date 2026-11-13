@@ -16,6 +16,7 @@ import { brl, fmtNum } from "@/lib/pricing";
 import { downloadCsv, today } from "@/lib/csv";
 import { ImportLeadsButton } from "@/components/app/import-leads";
 import { AnamneseLinkButton } from "@/components/app/anamnese-link";
+import { IndicacaoLinkButton } from "@/components/app/indicacao-link";
 import { useReward } from "@/components/app/rewards";
 import { Mantra } from "@/components/app/mantra";
 import { supabase } from "@/lib/supabase/client";
@@ -106,6 +107,7 @@ function Leads() {
               ]}
             />
             <AnamneseLinkButton />
+            <IndicacaoLinkButton />
             <ImportLeadsButton onDone={reload} />
             <Button
               variant="secondary"
