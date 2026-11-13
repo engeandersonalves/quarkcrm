@@ -39,21 +39,8 @@ import {
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cx } from "@/components/ui";
-import {
-  BUSINESSES,
-  CLEANING,
-  MANAGEMENT,
-  POWERS,
-  evCompare,
-  maintenanceSim,
-  stationCapacity,
-  stationSim,
-} from "@/lib/capture-sims";
-import {
-  DEFAULT_CAPTURE,
-  type CapturePrefs,
-  type RoofKey,
-} from "@/lib/defaults";
+import { BUSINESSES, CLEANING, MANAGEMENT, POWERS, evCompare, maintenanceSim, stationCapacity, stationSim } from "@/lib/capture-sims";
+import { DEFAULT_CAPTURE, type CapturePrefs, type RoofKey } from "@/lib/defaults";
 import { whatsappUrl } from "@/lib/format";
 import { brl, fmtNum } from "@/lib/pricing";
 import { quickEstimate } from "@/lib/quick-estimate";
@@ -81,37 +68,16 @@ export interface PublicCompany {
 
 /** Marca a conversão no Pixel da Meta e no Google Analytics, se estiverem configurados. */
 export function trackLead(segment: string | null, value: number) {
-  const w = window as unknown as {
-    fbq?: (...a: unknown[]) => void;
-    gtag?: (...a: unknown[]) => void;
-  };
+  const w = window as unknown as { fbq?: (...a: unknown[]) => void; gtag?: (...a: unknown[]) => void };
   try {
-    w.fbq?.("track", "Lead", {
-      content_category: segment ?? "solar",
-      value: Math.round(value),
-      currency: "BRL",
-    });
-    w.gtag?.("event", "generate_lead", {
-      lead_type: segment ?? "solar",
-      value: Math.round(value),
-      currency: "BRL",
-    });
+    w.fbq?.("track", "Lead", { content_category: segment ?? "solar", value: Math.round(value), currency: "BRL" });
+    w.gtag?.("event", "generate_lead", { lead_type: segment ?? "solar", value: Math.round(value), currency: "BRL" });
   } catch {
     // rastreamento nunca atrapalha o envio
   }
 }
 
-type StepId =
-  | "interesse"
-  | "conta"
-  | "telhado"
-  | "carro"
-  | "negocio"
-  | "operacao"
-  | "usina"
-  | "servicos"
-  | "resultado"
-  | "pronto";
+type StepId = "interesse" | "conta" | "telhado" | "carro" | "negocio" | "operacao" | "usina" | "servicos" | "resultado" | "pronto";
 type Urgency = "quente" | "morno" | "frio";
 
 const G = {
@@ -125,48 +91,12 @@ const G = {
   gray: "linear-gradient(145deg,#C7C7CC 0%,#8E8E93 100%)",
 };
 
-const SERVICES: {
-  seg: Segment;
-  title: string;
-  sub: string;
-  bg: string;
-  icon: ReactNode;
-}[] = [
-  {
-    seg: "solar",
-    title: "Energia solar",
-    sub: "Reduza até 95% da conta de luz",
-    bg: G.sun,
-    icon: <Sun className="h-[18px] w-[18px]" />,
-  },
-  {
-    seg: "save",
-    title: "Carregador para carro elétrico",
-    sub: "Rode pagando até 4x menos que gasolina",
-    bg: G.plug,
-    icon: <PlugZap className="h-[18px] w-[18px]" />,
-  },
-  {
-    seg: "eletroposto",
-    title: "Eletroposto de carga rápida",
-    sub: "Invista em recarga e fature com isso",
-    bg: G.station,
-    icon: <BatteryCharging className="h-[18px] w-[18px]" />,
-  },
-  {
-    seg: "manutencao",
-    title: "Limpeza e manutenção de usina",
-    sub: "Recupere a geração que a sujeira rouba",
-    bg: G.clean,
-    icon: <Droplets className="h-[18px] w-[18px]" />,
-  },
-  {
-    seg: "gestao",
-    title: "Gestão energética",
-    sub: "Titularidade, rateio de créditos e gestão",
-    bg: G.manage,
-    icon: <BarChart3 className="h-[18px] w-[18px]" />,
-  },
+const SERVICES: { seg: Segment; title: string; sub: string; bg: string; icon: ReactNode }[] = [
+  { seg: "solar", title: "Energia solar", sub: "Reduza até 95% da conta de luz", bg: G.sun, icon: <Sun className="h-[18px] w-[18px]" /> },
+  { seg: "save", title: "Carregador para carro elétrico", sub: "Rode pagando até 4x menos que gasolina", bg: G.plug, icon: <PlugZap className="h-[18px] w-[18px]" /> },
+  { seg: "eletroposto", title: "Eletroposto de carga rápida", sub: "Invista em recarga e fature com isso", bg: G.station, icon: <BatteryCharging className="h-[18px] w-[18px]" /> },
+  { seg: "manutencao", title: "Limpeza e manutenção de usina", sub: "Recupere a geração que a sujeira rouba", bg: G.clean, icon: <Droplets className="h-[18px] w-[18px]" /> },
+  { seg: "gestao", title: "Gestão energética", sub: "Titularidade, rateio de créditos e gestão", bg: G.manage, icon: <BarChart3 className="h-[18px] w-[18px]" /> },
 ];
 
 const FLOWS: Record<string, StepId[]> = {
@@ -179,24 +109,9 @@ const FLOWS: Record<string, StepId[]> = {
 };
 
 const ROOFS: { key: RoofKey; value: string; label: string; sub: string }[] = [
-  {
-    key: "ceramic",
-    value: "Telhado cerâmico",
-    label: "Cerâmico",
-    sub: "Colonial, telha de barro",
-  },
-  {
-    key: "fiber",
-    value: "Telhado fibrocimento",
-    label: "Fibrocimento",
-    sub: "Telha ondulada",
-  },
-  {
-    key: "metal",
-    value: "Telhado metálico",
-    label: "Metálico",
-    sub: "Aço ou zinco",
-  },
+  { key: "ceramic", value: "Telhado cerâmico", label: "Cerâmico", sub: "Colonial, telha de barro" },
+  { key: "fiber", value: "Telhado fibrocimento", label: "Fibrocimento", sub: "Telha ondulada" },
+  { key: "metal", value: "Telhado metálico", label: "Metálico", sub: "Aço ou zinco" },
   { key: "slab", value: "Laje", label: "Laje", sub: "Cobertura plana" },
   { key: "ground", value: "Solo", label: "Solo", sub: "Instalação no terreno" },
 ];
@@ -241,19 +156,7 @@ function useCountUp(target: number, ms = 1400) {
   return v;
 }
 
-export function CaptureFunnel({
-  company,
-  inline = false,
-  initialSegment,
-  initialBill,
-  onStepChange,
-}: {
-  company: PublicCompany;
-  inline?: boolean;
-  initialSegment?: Segment | null;
-  initialBill?: number;
-  onStepChange?: () => void;
-}) {
+export function CaptureFunnel({ company, inline = false, initialSegment, initialBill, onStepChange }: { company: PublicCompany; inline?: boolean; initialSegment?: Segment | null; initialBill?: number; onStepChange?: () => void }) {
   const params = useSearchParams();
   // inline: dentro da landing page (sem fundo próprio, sem rodapé e sem ocupar a tela toda)
   const embed = inline || params.get("embed") === "1";
@@ -264,25 +167,15 @@ export function CaptureFunnel({
   const capture: CapturePrefs = {
     roofImages: company.capture?.roofImages ?? {},
     paymentTitle: company.capture?.paymentTitle || DEFAULT_CAPTURE.paymentTitle,
-    payments:
-      Array.isArray(company.capture?.payments) &&
-      company.capture.payments.length
-        ? company.capture.payments
-        : DEFAULT_CAPTURE.payments,
+    payments: Array.isArray(company.capture?.payments) && company.capture.payments.length ? company.capture.payments : DEFAULT_CAPTURE.payments,
   };
   const tariff = Number(company.tariff) || 0.95;
 
-  const [segment, setSegment] = useState<Segment | null>(
-    initial && FLOWS[initial] ? initial : null,
-  );
-  const [step, setStep] = useState<StepId>(
-    initial && FLOWS[initial] ? FLOWS[initial][1] : "interesse",
-  );
+  const [segment, setSegment] = useState<Segment | null>(initial && FLOWS[initial] ? initial : null);
+  const [step, setStep] = useState<StepId>(initial && FLOWS[initial] ? FLOWS[initial][1] : "interesse");
   const [dir, setDir] = useState<"push" | "pop">("push");
   // Respostas
-  const [bill, setBill] = useState(
-    initialBill && initialBill > 0 ? initialBill : 600,
-  );
+  const [bill, setBill] = useState(initialBill && initialBill > 0 ? initialBill : 600);
   const [roof, setRoof] = useState("");
   const [km, setKm] = useState(1500);
   const [kml, setKml] = useState(10);
@@ -292,16 +185,7 @@ export function CaptureFunnel({
   const [kwp, setKwp] = useState(10);
   const [last, setLast] = useState("mais1ano");
   const [services, setServices] = useState<string[]>([]);
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    city: "",
-    urgency: "" as Urgency | "",
-    referred: "" as "" | "sim" | "nao",
-    referrer: "",
-    website: "",
-  });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", city: "", urgency: "" as Urgency | "", referred: "" as "" | "sim" | "nao", referrer: "", website: "" });
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
@@ -330,39 +214,14 @@ export function CaptureFunnel({
         bill,
         tariff: Number(company.tariff) || undefined,
         sunHours: Number(company.sunHours) || undefined,
-        fioBTariff:
-          company.fioBTariff != null ? Number(company.fioBTariff) : undefined,
-        publicLighting:
-          company.publicLighting != null
-            ? Number(company.publicLighting)
-            : undefined,
+        fioBTariff: company.fioBTariff != null ? Number(company.fioBTariff) : undefined,
+        publicLighting: company.publicLighting != null ? Number(company.publicLighting) : undefined,
       }),
-    [
-      bill,
-      company.tariff,
-      company.sunHours,
-      company.fioBTariff,
-      company.publicLighting,
-    ],
+    [bill, company.tariff, company.sunHours, company.fioBTariff, company.publicLighting],
   );
-  const ev = useMemo(
-    () => evCompare({ kmMonth: km, kmPerLiter: kml, tariff }),
-    [km, kml, tariff],
-  );
-  const station = useMemo(
-    () => stationSim({ power, sessionsDay: sessions, business }),
-    [power, sessions, business],
-  );
-  const maint = useMemo(
-    () =>
-      maintenanceSim({
-        kwp,
-        last,
-        tariff,
-        sunHours: Number(company.sunHours) || 5.2,
-      }),
-    [kwp, last, tariff, company.sunHours],
-  );
+  const ev = useMemo(() => evCompare({ kmMonth: km, kmPerLiter: kml, tariff }), [km, kml, tariff]);
+  const station = useMemo(() => stationSim({ power, sessionsDay: sessions, business }), [power, sessions, business]);
+  const maint = useMemo(() => maintenanceSim({ kwp, last, tariff, sunHours: Number(company.sunHours) || 5.2 }), [kwp, last, tariff, company.sunHours]);
 
   const summary = (): string => {
     switch (segment) {
@@ -373,38 +232,23 @@ export function CaptureFunnel({
       case "manutencao":
         return `Usina de ${fmtNum(kwp)} kWp · última limpeza: ${CLEANING.find((c) => c.id === last)?.label} · perda estimada ${brl(maint.lossMonth, 0)}/mês`;
       case "gestao":
-        return `Interesse: ${
-          services
-            .map((s) => MANAGEMENT.find((m) => m.id === s)?.label)
-            .filter(Boolean)
-            .join(", ") || "gestão energética"
-        }`;
+        return `Interesse: ${services.map((s) => MANAGEMENT.find((m) => m.id === s)?.label).filter(Boolean).join(", ") || "gestão energética"}`;
       default:
-        return solar.monthlySavings > 0
-          ? `Simulação: economia de ${brl(solar.monthlySavings, 0)}/mês`
-          : "";
+        return solar.monthlySavings > 0 ? `Simulação: economia de ${brl(solar.monthlySavings, 0)}/mês` : "";
     }
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.referred === "sim" && !form.referrer.trim())
-      return setError("Conte pra gente quem te indicou.");
+    if (form.referred === "sim" && !form.referrer.trim()) return setError("Conte pra gente quem te indicou.");
     setSending(true);
     setError("");
     const notes = [
-      form.referred === "sim"
-        ? `Indicação de: ${form.referrer.trim()}`
-        : form.referred === "nao"
-          ? "Sem indicação"
-          : "",
+      form.referred === "sim" ? `Indicação de: ${form.referrer.trim()}` : form.referred === "nao" ? "Sem indicação" : "",
       roof && `Telhado: ${roof}`,
-      form.urgency &&
-        `Prazo: ${URGENCY.find(([v]) => v === form.urgency)?.[1]}`,
+      form.urgency && `Prazo: ${URGENCY.find(([v]) => v === form.urgency)?.[1]}`,
       summary(),
-      form.referred === "sim" &&
-        source !== "Site" &&
-        `Origem do link: ${source}`,
+      form.referred === "sim" && source !== "Site" && `Origem do link: ${source}`,
     ]
       .filter(Boolean)
       .join(" · ");
@@ -430,39 +274,17 @@ export function CaptureFunnel({
       }),
     }).catch(() => null);
     setSending(false);
-    if (!res?.ok)
-      return setError(
-        "Não conseguimos enviar agora. Confira seus dados e tente novamente.",
-      );
-    trackLead(
-      segment,
-      segment === "eletroposto"
-        ? station.net + station.crossSell
-        : segment === "save"
-          ? ev.savingMonth
-          : segment === "manutencao"
-            ? maint.lossMonth
-            : solar.monthlySavings,
-    );
+    if (!res?.ok) return setError("Não conseguimos enviar agora. Confira seus dados e tente novamente.");
+    trackLead(segment, segment === "eletroposto" ? station.net + station.crossSell : segment === "save" ? ev.savingMonth : segment === "manutencao" ? maint.lossMonth : solar.monthlySavings);
     go("pronto");
   };
 
   const showBack = step !== "interesse" && step !== "pronto";
-  const withPayments =
-    segment === "solar" ||
-    segment === "ambos" ||
-    segment === "save" ||
-    segment === "eletroposto";
+  const withPayments = segment === "solar" || segment === "ambos" || segment === "save" || segment === "eletroposto";
 
   const result = (
     <>
-      {(segment === "solar" || segment === "ambos") && (
-        <SolarResult
-          monthly={solar.monthlySavings}
-          before={solar.billBefore}
-          after={solar.billAfter}
-        />
-      )}
+      {(segment === "solar" || segment === "ambos") && <SolarResult monthly={solar.monthlySavings} before={solar.billBefore} after={solar.billAfter} />}
       {segment === "save" && <EvResult ev={ev} />}
       {segment === "eletroposto" && <StationResult s={station} />}
       {segment === "manutencao" && <MaintResult m={maint} />}
@@ -472,99 +294,43 @@ export function CaptureFunnel({
   );
 
   return (
-    <div
-      className={cx(
-        "notranslate ios-font relative overflow-x-hidden text-white",
-        !inline && "min-h-dvh",
-        embed ? "bg-transparent" : "bg-[#0E0A1C]",
-      )}
-    >
+    <div className={cx("notranslate ios-font relative overflow-x-hidden text-white", !inline && "min-h-dvh", embed ? "bg-transparent" : "bg-[#0E0A1C]")}>
       {!embed && (
-        <div
-          aria-hidden
-          className="pointer-events-none fixed inset-0 overflow-hidden"
-        >
+        <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
           <div className="ios-float absolute -top-32 -left-24 h-80 w-80 rounded-full bg-[#5B34D6]/40 blur-[110px]" />
           <div className="ios-float absolute top-1/3 -right-28 h-96 w-96 rounded-full bg-[#9BD373]/20 blur-[110px] [animation-delay:-3s]" />
           <div className="ios-float absolute -bottom-40 left-1/4 h-80 w-80 rounded-full bg-[#F3EA3B]/15 blur-[110px] [animation-delay:-5s]" />
         </div>
       )}
 
-      <div
-        className={cx(
-          "relative mx-auto flex w-full max-w-[440px] flex-col",
-          inline ? "min-h-[640px]" : "min-h-dvh",
-        )}
-      >
-        <nav
-          className={cx(
-            "z-20 border-b border-white/5 bg-[#0E0A1C]/70 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-2xl backdrop-saturate-150",
-            inline ? "relative" : "sticky top-0",
-          )}
-        >
+      <div className={cx("relative mx-auto flex w-full max-w-[440px] flex-col", inline ? "min-h-[640px]" : "min-h-dvh")}>
+        <nav className={cx("z-20 border-b border-white/5 bg-[#0E0A1C]/70 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-2xl backdrop-saturate-150", inline ? "relative" : "sticky top-0")}>
           <div className="grid h-11 grid-cols-[1fr_auto_1fr] items-center">
             <div>
               {showBack && (
-                <button
-                  onClick={back}
-                  className="ios-press -ml-1 flex items-center text-[17px] text-[#9BD373]"
-                >
+                <button onClick={back} className="ios-press -ml-1 flex items-center text-[17px] text-[#9BD373]">
                   <ChevronLeft className="h-6 w-6" strokeWidth={2.4} /> Voltar
                 </button>
               )}
             </div>
-            <img
-              src="/brand/logo-h-white.png"
-              alt={brand}
-              className="h-7 w-auto"
-            />
+            <img src="/brand/logo-h-white.png" alt={brand} className="h-7 w-auto" />
             <div className="flex justify-end gap-1.5">
               {segment &&
                 step !== "pronto" &&
-                flow
-                  .slice(0, -1)
-                  .map((s, i) => (
-                    <span
-                      key={s}
-                      className={cx(
-                        "h-1.5 rounded-full transition-all duration-300",
-                        i < idx
-                          ? "w-1.5 bg-[#9BD373]"
-                          : i === idx
-                            ? "w-4 bg-[#F3EA3B]"
-                            : "w-1.5 bg-white/20",
-                      )}
-                    />
-                  ))}
+                flow.slice(0, -1).map((s, i) => (
+                  <span key={s} className={cx("h-1.5 rounded-full transition-all duration-300", i < idx ? "w-1.5 bg-[#9BD373]" : i === idx ? "w-4 bg-[#F3EA3B]" : "w-1.5 bg-white/20")} />
+                ))}
             </div>
           </div>
         </nav>
 
-        <main
-          key={step}
-          className={cx(
-            "flex flex-1 flex-col px-4 pt-6 pb-10",
-            dir === "push" ? "ios-push" : "ios-pop",
-          )}
-        >
+        <main key={step} className={cx("flex flex-1 flex-col px-4 pt-6 pb-10", dir === "push" ? "ios-push" : "ios-pop")}>
           {step === "interesse" && (
             <>
-              <LargeTitle
-                kicker="Simulação gratuita"
-                title="Como podemos te ajudar?"
-                sub="Escolha e veja os números na hora."
-              />
+              <LargeTitle kicker="Simulação gratuita" title="Como podemos te ajudar?" sub="Escolha e veja os números na hora." />
               <Group>
                 {SERVICES.map((s, i) => (
-                  <Row
-                    key={s.seg}
-                    icon={s.icon}
-                    bg={s.bg}
-                    title={s.title}
-                    sub={s.sub}
-                    onClick={() => choose(s.seg)}
-                    last={i === SERVICES.length - 1}
-                  />
+                  <Row key={s.seg} icon={s.icon} bg={s.bg} title={s.title} sub={s.sub} onClick={() => choose(s.seg)} last={i === SERVICES.length - 1} />
                 ))}
               </Group>
               <Trust company={company} />
@@ -573,30 +339,14 @@ export function CaptureFunnel({
 
           {step === "conta" && (
             <>
-              <LargeTitle
-                kicker={
-                  questions > 1
-                    ? `Pergunta ${idx} de ${questions}`
-                    : "Última pergunta"
-                }
-                title="Sua conta de luz"
-                sub="Valor médio por mês. Arraste ou use − e +."
-              />
+              <LargeTitle kicker={questions > 1 ? `Pergunta ${idx} de ${questions}` : "Última pergunta"} title="Sua conta de luz" sub="Valor médio por mês. Arraste ou use − e +." />
               <Glass className="mt-6 px-5 pt-8 pb-7 text-center">
                 <BigNumber>
                   {brl(bill, 0)}
                   {bill >= 5000 && <span className="text-4xl">+</span>}
                 </BigNumber>
                 <p className="mt-2 text-[15px] text-white/55">por mês</p>
-                <SliderRow
-                  value={bill}
-                  min={150}
-                  max={5000}
-                  step={10}
-                  bump={50}
-                  onChange={setBill}
-                  label="Valor da conta de luz"
-                />
+                <SliderRow value={bill} min={150} max={5000} step={10} bump={50} onChange={setBill} label="Valor da conta de luz" />
               </Glass>
               <Primary onClick={next}>Continuar</Primary>
             </>
@@ -604,15 +354,7 @@ export function CaptureFunnel({
 
           {step === "telhado" && (
             <>
-              <LargeTitle
-                kicker={
-                  questions > 1
-                    ? `Pergunta ${idx} de ${questions}`
-                    : "Última pergunta"
-                }
-                title="Seu telhado"
-                sub="Toque no que parece com o seu."
-              />
+              <LargeTitle kicker={questions > 1 ? `Pergunta ${idx} de ${questions}` : "Última pergunta"} title="Seu telhado" sub="Toque no que parece com o seu." />
               <div className="mt-6 grid grid-cols-2 gap-3">
                 {ROOFS.map((r, i) => (
                   <PhotoCard
@@ -636,31 +378,13 @@ export function CaptureFunnel({
 
           {step === "carro" && (
             <>
-              <LargeTitle
-                kicker={
-                  questions > 1
-                    ? `Pergunta ${idx} de ${questions}`
-                    : "Última pergunta"
-                }
-                title="Quanto você roda?"
-                sub="Por mês, somando todos os trajetos."
-              />
+              <LargeTitle kicker={questions > 1 ? `Pergunta ${idx} de ${questions}` : "Última pergunta"} title="Quanto você roda?" sub="Por mês, somando todos os trajetos." />
               <Glass className="mt-6 px-5 pt-8 pb-7 text-center">
                 <BigNumber>{fmtNum(km)} km</BigNumber>
                 <p className="mt-2 text-[15px] text-white/55">por mês</p>
-                <SliderRow
-                  value={km}
-                  min={300}
-                  max={6000}
-                  step={50}
-                  bump={100}
-                  onChange={setKm}
-                  label="Quilômetros por mês"
-                />
+                <SliderRow value={km} min={300} max={6000} step={50} bump={100} onChange={setKm} label="Quilômetros por mês" />
               </Glass>
-              <SectionHeader className="mt-7">
-                Seu carro a gasolina faz
-              </SectionHeader>
+              <SectionHeader className="mt-7">Seu carro a gasolina faz</SectionHeader>
               <Segmented
                 value={String(kml)}
                 onChange={(v) => setKml(Number(v))}
@@ -677,15 +401,7 @@ export function CaptureFunnel({
 
           {step === "negocio" && (
             <>
-              <LargeTitle
-                kicker={
-                  questions > 1
-                    ? `Pergunta ${idx} de ${questions}`
-                    : "Última pergunta"
-                }
-                title="Qual é o seu negócio?"
-                sub="Onde o eletroposto vai ficar."
-              />
+              <LargeTitle kicker={questions > 1 ? `Pergunta ${idx} de ${questions}` : "Última pergunta"} title="Qual é o seu negócio?" sub="Onde o eletroposto vai ficar." />
               <div className="mt-6 grid grid-cols-2 gap-3">
                 {BUSINESSES.map((b, i) => (
                   <Tile
@@ -693,9 +409,7 @@ export function CaptureFunnel({
                     delay={i * 40}
                     active={business === b.id}
                     icon={BUSINESS_ICON[b.id]}
-                    bg={
-                      [G.orange, G.sun, G.purple, G.plug, G.station, G.gray][i]
-                    }
+                    bg={[G.orange, G.sun, G.purple, G.plug, G.station, G.gray][i]}
                     label={b.label}
                     onClick={() => {
                       setBusiness(b.id);
@@ -709,18 +423,8 @@ export function CaptureFunnel({
 
           {step === "operacao" && (
             <>
-              <LargeTitle
-                kicker={
-                  questions > 1
-                    ? `Pergunta ${idx} de ${questions}`
-                    : "Última pergunta"
-                }
-                title="Seu eletroposto"
-                sub="Potência do carregador e movimento esperado."
-              />
-              <SectionHeader className="mt-6">
-                Potência do carregador rápido (DC)
-              </SectionHeader>
+              <LargeTitle kicker={questions > 1 ? `Pergunta ${idx} de ${questions}` : "Última pergunta"} title="Seu eletroposto" sub="Potência do carregador e movimento esperado." />
+              <SectionHeader className="mt-6">Potência do carregador rápido (DC)</SectionHeader>
               <Segmented
                 value={String(power)}
                 onChange={(v) => {
@@ -732,22 +436,10 @@ export function CaptureFunnel({
               />
               <Glass className="mt-6 px-5 pt-7 pb-7 text-center">
                 <BigNumber>{station.sessions}</BigNumber>
-                <p className="mt-2 text-[15px] text-white/55">
-                  recargas por dia
-                </p>
-                <SliderRow
-                  value={sessions}
-                  min={1}
-                  max={stationCapacity(power)}
-                  step={1}
-                  bump={1}
-                  onChange={setSessions}
-                  label="Recargas por dia"
-                />
+                <p className="mt-2 text-[15px] text-white/55">recargas por dia</p>
+                <SliderRow value={sessions} min={1} max={stationCapacity(power)} step={1} bump={1} onChange={setSessions} label="Recargas por dia" />
                 <p className="mt-4 text-[13px] text-white/50">
-                  Capacidade de até {stationCapacity(power)} recargas/dia com{" "}
-                  {power} kW · cerca de {Math.round((30 / (power * 0.85)) * 60)}{" "}
-                  min por recarga
+                  Capacidade de até {stationCapacity(power)} recargas/dia com {power} kW · cerca de {Math.round((30 / (power * 0.85)) * 60)} min por recarga
                 </p>
               </Glass>
               <Primary onClick={next}>Ver meu potencial</Primary>
@@ -756,29 +448,11 @@ export function CaptureFunnel({
 
           {step === "usina" && (
             <>
-              <LargeTitle
-                kicker={
-                  questions > 1
-                    ? `Pergunta ${idx} de ${questions}`
-                    : "Última pergunta"
-                }
-                title="Sua usina solar"
-                sub="Tamanho aproximado e última limpeza."
-              />
+              <LargeTitle kicker={questions > 1 ? `Pergunta ${idx} de ${questions}` : "Última pergunta"} title="Sua usina solar" sub="Tamanho aproximado e última limpeza." />
               <Glass className="mt-6 px-5 pt-8 pb-7 text-center">
                 <BigNumber>{fmtNum(kwp)} kWp</BigNumber>
-                <p className="mt-2 text-[15px] text-white/55">
-                  ≈ {Math.max(1, Math.round((kwp * 1000) / 600))} placas
-                </p>
-                <SliderRow
-                  value={kwp}
-                  min={2}
-                  max={300}
-                  step={1}
-                  bump={1}
-                  onChange={setKwp}
-                  label="Potência da usina"
-                />
+                <p className="mt-2 text-[15px] text-white/55">≈ {Math.max(1, Math.round((kwp * 1000) / 600))} placas</p>
+                <SliderRow value={kwp} min={2} max={300} step={1} bump={1} onChange={setKwp} label="Potência da usina" />
               </Glass>
               <SectionHeader className="mt-7">Última limpeza</SectionHeader>
               <Group className="mt-2">
@@ -801,15 +475,7 @@ export function CaptureFunnel({
 
           {step === "servicos" && (
             <>
-              <LargeTitle
-                kicker={
-                  questions > 1
-                    ? `Pergunta ${idx} de ${questions}`
-                    : "Última pergunta"
-                }
-                title="Do que você precisa?"
-                sub="Pode marcar mais de um."
-              />
+              <LargeTitle kicker={questions > 1 ? `Pergunta ${idx} de ${questions}` : "Última pergunta"} title="Do que você precisa?" sub="Pode marcar mais de um." />
               <Group>
                 {MANAGEMENT.map((m, i) => (
                   <Row
@@ -819,13 +485,7 @@ export function CaptureFunnel({
                     title={m.label}
                     sub={m.text}
                     selected={services.includes(m.id)}
-                    onClick={() =>
-                      setServices((s) =>
-                        s.includes(m.id)
-                          ? s.filter((x) => x !== m.id)
-                          : [...s, m.id],
-                      )
-                    }
+                    onClick={() => setServices((s) => (s.includes(m.id) ? s.filter((x) => x !== m.id) : [...s, m.id]))}
                     last={i === MANAGEMENT.length - 1}
                     noChevron
                   />
@@ -841,68 +501,21 @@ export function CaptureFunnel({
             <>
               {result}
               <form onSubmit={submit} className="mt-8">
-                <SectionHeader>
-                  {segment === "eletroposto"
-                    ? "Receba o estudo de viabilidade"
-                    : segment === "manutencao"
-                      ? "Agende um diagnóstico"
-                      : "Receba o estudo completo"}
-                </SectionHeader>
+                <SectionHeader>{segment === "eletroposto" ? "Receba o estudo de viabilidade" : segment === "manutencao" ? "Agende um diagnóstico" : "Receba o estudo completo"}</SectionHeader>
                 <Group className="mt-2">
-                  <Field
-                    label="Nome"
-                    value={form.name}
-                    onChange={(v) => setForm({ ...form, name: v })}
-                    autoComplete="name"
-                    required
-                    placeholder="Seu nome"
-                  />
-                  <Field
-                    label="WhatsApp"
-                    type="tel"
-                    inputMode="tel"
-                    value={form.phone}
-                    onChange={(v) => setForm({ ...form, phone: v })}
-                    autoComplete="tel"
-                    required
-                    placeholder="(00) 00000-0000"
-                  />
-                  <Field
-                    label="E-mail"
-                    type="email"
-                    value={form.email}
-                    onChange={(v) => setForm({ ...form, email: v })}
-                    autoComplete="email"
-                    required
-                    placeholder="voce@email.com"
-                  />
-                  <Field
-                    label="Cidade"
-                    value={form.city}
-                    onChange={(v) => setForm({ ...form, city: v })}
-                    autoComplete="address-level2"
-                    placeholder="Opcional"
-                    last
-                  />
+                  <Field label="Nome" value={form.name} onChange={(v) => setForm({ ...form, name: v })} autoComplete="name" required placeholder="Seu nome" />
+                  <Field label="WhatsApp" type="tel" inputMode="tel" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} autoComplete="tel" required placeholder="(00) 00000-0000" />
+                  <Field label="E-mail" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} autoComplete="email" required placeholder="voce@email.com" />
+                  <Field label="Cidade" value={form.city} onChange={(v) => setForm({ ...form, city: v })} autoComplete="address-level2" placeholder="Opcional" last />
                 </Group>
 
-                <SectionHeader className="mt-6">
-                  Quando pretende começar?
-                </SectionHeader>
-                <Segmented
-                  value={form.urgency}
-                  onChange={(v) => setForm({ ...form, urgency: v as Urgency })}
-                  options={URGENCY}
-                />
+                <SectionHeader className="mt-6">Quando pretende começar?</SectionHeader>
+                <Segmented value={form.urgency} onChange={(v) => setForm({ ...form, urgency: v as Urgency })} options={URGENCY} />
 
-                <SectionHeader className="mt-6">
-                  Alguém indicou a gente?
-                </SectionHeader>
+                <SectionHeader className="mt-6">Alguém indicou a gente?</SectionHeader>
                 <Segmented
                   value={form.referred}
-                  onChange={(v) =>
-                    setForm({ ...form, referred: v as "sim" | "nao" })
-                  }
+                  onChange={(v) => setForm({ ...form, referred: v as "sim" | "nao" })}
                   options={[
                     ["sim", "Sim"],
                     ["nao", "Não"],
@@ -910,38 +523,17 @@ export function CaptureFunnel({
                 />
                 {form.referred === "sim" && (
                   <Group className="ios-rise mt-3">
-                    <Field
-                      label="Quem?"
-                      value={form.referrer}
-                      onChange={(v) => setForm({ ...form, referrer: v })}
-                      placeholder="Nome de quem indicou"
-                      autoFocus
-                      last
-                    />
+                    <Field label="Quem?" value={form.referrer} onChange={(v) => setForm({ ...form, referrer: v })} placeholder="Nome de quem indicou" autoFocus last />
                   </Group>
                 )}
-                <input
-                  tabIndex={-1}
-                  autoComplete="off"
-                  className="hidden"
-                  value={form.website}
-                  onChange={(e) =>
-                    setForm({ ...form, website: e.target.value })
-                  }
-                  aria-hidden
-                />
+                <input tabIndex={-1} autoComplete="off" className="hidden" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} aria-hidden />
 
-                {error && (
-                  <p className="mt-4 px-4 text-[15px] text-[#FF3B30]">
-                    {error}
-                  </p>
-                )}
+                {error && <p className="mt-4 px-4 text-[15px] text-[#FF3B30]">{error}</p>}
                 <Primary type="submit" disabled={sending}>
                   {sending ? "Enviando…" : "Quero receber gratuitamente"}
                 </Primary>
                 <p className="mt-3 flex items-center justify-center gap-1.5 text-[13px] text-white/50">
-                  <Lock className="h-3.5 w-3.5" /> Seus dados ficam protegidos
-                  com a {brand}.
+                  <Lock className="h-3.5 w-3.5" /> Seus dados ficam protegidos com a {brand}.
                 </p>
               </form>
             </>
@@ -951,35 +543,19 @@ export function CaptureFunnel({
             <>
               <div className="flex flex-col items-center pt-2 pb-6 text-center">
                 <span className="ios-bounce grid h-20 w-20 place-items-center rounded-full bg-[#34C759] shadow-[0_16px_40px_-10px_rgba(52,199,89,0.7)]">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="ios-check h-10 w-10"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth={3}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden
-                  >
+                  <svg viewBox="0 0 24 24" className="ios-check h-10 w-10" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M5 12.5l4.5 4.5L19 7.5" />
                   </svg>
                 </span>
-                <h1 className="mt-5 text-[30px] font-bold tracking-[-0.02em]">
-                  Tudo certo
-                  {form.name ? `, ${form.name.trim().split(/\s+/)[0]}` : ""}!
-                </h1>
+                <h1 className="mt-5 text-[30px] font-bold tracking-[-0.02em]">Tudo certo{form.name ? `, ${form.name.trim().split(/\s+/)[0]}` : ""}!</h1>
                 <p className="mt-1.5 text-[16px] text-white/60">
-                  Enviamos tudo para{" "}
-                  <span className="text-white/90">{form.email}</span>
+                  Enviamos tudo para <span className="text-white/90">{form.email}</span>
                 </p>
               </div>
               {result}
               {company.whatsapp && (
                 <a
-                  href={whatsappUrl(
-                    company.whatsapp,
-                    `Olá! Sou ${form.name.trim().split(/\s+/)[0]}, fiz a simulação no site (${summary() || "quero saber mais"}) e quero falar com um especialista.`,
-                  )}
+                  href={whatsappUrl(company.whatsapp, `Olá! Sou ${form.name.trim().split(/\s+/)[0]}, fiz a simulação no site (${summary() || "quero saber mais"}) e quero falar com um especialista.`)}
                   target="_blank"
                   rel="noreferrer"
                   className="ios-press mt-8 flex h-[54px] w-full items-center justify-center gap-2 rounded-[16px] bg-[#34C759] text-[17px] font-semibold text-white shadow-[0_10px_30px_-10px_rgba(52,199,89,0.8)]"
@@ -995,9 +571,7 @@ export function CaptureFunnel({
           <footer className="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[12px] text-white/45">
             {brand}
             {company.city ? ` · ${company.city}` : ""}
-            {company.instagram
-              ? ` · @${String(company.instagram).replace(/^@/, "")}`
-              : ""}
+            {company.instagram ? ` · @${String(company.instagram).replace(/^@/, "")}` : ""}
           </footer>
         )}
       </div>
@@ -1007,38 +581,16 @@ export function CaptureFunnel({
 
 /* ================================================================ resultados */
 
-function SolarResult({
-  monthly,
-  before,
-  after,
-}: {
-  monthly: number;
-  before: number;
-  after: number;
-}) {
+function SolarResult({ monthly, before, after }: { monthly: number; before: number; after: number }) {
   return (
     <>
-      <Hero
-        badge="Sua economia estimada"
-        value={monthly}
-        sub="por mês na sua conta de luz"
-      />
+      <Hero badge="Sua economia estimada" value={monthly} sub="por mês na sua conta de luz" />
       {before > 0 && (
         <Glass className="ios-rise mt-4 p-5">
           <Compare
             rows={[
-              {
-                label: "Conta hoje",
-                value: before,
-                color: "linear-gradient(90deg,#FF9F6B,#F0642E)",
-                icon: <Flame className="h-4 w-4" />,
-              },
-              {
-                label: "Com energia solar",
-                value: after,
-                color: "linear-gradient(90deg,#F3EA3B,#34C759)",
-                icon: <Sun className="h-4 w-4" />,
-              },
+              { label: "Conta hoje", value: before, color: "linear-gradient(90deg,#FF9F6B,#F0642E)", icon: <Flame className="h-4 w-4" /> },
+              { label: "Com energia solar", value: after, color: "linear-gradient(90deg,#F3EA3B,#34C759)", icon: <Sun className="h-4 w-4" /> },
             ]}
           />
         </Glass>
@@ -1050,66 +602,23 @@ function SolarResult({
 function EvResult({ ev }: { ev: ReturnType<typeof evCompare> }) {
   return (
     <>
-      <Hero
-        badge="Economia com carro elétrico"
-        value={ev.savingMonth}
-        sub="por mês trocando a gasolina pela tomada"
-      />
+      <Hero badge="Economia com carro elétrico" value={ev.savingMonth} sub="por mês trocando a gasolina pela tomada" />
       <Glass className="ios-rise mt-4 p-5">
-        <p className="mb-4 text-[13px] font-medium tracking-wide text-white/55 uppercase">
-          Custo para rodar {fmtNum(ev.km)} km/mês
-        </p>
+        <p className="mb-4 text-[13px] font-medium tracking-wide text-white/55 uppercase">Custo para rodar {fmtNum(ev.km)} km/mês</p>
         <Compare
           rows={[
-            {
-              label: "Carro a gasolina",
-              value: ev.gasMonth,
-              color: "linear-gradient(90deg,#FF9F6B,#F0642E)",
-              icon: <Fuel className="h-4 w-4" />,
-            },
-            {
-              label: "Carro elétrico",
-              value: ev.evMonth,
-              color: "linear-gradient(90deg,#7CC4FF,#34C759)",
-              icon: <Zap className="h-4 w-4" />,
-            },
+            { label: "Carro a gasolina", value: ev.gasMonth, color: "linear-gradient(90deg,#FF9F6B,#F0642E)", icon: <Fuel className="h-4 w-4" /> },
+            { label: "Carro elétrico", value: ev.evMonth, color: "linear-gradient(90deg,#7CC4FF,#34C759)", icon: <Zap className="h-4 w-4" /> },
           ]}
         />
       </Glass>
       <div className="ios-rise mt-3 grid grid-cols-2 gap-3">
-        <Stat
-          icon={<Gauge className="h-4 w-4" />}
-          bg={G.plug}
-          label="Por km"
-          value={`${brl(ev.perKmEv, 2)}`}
-          sub={`contra ${brl(ev.perKmGas, 2)} na gasolina`}
-        />
-        <Stat
-          icon={<TrendingUp className="h-4 w-4" />}
-          bg={G.station}
-          label="Em 5 anos"
-          value={brl(ev.saving5y, 0)}
-          sub="no seu bolso"
-        />
-        <Stat
-          icon={<Zap className="h-4 w-4" />}
-          bg={G.purple}
-          label="Mais barato"
-          value={`${fmtNum(ev.times, 1)}x`}
-          sub="que a gasolina"
-        />
-        <Stat
-          icon={<Leaf className="h-4 w-4" />}
-          bg={G.station}
-          label="CO₂ evitado"
-          value={`${fmtNum(ev.co2TonsYear, 1)} t`}
-          sub="por ano"
-        />
+        <Stat icon={<Gauge className="h-4 w-4" />} bg={G.plug} label="Por km" value={`${brl(ev.perKmEv, 2)}`} sub={`contra ${brl(ev.perKmGas, 2)} na gasolina`} />
+        <Stat icon={<TrendingUp className="h-4 w-4" />} bg={G.station} label="Em 5 anos" value={brl(ev.saving5y, 0)} sub="no seu bolso" />
+        <Stat icon={<Zap className="h-4 w-4" />} bg={G.purple} label="Mais barato" value={`${fmtNum(ev.times, 1)}x`} sub="que a gasolina" />
+        <Stat icon={<Leaf className="h-4 w-4" />} bg={G.station} label="CO₂ evitado" value={`${fmtNum(ev.co2TonsYear, 1)} t`} sub="por ano" />
       </div>
-      <Tip icon={<Sun className="h-4 w-4" />}>
-        Com energia solar em casa, a recarga sai praticamente de graça: o sol
-        abastece o carro.
-      </Tip>
+      <Tip icon={<Sun className="h-4 w-4" />}>Com energia solar em casa, a recarga sai praticamente de graça: o sol abastece o carro.</Tip>
     </>
   );
 }
@@ -1120,58 +629,26 @@ function StationResult({ s }: { s: ReturnType<typeof stationSim> }) {
   const paybackPct = Math.min(100, (s.paybackMonths / 60) * 100);
   return (
     <>
-      <Hero
-        badge="Potencial do seu eletroposto"
-        value={total}
-        sub="por mês entre recarga e vendas no seu negócio"
-      />
+      <Hero badge="Potencial do seu eletroposto" value={total} sub="por mês entre recarga e vendas no seu negócio" />
       <Glass className="ios-rise mt-4 p-5">
-        <p className="text-[13px] font-medium tracking-wide text-white/55 uppercase">
-          De onde vem o dinheiro
-        </p>
+        <p className="text-[13px] font-medium tracking-wide text-white/55 uppercase">De onde vem o dinheiro</p>
         <div className="mt-3 flex h-4 overflow-hidden rounded-full bg-white/[0.06]">
-          <div
-            className="h-full bg-gradient-to-r from-[#8FE3B0] to-[#1FA36A]"
-            style={{ width: `${netPct}%` }}
-          />
-          <div
-            className="h-full bg-gradient-to-r from-[#B38CFF] to-[#5B34D6]"
-            style={{ width: `${100 - netPct}%` }}
-          />
+          <div className="h-full bg-gradient-to-r from-[#8FE3B0] to-[#1FA36A]" style={{ width: `${netPct}%` }} />
+          <div className="h-full bg-gradient-to-r from-[#B38CFF] to-[#5B34D6]" style={{ width: `${100 - netPct}%` }} />
         </div>
         <div className="mt-4 grid gap-3">
-          <Legend
-            color="#1FA36A"
-            title="Lucro com recargas"
-            value={brl(s.net, 0)}
-            sub={`${fmtNum(s.sessionsMonth)} recargas · ${fmtNum(s.kwhMonth)} kWh vendidos`}
-          />
-          <Legend
-            color="#5B34D6"
-            title="Venda cruzada no seu negócio"
-            value={brl(s.crossSell, 0)}
-            sub={`6 em cada 10 motoristas consomem enquanto carregam · ticket de ${brl(s.ticket, 0)}`}
-          />
+          <Legend color="#1FA36A" title="Lucro com recargas" value={brl(s.net, 0)} sub={`${fmtNum(s.sessionsMonth)} recargas · ${fmtNum(s.kwhMonth)} kWh vendidos`} />
+          <Legend color="#5B34D6" title="Venda cruzada no seu negócio" value={brl(s.crossSell, 0)} sub={`6 em cada 10 motoristas consomem enquanto carregam · ticket de ${brl(s.ticket, 0)}`} />
         </div>
       </Glass>
       <Glass className="ios-rise mt-3 p-5">
         <div className="flex items-baseline justify-between">
-          <p className="text-[13px] font-medium tracking-wide text-white/55 uppercase">
-            Retorno do investimento
-          </p>
-          <p className="ios-rounded text-[22px] font-bold">
-            {s.paybackMonths ? `${fmtNum(s.paybackMonths)} meses` : "—"}
-          </p>
+          <p className="text-[13px] font-medium tracking-wide text-white/55 uppercase">Retorno do investimento</p>
+          <p className="ios-rounded text-[22px] font-bold">{s.paybackMonths ? `${fmtNum(s.paybackMonths)} meses` : "—"}</p>
         </div>
         <div className="relative mt-4 h-2 rounded-full bg-white/[0.06]">
-          <div
-            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#F3EA3B] to-[#34C759]"
-            style={{ width: `${paybackPct}%` }}
-          />
-          <span
-            className="absolute -top-1.5 grid h-5 w-5 -translate-x-1/2 place-items-center rounded-full bg-white shadow ring-2 ring-[#34C759]"
-            style={{ left: `${paybackPct}%` }}
-          >
+          <div className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#F3EA3B] to-[#34C759]" style={{ width: `${paybackPct}%` }} />
+          <span className="absolute -top-1.5 grid h-5 w-5 -translate-x-1/2 place-items-center rounded-full bg-white shadow ring-2 ring-[#34C759]" style={{ left: `${paybackPct}%` }}>
             <Check className="h-3 w-3 text-[#34C759]" strokeWidth={3} />
           </span>
         </div>
@@ -1180,19 +657,12 @@ function StationResult({ s }: { s: ReturnType<typeof stationSim> }) {
           <span>5 anos</span>
         </div>
         <p className="mt-3 text-[14px] text-white/65">
-          Só com recargas: {brl(s.net * 12, 0)} por ano. Investimento de
-          referência: {brl(s.invest, 0)} ({s.power} kW, equipamento e
-          instalação).
+          Só com recargas: {brl(s.net * 12, 0)} por ano. Investimento de referência: {brl(s.invest, 0)} ({s.power} kW, equipamento e instalação).
         </p>
       </Glass>
-      <Tip icon={<Sun className="h-4 w-4" />}>
-        Com energia solar alimentando o eletroposto, o custo da energia despenca
-        e a margem por recarga dispara.
-      </Tip>
+      <Tip icon={<Sun className="h-4 w-4" />}>Com energia solar alimentando o eletroposto, o custo da energia despenca e a margem por recarga dispara.</Tip>
       <p className="mt-3 px-2 text-[11px] leading-relaxed text-white/45">
-        Estimativa com recarga média de 30 kWh, venda a R$ 2,19/kWh, energia a
-        R$ 0,95/kWh e 10% de taxas. O estudo de viabilidade considera o seu
-        local.
+        Estimativa com recarga média de 30 kWh, venda a R$ 2,19/kWh, energia a R$ 0,95/kWh e 10% de taxas. O estudo de viabilidade considera o seu local.
       </p>
     </>
   );
@@ -1202,100 +672,39 @@ function MaintResult({ m }: { m: ReturnType<typeof maintenanceSim> }) {
   const loss = useCountUp(m.lossMonth);
   return (
     <>
-      <div
-        className="ios-rise relative overflow-hidden rounded-[28px] px-6 pt-7 pb-6 text-center text-white shadow-[0_24px_60px_-20px_rgba(28,18,52,0.7)]"
-        style={{
-          background:
-            "linear-gradient(160deg,#2A1B55 0%,#1C1234 55%,#120B24 100%)",
-        }}
-      >
+      <div className="ios-rise relative overflow-hidden rounded-[28px] px-6 pt-7 pb-6 text-center text-white shadow-[0_24px_60px_-20px_rgba(28,18,52,0.7)]" style={{ background: "linear-gradient(160deg,#2A1B55 0%,#1C1234 55%,#120B24 100%)" }}>
         <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[12px] font-semibold tracking-wide text-[#FFB36B]">
           <AlertTriangle className="h-3.5 w-3.5" /> Diagnóstico da sua usina
         </span>
         <EfficiencyGauge value={m.efficiency} />
-        <p className="mt-1 text-[15px] text-white/70">
-          Você pode estar deixando de ganhar
-        </p>
-        <p className="ios-rounded mt-1 bg-gradient-to-r from-[#FFD84D] to-[#FF7A45] bg-clip-text text-[48px] leading-none font-bold text-transparent">
-          {brl(loss, 0)}
-        </p>
-        <p className="mt-1 text-[15px] text-white/70">
-          por mês · {brl(m.lossYear, 0)} por ano
-        </p>
+        <p className="mt-1 text-[15px] text-white/70">Você pode estar deixando de ganhar</p>
+        <p className="ios-rounded mt-1 bg-gradient-to-r from-[#FFD84D] to-[#FF7A45] bg-clip-text text-[48px] leading-none font-bold text-transparent">{brl(loss, 0)}</p>
+        <p className="mt-1 text-[15px] text-white/70">por mês · {brl(m.lossYear, 0)} por ano</p>
       </div>
-      <SectionHeader className="mt-7">
-        Benefícios da limpeza e manutenção
-      </SectionHeader>
+      <SectionHeader className="mt-7">Benefícios da limpeza e manutenção</SectionHeader>
       <Group className="mt-2">
         {[
-          [
-            "Mais geração, mais economia",
-            `Recupere até ${fmtNum(m.lossPct * 100)}% de energia que a sujeira bloqueia.`,
-          ],
-          [
-            "Vida útil prolongada",
-            "Módulos limpos esquentam menos e degradam mais devagar.",
-          ],
-          [
-            "Garantia preservada",
-            "Fabricantes exigem manutenção para manter a garantia.",
-          ],
-          [
-            "Falhas detectadas cedo",
-            "Inspeção de conexões, inversor e string box.",
-          ],
+          ["Mais geração, mais economia", `Recupere até ${fmtNum(m.lossPct * 100)}% de energia que a sujeira bloqueia.`],
+          ["Vida útil prolongada", "Módulos limpos esquentam menos e degradam mais devagar."],
+          ["Garantia preservada", "Fabricantes exigem manutenção para manter a garantia."],
+          ["Falhas detectadas cedo", "Inspeção de conexões, inversor e string box."],
         ].map(([t, d], i, a) => (
-          <InfoRow
-            key={t}
-            icon={<Check className="h-[18px] w-[18px]" strokeWidth={3} />}
-            bg={G.station}
-            title={t}
-            text={d}
-            last={i === a.length - 1}
-          />
+          <InfoRow key={t} icon={<Check className="h-[18px] w-[18px]" strokeWidth={3} />} bg={G.station} title={t} text={d} last={i === a.length - 1} />
         ))}
       </Group>
       <SectionHeader className="mt-6">Riscos de não fazer</SectionHeader>
       <Group className="mt-2">
         {[
-          [
-            "Pontos quentes (hotspots)",
-            "Sujeira concentrada aquece células e pode queimar o módulo.",
-          ],
-          [
-            "Risco de incêndio",
-            "Conexões frouxas e cabos danificados geram arcos elétricos.",
-          ],
-          [
-            "Perda silenciosa",
-            "A geração cai aos poucos e a conta volta a subir sem você perceber.",
-          ],
+          ["Pontos quentes (hotspots)", "Sujeira concentrada aquece células e pode queimar o módulo."],
+          ["Risco de incêndio", "Conexões frouxas e cabos danificados geram arcos elétricos."],
+          ["Perda silenciosa", "A geração cai aos poucos e a conta volta a subir sem você perceber."],
         ].map(([t, d], i, a) => (
-          <InfoRow
-            key={t}
-            icon={<AlertTriangle className="h-[18px] w-[18px]" />}
-            bg={G.orange}
-            title={t}
-            text={d}
-            last={i === a.length - 1}
-          />
+          <InfoRow key={t} icon={<AlertTriangle className="h-[18px] w-[18px]" />} bg={G.orange} title={t} text={d} last={i === a.length - 1} />
         ))}
       </Group>
       <div className="ios-rise mt-4 grid grid-cols-2 gap-3">
-        <Stat
-          icon={<Zap className="h-4 w-4" />}
-          bg={G.clean}
-          label="Energia perdida"
-          value={`${fmtNum(m.lossKwh)} kWh`}
-          sub="por mês"
-        />
-        <Stat
-          icon={<TrendingUp className="h-4 w-4" />}
-          bg={G.station}
-          label="Em 5 anos"
-          value={brl(m.loss5y, 0)}
-          sub="que voltam para você"
-        />
+        <Stat icon={<Zap className="h-4 w-4" />} bg={G.clean} label="Energia perdida" value={`${fmtNum(m.lossKwh)} kWh`} sub="por mês" />
+        <Stat icon={<TrendingUp className="h-4 w-4" />} bg={G.station} label="Em 5 anos" value={brl(m.loss5y, 0)} sub="que voltam para você" />
       </div>
     </>
   );
@@ -1305,62 +714,28 @@ function ManageResult({ selected }: { selected: string[] }) {
   const list = MANAGEMENT.filter((m) => selected.includes(m.id));
   return (
     <>
-      <div
-        className="ios-rise relative overflow-hidden rounded-[28px] px-6 pt-7 pb-8 text-center text-white shadow-[0_24px_60px_-20px_rgba(28,18,52,0.7)]"
-        style={{
-          background:
-            "linear-gradient(160deg,#2A1B55 0%,#1C1234 55%,#120B24 100%)",
-        }}
-      >
-        <div
-          aria-hidden
-          className="absolute -top-16 left-1/2 h-40 w-72 -translate-x-1/2 rounded-full bg-[#FF9DB8]/30 blur-3xl"
-        />
+      <div className="ios-rise relative overflow-hidden rounded-[28px] px-6 pt-7 pb-8 text-center text-white shadow-[0_24px_60px_-20px_rgba(28,18,52,0.7)]" style={{ background: "linear-gradient(160deg,#2A1B55 0%,#1C1234 55%,#120B24 100%)" }}>
+        <div aria-hidden className="absolute -top-16 left-1/2 h-40 w-72 -translate-x-1/2 rounded-full bg-[#FF9DB8]/30 blur-3xl" />
         <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[12px] font-semibold tracking-wide text-[#F3EA3B]">
           <Sparkles className="h-3.5 w-3.5" /> Gestão energética
         </span>
-        <p className="relative mt-4 text-[28px] leading-tight font-bold">
-          Sua energia no controle, sem burocracia.
-        </p>
-        <p className="relative mt-2 text-[15px] text-white/70">
-          Cuidamos de tudo junto à distribuidora.
-        </p>
+        <p className="relative mt-4 text-[28px] leading-tight font-bold">Sua energia no controle, sem burocracia.</p>
+        <p className="relative mt-2 text-[15px] text-white/70">Cuidamos de tudo junto à distribuidora.</p>
       </div>
       <SectionHeader className="mt-7">O que resolvemos para você</SectionHeader>
       <Group className="mt-2">
         {list.map((m, i) => (
-          <InfoRow
-            key={m.id}
-            icon={MANAGE_ICON[m.id]}
-            bg={
-              [G.purple, G.station, G.plug, G.manage][
-                MANAGEMENT.findIndex((x) => x.id === m.id)
-              ]
-            }
-            title={m.label}
-            text={m.text}
-            last={i === list.length - 1}
-          />
+          <InfoRow key={m.id} icon={MANAGE_ICON[m.id]} bg={[G.purple, G.station, G.plug, G.manage][MANAGEMENT.findIndex((x) => x.id === m.id)]} title={m.label} text={m.text} last={i === list.length - 1} />
         ))}
       </Group>
       <div className="ios-rise mt-4 grid grid-cols-3 gap-2">
         {[
           [<ShieldCheck key="a" className="h-5 w-5" />, "Sem filas", G.station],
           [<Wrench key="b" className="h-5 w-5" />, "Sem burocracia", G.plug],
-          [
-            <Building2 key="c" className="h-5 w-5" />,
-            "Vários imóveis",
-            G.purple,
-          ],
+          [<Building2 key="c" className="h-5 w-5" />, "Vários imóveis", G.purple],
         ].map(([icon, label, bg]) => (
-          <Glass
-            key={String(label)}
-            className="flex flex-col items-center gap-2 p-3 text-center"
-          >
-            <span
-              className="grid h-10 w-10 place-items-center rounded-[11px] text-white"
-              style={{ background: bg as string }}
-            >
+          <Glass key={String(label)} className="flex flex-col items-center gap-2 p-3 text-center">
+            <span className="grid h-10 w-10 place-items-center rounded-[11px] text-white" style={{ background: bg as string }}>
               {icon}
             </span>
             <span className="text-[13px] font-medium">{label}</span>
@@ -1373,147 +748,48 @@ function ManageResult({ selected }: { selected: string[] }) {
 
 /* ================================================================== peças */
 
-function LargeTitle({
-  kicker,
-  title,
-  sub,
-}: {
-  kicker: string;
-  title: string;
-  sub?: string;
-}) {
+function LargeTitle({ kicker, title, sub }: { kicker: string; title: string; sub?: string }) {
   return (
     <header className="px-1">
-      <p className="text-[13px] font-semibold tracking-wide text-[#9BD373] uppercase">
-        {kicker}
-      </p>
-      <h1 className="mt-1 text-[34px] leading-[1.1] font-bold tracking-[-0.022em]">
-        {title}
-      </h1>
-      {sub && (
-        <p className="mt-2 text-[17px] leading-snug text-white/60">{sub}</p>
-      )}
+      <p className="text-[13px] font-semibold tracking-wide text-[#9BD373] uppercase">{kicker}</p>
+      <h1 className="mt-1 text-[34px] leading-[1.1] font-bold tracking-[-0.022em]">{title}</h1>
+      {sub && <p className="mt-2 text-[17px] leading-snug text-white/60">{sub}</p>}
     </header>
   );
 }
 
 function BigNumber({ children }: { children: ReactNode }) {
-  return (
-    <p className="ios-rounded text-[60px] leading-none font-semibold tracking-tight">
-      {children}
-    </p>
-  );
+  return <p className="ios-rounded text-[60px] leading-none font-semibold tracking-tight">{children}</p>;
 }
 
-function Glass({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cx(
-        "rounded-[24px] bg-white/[0.06] ring-1 ring-white/10 backdrop-blur-2xl",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
+function Glass({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cx("rounded-[24px] bg-white/[0.06] ring-1 ring-white/10 backdrop-blur-2xl", className)}>{children}</div>;
 }
 
-function Group({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <Glass className={cx("mt-6 overflow-hidden rounded-[20px]", className)}>
-      {children}
-    </Glass>
-  );
+function Group({ children, className }: { children: ReactNode; className?: string }) {
+  return <Glass className={cx("mt-6 overflow-hidden rounded-[20px]", className)}>{children}</Glass>;
 }
 
-function SectionHeader({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <p
-      className={cx(
-        "px-4 text-[13px] font-medium tracking-wide text-white/55 uppercase",
-        className,
-      )}
-    >
-      {children}
-    </p>
-  );
+function SectionHeader({ children, className }: { children: ReactNode; className?: string }) {
+  return <p className={cx("px-4 text-[13px] font-medium tracking-wide text-white/55 uppercase", className)}>{children}</p>;
 }
 
-function AppIcon({
-  bg,
-  children,
-  size = 30,
-}: {
-  bg: string;
-  children: ReactNode;
-  size?: number;
-}) {
+function AppIcon({ bg, children, size = 30 }: { bg: string; children: ReactNode; size?: number }) {
   return (
-    <span
-      className="grid shrink-0 place-items-center rounded-[8px] text-white shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-      style={{ background: bg, width: size, height: size }}
-    >
+    <span className="grid shrink-0 place-items-center rounded-[8px] text-white shadow-[0_1px_2px_rgba(0,0,0,0.15)]" style={{ background: bg, width: size, height: size }}>
       {children}
     </span>
   );
 }
 
-function Row({
-  icon,
-  bg,
-  title,
-  sub,
-  onClick,
-  last,
-  selected,
-  noChevron,
-}: {
-  icon: ReactNode;
-  bg: string;
-  title: string;
-  sub?: string;
-  onClick: () => void;
-  last?: boolean;
-  selected?: boolean;
-  noChevron?: boolean;
-}) {
+function Row({ icon, bg, title, sub, onClick, last, selected, noChevron }: { icon: ReactNode; bg: string; title: string; sub?: string; onClick: () => void; last?: boolean; selected?: boolean; noChevron?: boolean }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-3 pl-4 text-left transition-colors active:bg-white/[0.06]"
-    >
+    <button onClick={onClick} className="flex w-full items-center gap-3 pl-4 text-left transition-colors active:bg-white/[0.06]">
       <AppIcon bg={bg}>{icon}</AppIcon>
-      <span
-        className={cx(
-          "flex min-w-0 flex-1 items-center gap-2 py-3.5 pr-4",
-          !last && "border-b border-white/10",
-        )}
-      >
+      <span className={cx("flex min-w-0 flex-1 items-center gap-2 py-3.5 pr-4", !last && "border-b border-white/10")}>
         <span className="min-w-0 flex-1">
           <span className="block text-[17px] leading-tight">{title}</span>
-          {sub && (
-            <span className="mt-0.5 block text-[14px] leading-snug text-white/55">
-              {sub}
-            </span>
-          )}
+          {sub && <span className="mt-0.5 block text-[14px] leading-snug text-white/55">{sub}</span>}
         </span>
         {selected ? (
           <span className="ios-bounce grid h-6 w-6 place-items-center rounded-full bg-[#F3EA3B] text-[#1C1234]">
@@ -1529,30 +805,13 @@ function Row({
   );
 }
 
-function InfoRow({
-  icon,
-  bg,
-  title,
-  text,
-  last,
-}: {
-  icon: ReactNode;
-  bg: string;
-  title: string;
-  text: string;
-  last?: boolean;
-}) {
+function InfoRow({ icon, bg, title, text, last }: { icon: ReactNode; bg: string; title: string; text: string; last?: boolean }) {
   return (
     <div className="flex items-start gap-3 pl-4">
       <span className="pt-3.5">
         <AppIcon bg={bg}>{icon}</AppIcon>
       </span>
-      <div
-        className={cx(
-          "min-w-0 flex-1 py-3.5 pr-4",
-          !last && "border-b border-white/10",
-        )}
-      >
+      <div className={cx("min-w-0 flex-1 py-3.5 pr-4", !last && "border-b border-white/10")}>
         <p className="text-[16px] leading-tight font-medium">{title}</p>
         <p className="mt-0.5 text-[14px] leading-snug text-white/60">{text}</p>
       </div>
@@ -1560,74 +819,29 @@ function InfoRow({
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  last,
-  ...rest
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  last?: boolean;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
+function Field({ label, value, onChange, last, ...rest }: { label: string; value: string; onChange: (v: string) => void; last?: boolean } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
   return (
     <label className="flex items-center gap-3 pl-4">
-      <span
-        className={cx(
-          "flex min-w-0 flex-1 items-center gap-3 pr-4",
-          !last && "border-b border-white/10",
-        )}
-      >
+      <span className={cx("flex min-w-0 flex-1 items-center gap-3 pr-4", !last && "border-b border-white/10")}>
         <span className="w-[84px] shrink-0 text-[17px]">{label}</span>
-        <input
-          {...rest}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-[50px] min-w-0 flex-1 bg-transparent text-[17px] text-white outline-none placeholder:text-white/30"
-        />
+        <input {...rest} value={value} onChange={(e) => onChange(e.target.value)} className="h-[50px] min-w-0 flex-1 bg-transparent text-[17px] text-white outline-none placeholder:text-white/30" />
       </span>
     </label>
   );
 }
 
-function Segmented({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: [string, string][];
-}) {
+function Segmented({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: [string, string][] }) {
   const i = options.findIndex(([v]) => v === value);
   return (
-    <div
-      className="relative mt-2 grid rounded-[10px] bg-white/10 p-[2px]"
-      style={{
-        gridTemplateColumns: `repeat(${options.length}, minmax(0,1fr))`,
-      }}
-    >
+    <div className="relative mt-2 grid rounded-[10px] bg-white/10 p-[2px]" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0,1fr))` }}>
       {i >= 0 && (
         <span
           className="absolute top-[2px] bottom-[2px] rounded-[8px] bg-[#F3EA3B] shadow-[0_3px_8px_rgba(0,0,0,0.3)] transition-all duration-300"
-          style={{
-            left: `calc(${(i / options.length) * 100}% + 2px)`,
-            width: `calc(${100 / options.length}% - 4px)`,
-          }}
+          style={{ left: `calc(${(i / options.length) * 100}% + 2px)`, width: `calc(${100 / options.length}% - 4px)` }}
         />
       )}
       {options.map(([v, l]) => (
-        <button
-          key={v}
-          type="button"
-          onClick={() => onChange(v)}
-          className={cx(
-            "relative z-10 h-9 text-[14px] transition",
-            value === v ? "font-semibold text-[#1C1234]" : "text-white/70",
-          )}
-        >
+        <button key={v} type="button" onClick={() => onChange(v)} className={cx("relative z-10 h-9 text-[14px] transition", value === v ? "font-semibold text-[#1C1234]" : "text-white/70")}>
           {l}
         </button>
       ))}
@@ -1635,30 +849,11 @@ function Segmented({
   );
 }
 
-function SliderRow({
-  value,
-  min,
-  max,
-  step,
-  bump,
-  onChange,
-  label,
-}: {
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  bump: number;
-  onChange: (v: number) => void;
-  label: string;
-}) {
+function SliderRow({ value, min, max, step, bump, onChange, label }: { value: number; min: number; max: number; step: number; bump: number; onChange: (v: number) => void; label: string }) {
   const fill = max > min ? ((value - min) / (max - min)) * 100 : 100;
   return (
     <div className="mt-8 flex items-center gap-3">
-      <Round
-        onClick={() => onChange(Math.max(min, value - bump))}
-        label="Diminuir"
-      >
+      <Round onClick={() => onChange(Math.max(min, value - bump))} label="Diminuir">
         <Minus className="h-5 w-5" />
       </Round>
       <input
@@ -1672,48 +867,22 @@ function SliderRow({
         style={{ ["--fill" as string]: `${fill}%` }}
         aria-label={label}
       />
-      <Round
-        onClick={() => onChange(Math.min(max, value + bump))}
-        label="Aumentar"
-      >
+      <Round onClick={() => onChange(Math.min(max, value + bump))} label="Aumentar">
         <Plus className="h-5 w-5" />
       </Round>
     </div>
   );
 }
 
-function Round({
-  children,
-  onClick,
-  label,
-}: {
-  children: ReactNode;
-  onClick: () => void;
-  label: string;
-}) {
+function Round({ children, onClick, label }: { children: ReactNode; onClick: () => void; label: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      className="ios-press grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-white"
-    >
+    <button type="button" onClick={onClick} aria-label={label} className="ios-press grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-white">
       {children}
     </button>
   );
 }
 
-function Primary({
-  children,
-  onClick,
-  type = "button",
-  disabled,
-}: {
-  children: ReactNode;
-  onClick?: () => void;
-  type?: "button" | "submit";
-  disabled?: boolean;
-}) {
+function Primary({ children, onClick, type = "button", disabled }: { children: ReactNode; onClick?: () => void; type?: "button" | "submit"; disabled?: boolean }) {
   return (
     <button
       type={type}
@@ -1726,53 +895,16 @@ function Primary({
   );
 }
 
-function PhotoCard({
-  photo,
-  art,
-  label,
-  sub,
-  active,
-  wide,
-  delay,
-  onClick,
-}: {
-  photo?: string;
-  art: ReactNode;
-  label: string;
-  sub: string;
-  active: boolean;
-  wide?: boolean;
-  delay: number;
-  onClick: () => void;
-}) {
+function PhotoCard({ photo, art, label, sub, active, wide, delay, onClick }: { photo?: string; art: ReactNode; label: string; sub: string; active: boolean; wide?: boolean; delay: number; onClick: () => void }) {
   const [failed, setFailed] = useState(false);
   return (
     <button
       onClick={onClick}
-      className={cx(
-        "ios-press ios-rise flex flex-col overflow-hidden rounded-[22px] bg-white/[0.06] text-left shadow-[0_10px_30px_-14px_rgba(0,0,0,0.5)] ring-1 backdrop-blur-xl",
-        wide && "col-span-2",
-        active ? "ring-[3px] ring-[#F3EA3B]" : "ring-white/10",
-      )}
+      className={cx("ios-press ios-rise flex flex-col overflow-hidden rounded-[22px] bg-white/[0.06] text-left shadow-[0_10px_30px_-14px_rgba(0,0,0,0.5)] ring-1 backdrop-blur-xl", wide && "col-span-2", active ? "ring-[3px] ring-[#F3EA3B]" : "ring-white/10")}
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div
-        className={cx(
-          "relative w-full overflow-hidden",
-          wide ? "aspect-[21/8]" : "aspect-[4/3]",
-        )}
-      >
-        {photo && !failed ? (
-          <img
-            src={photo}
-            alt={label}
-            loading="lazy"
-            onError={() => setFailed(true)}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          art
-        )}
+      <div className={cx("relative w-full overflow-hidden", wide ? "aspect-[21/8]" : "aspect-[4/3]")}>
+        {photo && !failed ? <img src={photo} alt={label} loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-cover" /> : art}
         {active && (
           <span className="ios-bounce absolute top-2.5 right-2.5 grid h-7 w-7 place-items-center rounded-full bg-[#F3EA3B] text-[#1C1234] shadow-lg">
             <Check className="h-4 w-4" strokeWidth={3} />
@@ -1787,28 +919,11 @@ function PhotoCard({
   );
 }
 
-function Tile({
-  icon,
-  bg,
-  label,
-  active,
-  delay,
-  onClick,
-}: {
-  icon: ReactNode;
-  bg: string;
-  label: string;
-  active: boolean;
-  delay: number;
-  onClick: () => void;
-}) {
+function Tile({ icon, bg, label, active, delay, onClick }: { icon: ReactNode; bg: string; label: string; active: boolean; delay: number; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className={cx(
-        "ios-press ios-rise flex flex-col items-start gap-3 rounded-[22px] bg-white/[0.06] p-4 text-left shadow-[0_10px_30px_-14px_rgba(0,0,0,0.5)] ring-1 backdrop-blur-xl",
-        active ? "ring-[3px] ring-[#F3EA3B]" : "ring-white/10",
-      )}
+      className={cx("ios-press ios-rise flex flex-col items-start gap-3 rounded-[22px] bg-white/[0.06] p-4 text-left shadow-[0_10px_30px_-14px_rgba(0,0,0,0.5)] ring-1 backdrop-blur-xl", active ? "ring-[3px] ring-[#F3EA3B]" : "ring-white/10")}
       style={{ animationDelay: `${delay}ms` }}
     >
       <AppIcon bg={bg} size={44}>
@@ -1821,19 +936,14 @@ function Tile({
 
 function Trust({ company }: { company: PublicCompany }) {
   const items = [
-    company.tech_name
-      ? "Engenharia própria com responsável técnico"
-      : "Engenharia e instalação próprias",
+    company.tech_name ? "Engenharia própria com responsável técnico" : "Engenharia e instalação próprias",
     "Projeto e homologação inclusos",
     `Até ${company.warranty_modules_performance_years || 25} anos de garantia`,
   ];
   return (
     <div className="mt-8 grid gap-2.5 px-2">
       {items.map((t) => (
-        <p
-          key={t}
-          className="flex items-center gap-2.5 text-[14px] text-white/65"
-        >
+        <p key={t} className="flex items-center gap-2.5 text-[14px] text-white/65">
           <ShieldCheck className="h-4 w-4 shrink-0 text-[#2FB57A]" /> {t}
         </p>
       ))}
@@ -1841,50 +951,22 @@ function Trust({ company }: { company: PublicCompany }) {
   );
 }
 
-function Hero({
-  badge,
-  value,
-  sub,
-}: {
-  badge: string;
-  value: number;
-  sub: string;
-}) {
+function Hero({ badge, value, sub }: { badge: string; value: number; sub: string }) {
   const v = useCountUp(value);
   return (
-    <div
-      className="ios-rise relative overflow-hidden rounded-[28px] px-6 pt-7 pb-8 text-center text-white shadow-[0_24px_60px_-20px_rgba(28,18,52,0.7)]"
-      style={{
-        background:
-          "linear-gradient(160deg,#2A1B55 0%,#1C1234 55%,#120B24 100%)",
-      }}
-    >
-      <div
-        aria-hidden
-        className="absolute -top-16 left-1/2 h-40 w-72 -translate-x-1/2 rounded-full bg-[#9BD373]/30 blur-3xl"
-      />
-      <img
-        src="/brand/symbol.png"
-        alt=""
-        aria-hidden
-        className="absolute -right-6 -bottom-8 w-36 opacity-[0.12]"
-      />
+    <div className="ios-rise relative overflow-hidden rounded-[28px] px-6 pt-7 pb-8 text-center text-white shadow-[0_24px_60px_-20px_rgba(28,18,52,0.7)]" style={{ background: "linear-gradient(160deg,#2A1B55 0%,#1C1234 55%,#120B24 100%)" }}>
+      <div aria-hidden className="absolute -top-16 left-1/2 h-40 w-72 -translate-x-1/2 rounded-full bg-[#9BD373]/30 blur-3xl" />
+      <img src="/brand/symbol.png" alt="" aria-hidden className="absolute -right-6 -bottom-8 w-36 opacity-[0.12]" />
       <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[12px] font-semibold tracking-wide text-[#F3EA3B] backdrop-blur-md">
         <Sparkles className="h-3.5 w-3.5" /> {badge}
       </span>
-      <p className="ios-rounded relative mt-4 bg-gradient-to-r from-[#F3EA3B] via-[#C9E97A] to-[#8FE3B0] bg-clip-text text-[58px] leading-none font-bold tracking-tight text-transparent">
-        {brl(v, 0)}
-      </p>
+      <p className="ios-rounded relative mt-4 bg-gradient-to-r from-[#F3EA3B] via-[#C9E97A] to-[#8FE3B0] bg-clip-text text-[58px] leading-none font-bold tracking-tight text-transparent">{brl(v, 0)}</p>
       <p className="relative mt-2 text-[16px] text-white/70">{sub}</p>
     </div>
   );
 }
 
-function Compare({
-  rows,
-}: {
-  rows: { label: string; value: number; color: string; icon: ReactNode }[];
-}) {
+function Compare({ rows }: { rows: { label: string; value: number; color: string; icon: ReactNode }[] }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -1902,13 +984,7 @@ function Compare({
             <span className="ios-rounded font-semibold">{brl(r.value, 0)}</span>
           </div>
           <div className="h-3 overflow-hidden rounded-full bg-white/[0.06]">
-            <div
-              className="h-full rounded-full transition-[width] duration-1000 ease-out"
-              style={{
-                width: ready ? `${Math.max(3, (r.value / max) * 100)}%` : "0%",
-                background: r.color,
-              }}
-            />
+            <div className="h-full rounded-full transition-[width] duration-1000 ease-out" style={{ width: ready ? `${Math.max(3, (r.value / max) * 100)}%` : "0%", background: r.color }} />
           </div>
         </div>
       ))}
@@ -1916,52 +992,23 @@ function Compare({
   );
 }
 
-function Stat({
-  icon,
-  bg,
-  label,
-  value,
-  sub,
-}: {
-  icon: ReactNode;
-  bg: string;
-  label: string;
-  value: string;
-  sub: string;
-}) {
+function Stat({ icon, bg, label, value, sub }: { icon: ReactNode; bg: string; label: string; value: string; sub: string }) {
   return (
     <Glass className="p-4">
       <AppIcon bg={bg} size={28}>
         {icon}
       </AppIcon>
-      <p className="mt-3 text-[12px] font-medium tracking-wide text-white/55 uppercase">
-        {label}
-      </p>
-      <p className="ios-rounded mt-0.5 text-[22px] leading-tight font-bold">
-        {value}
-      </p>
+      <p className="mt-3 text-[12px] font-medium tracking-wide text-white/55 uppercase">{label}</p>
+      <p className="ios-rounded mt-0.5 text-[22px] leading-tight font-bold">{value}</p>
       <p className="text-[12px] text-white/55">{sub}</p>
     </Glass>
   );
 }
 
-function Legend({
-  color,
-  title,
-  value,
-  sub,
-}: {
-  color: string;
-  title: string;
-  value: string;
-  sub: string;
-}) {
+function Legend({ color, title, value, sub }: { color: string; title: string; value: string; sub: string }) {
   return (
     <div className="flex items-start gap-3">
-      <span
-        className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
-        style={{ background: color }}
-      />
+      <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
           <p className="text-[15px] font-medium">{title}</p>
@@ -1993,11 +1040,7 @@ function EfficiencyGauge({ value }: { value: number }) {
   const r = 70;
   const len = Math.PI * r;
   return (
-    <svg
-      viewBox="0 0 180 110"
-      className="relative mx-auto mt-3 w-56"
-      aria-label={`Eficiência estimada ${Math.round(value * 100)}%`}
-    >
+    <svg viewBox="0 0 180 110" className="relative mx-auto mt-3 w-56" aria-label={`Eficiência estimada ${Math.round(value * 100)}%`}>
       <defs>
         <linearGradient id="gauge" x1="0" x2="1">
           <stop offset="0" stopColor="#FF7A45" />
@@ -2005,13 +1048,7 @@ function EfficiencyGauge({ value }: { value: number }) {
           <stop offset="1" stopColor="#34C759" />
         </linearGradient>
       </defs>
-      <path
-        d="M20 95 A70 70 0 0 1 160 95"
-        fill="none"
-        stroke="rgba(255,255,255,0.12)"
-        strokeWidth="14"
-        strokeLinecap="round"
-      />
+      <path d="M20 95 A70 70 0 0 1 160 95" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="14" strokeLinecap="round" />
       <path
         d="M20 95 A70 70 0 0 1 160 95"
         fill="none"
@@ -2020,28 +1057,12 @@ function EfficiencyGauge({ value }: { value: number }) {
         strokeLinecap="round"
         strokeDasharray={len}
         strokeDashoffset={len * (1 - v)}
-        style={{
-          transition: "stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)",
-        }}
+        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)" }}
       />
-      <text
-        x="90"
-        y="82"
-        textAnchor="middle"
-        className="ios-rounded"
-        fill="white"
-        fontSize="30"
-        fontWeight="700"
-      >
+      <text x="90" y="82" textAnchor="middle" className="ios-rounded" fill="white" fontSize="30" fontWeight="700">
         {Math.round(value * 100)}%
       </text>
-      <text
-        x="90"
-        y="100"
-        textAnchor="middle"
-        fill="rgba(255,255,255,0.6)"
-        fontSize="10"
-      >
+      <text x="90" y="100" textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="10">
         eficiência estimada
       </text>
     </svg>
@@ -2058,23 +1079,13 @@ function Payments({ capture }: { capture: CapturePrefs }) {
         {list.map((p, i) => {
           const s = PAY_STYLE[i % PAY_STYLE.length];
           return (
-            <div
-              key={`${p.title}-${i}`}
-              className="flex items-center gap-3 pl-4"
-            >
+            <div key={`${p.title}-${i}`} className="flex items-center gap-3 pl-4">
               <AppIcon bg={s.bg}>
                 <s.icon className="h-[18px] w-[18px]" />
               </AppIcon>
-              <div
-                className={cx(
-                  "min-w-0 flex-1 py-3 pr-4",
-                  i < list.length - 1 && "border-b border-white/10",
-                )}
-              >
+              <div className={cx("min-w-0 flex-1 py-3 pr-4", i < list.length - 1 && "border-b border-white/10")}>
                 <p className="text-[17px] leading-tight">{p.title}</p>
-                {p.text && (
-                  <p className="mt-0.5 text-[14px] text-white/55">{p.text}</p>
-                )}
+                {p.text && <p className="mt-0.5 text-[14px] text-white/55">{p.text}</p>}
               </div>
             </div>
           );
@@ -2083,3 +1094,4 @@ function Payments({ capture }: { capture: CapturePrefs }) {
     </div>
   );
 }
+

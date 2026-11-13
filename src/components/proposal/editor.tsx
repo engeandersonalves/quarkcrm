@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Copy,
   CopyPlus,
+  Download,
   ExternalLink,
   FileText,
   Hammer,
@@ -42,6 +43,8 @@ import { duplicateProposal } from "@/lib/proposal-actions";
 import { supabase } from "@/lib/supabase/client";
 import type { Lead, Proposal } from "@/lib/types";
 import { BillPreview, Checkout, StepNav } from "./checkout";
+import type { PublicProposal } from "./document";
+import { bfPhase } from "@/lib/black-friday";
 
 const MODULE_BRANDS = ["JA Solar", "Jinko Solar", "Trina Solar", "LONGi", "Canadian Solar", "Risen", "Astronergy", "DAH Solar", "BYD", "Sunova", "Osda", "Honor Solar", "Znshine", "TW Solar"];
 const INVERTER_BRANDS = ["Growatt", "Deye", "Sungrow", "SAJ", "GoodWe", "Solis", "Huawei", "Fronius", "WEG", "Chint", "SolarEdge", "Hoymiles", "APsystems", "Enphase", "Livoltek", "Solplanet"];
@@ -64,6 +67,7 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
   const [leadId, setLeadId] = useState<string | null>(proposal?.lead_id ?? initialLeadId ?? null);
   const [title, setTitle] = useState(proposal?.title ?? "");
   const [saving, setSaving] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [billValue, setBillValue] = useState(0);
@@ -204,6 +208,29 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
     }
   }
 
+  /** Baixa o PDF da proposta aqui mesmo, sem abrir o link do cliente. */
+  async function downloadPdf() {
+    setPdfBusy("Preparando…");
+    try {
+      const saved = dirty || !current.current ? await save({ silent: true }) : current.current;
+      if (!saved) return;
+      if (bfPhase().phase === "encerrada") {
+        // Fora da campanha a proposta usa o layout clássico, que tem impressão própria.
+        window.open(`${window.location.origin}/p/${saved.public_token}`, "_blank");
+        return;
+      }
+      const { data, error } = await supabase().rpc("get_public_proposal", { p_token: saved.public_token });
+      if (error || !data) throw new Error(error?.message || "Não foi possível carregar a proposta");
+      const { downloadProposalPdf } = await import("@/components/bf/download-pdf");
+      await downloadProposalPdf(data as PublicProposal, (done, total) => setPdfBusy(done < total ? `Página ${done + 1} de ${total}…` : "Baixando…"));
+      toast.success("PDF da proposta baixado");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+    } finally {
+      setPdfBusy(null);
+    }
+  }
+
   async function saveAsKit() {
     if (!inputs) return;
     const name = prompt("Nome do kit", `${fmtNum(pricing!.powerKwp, 2)} kWp ${inputs.moduleBrand} + ${inputs.inverterBrand}`.trim());
@@ -275,6 +302,9 @@ export function ProposalEditor({ proposal, initialLeadId }: { proposal?: Proposa
               </Button>
               <Button variant="secondary" onClick={() => share("copy")}>
                 <Copy className="h-4 w-4" /> Copiar link
+              </Button>
+              <Button variant="secondary" onClick={downloadPdf} loading={!!pdfBusy} title="Baixar a proposta em PDF, organizada em páginas A4">
+                {!pdfBusy && <Download className="h-4 w-4" />} {pdfBusy ?? "Baixar PDF"}
               </Button>
               <Button
                 variant="secondary"

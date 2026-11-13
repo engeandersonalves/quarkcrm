@@ -171,6 +171,21 @@ export function BlackProposal({ data, token }: { data: PublicProposal; token: st
   const [accepted, setAccepted] = useState<{ at: string; by: string } | null>(data.proposal.accepted_at ? { at: data.proposal.accepted_at, by: data.proposal.accepted_by ?? "" } : null);
   const [acceptOpen, setAcceptOpen] = useState(false);
   const { click } = useProposalTracking(token);
+  const [pdf, setPdf] = useState<string | null>(null);
+  const downloadPdf = async () => {
+    if (pdf) return;
+    click("pdf");
+    setPdf("Gerando…");
+    try {
+      const { downloadProposalPdf } = await import("./download-pdf");
+      await downloadProposalPdf(data, (done, total) => setPdf(done < total ? `Página ${done + 1}/${total}` : "Baixando…"));
+    } catch (e) {
+      console.error("PDF", e);
+      window.print();
+    } finally {
+      setPdf(null);
+    }
+  };
 
   const kwp = (inputs.modulePowerW * inputs.moduleQty) / 1000;
   const energy = useMemo(() => calcEnergy(inputs, price, startYear), [inputs, price, startYear]);
@@ -226,8 +241,11 @@ export function BlackProposal({ data, token }: { data: PublicProposal; token: st
           <img src={s.logo_url || "/bf/logo.png"} alt={s.company_name} className="h-8 w-auto sm:h-9" />
           <div className="flex items-center gap-3">
             <span className="hidden text-[12px] font-bold tracking-[0.12em] text-white/50 uppercase md:block">Proposta nº {data.proposal.number}</span>
-            <button onClick={() => window.print()} className="hidden h-10 rounded-full bg-white/[0.07] px-4 text-[14px] font-semibold ring-1 ring-white/10 sm:block">
-              Baixar PDF
+            <button onClick={downloadPdf} disabled={!!pdf} aria-label="Baixar PDF" className="inline-flex h-10 items-center gap-2 rounded-full bg-white/[0.07] px-3.5 text-[14px] font-semibold ring-1 ring-white/10 disabled:opacity-70 sm:px-4">
+              <svg viewBox="0 0 24 24" className={cx("h-4 w-4", pdf && "animate-bounce")} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v12m-5-5 5 5 5-5M5 20h14" />
+              </svg>
+              <span className={cx(!pdf && "hidden sm:inline")}>{pdf ?? "Baixar PDF"}</span>
             </button>
             {canAccept && (
               <button onClick={accept} className={cx("h-10 rounded-full px-5 text-[14px] font-bold text-[#0A0D0B]", GRAD)}>

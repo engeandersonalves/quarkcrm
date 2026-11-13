@@ -80,15 +80,11 @@ export interface CapturePrefs {
 
 /** Fotos padrão dos telhados (Wikimedia Commons, licenças livres). Troque pelas fotos das suas obras em Configurações → Captura. */
 export const DEFAULT_ROOF_IMAGES: Record<RoofKey, string> = {
-  ceramic:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Terracotta_clay_tile_%28Unsplash%29.jpg/500px-Terracotta_clay_tile_%28Unsplash%29.jpg",
-  fiber:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Corrugated-fibro-roofing.jpg/500px-Corrugated-fibro-roofing.jpg",
-  metal:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Corrugated_metal_roof.jpg/500px-Corrugated_metal_roof.jpg",
+  ceramic: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Terracotta_clay_tile_%28Unsplash%29.jpg/500px-Terracotta_clay_tile_%28Unsplash%29.jpg",
+  fiber: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Corrugated-fibro-roofing.jpg/500px-Corrugated-fibro-roofing.jpg",
+  metal: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Corrugated_metal_roof.jpg/500px-Corrugated_metal_roof.jpg",
   slab: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Hatil_rooftop_solar_panels.jpg/500px-Hatil_rooftop_solar_panels.jpg",
-  ground:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Ground_mounted_solar_panels.gk.jpg/500px-Ground_mounted_solar_panels.gk.jpg",
+  ground: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Ground_mounted_solar_panels.gk.jpg/500px-Ground_mounted_solar_panels.gk.jpg",
 };
 
 export const DEFAULT_CAPTURE: CapturePrefs = {
@@ -97,10 +93,7 @@ export const DEFAULT_CAPTURE: CapturePrefs = {
   payments: [
     { title: "À vista", text: "Desconto especial no pagamento à vista" },
     { title: "Cartão de crédito", text: "Parcele no cartão" },
-    {
-      title: "Financiamento em até 72x",
-      text: "Com a primeira parcela em até 3 meses",
-    },
+    { title: "Financiamento em até 72x", text: "Com a primeira parcela em até 3 meses" },
   ],
 };
 
@@ -269,21 +262,14 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   cadence: DEFAULT_CADENCE,
 };
 
-type StoredDefaults = Partial<ProposalInputs> & {
-  kits?: KitPreset[];
-  app?: Partial<AppPrefs>;
-  save?: Partial<SaveInputs>;
-  maint?: Partial<MaintInputs>;
-};
+type StoredDefaults = Partial<ProposalInputs> & { kits?: KitPreset[]; app?: Partial<AppPrefs>; save?: Partial<SaveInputs>; maint?: Partial<MaintInputs> };
 
 /**
  * Converte o JSON salvo no banco em configurações completas.
  * Kits e preferências do app ficam guardados dentro de "defaults" — chave que a função
  * pública da proposta remove — para que preços de kit e metas nunca cheguem ao cliente.
  */
-export function mergeSettings(
-  s: Partial<CompanySettings> | null | undefined,
-): CompanySettings {
+export function mergeSettings(s: Partial<CompanySettings> | null | undefined): CompanySettings {
   const stored = (s?.defaults ?? {}) as StoredDefaults;
   const { kits, app, save, maint, ...defaults } = stored;
   const proposal = (s?.proposal ?? {}) as Partial<ProposalPrefs>;
@@ -295,27 +281,15 @@ export function mergeSettings(
     saveDefaults: save ?? {},
     maintDefaults: maint ?? {},
     app: { ...DEFAULT_SETTINGS.app, ...(s?.app ?? {}), ...(app ?? {}) },
-    capture: {
-      ...DEFAULT_CAPTURE,
-      ...((s?.capture ?? {}) as Partial<CapturePrefs>),
-    },
-    integrations: {
-      ...DEFAULT_SETTINGS.integrations,
-      ...((s?.integrations ?? {}) as Partial<IntegrationPrefs>),
-    },
+    capture: { ...DEFAULT_CAPTURE, ...((s?.capture ?? {}) as Partial<CapturePrefs>) },
+    integrations: { ...DEFAULT_SETTINGS.integrations, ...((s?.integrations ?? {}) as Partial<IntegrationPrefs>) },
     cadence: mergeCadence(s?.cadence),
     marketing_drive: Array.isArray(s?.marketing_drive) ? s.marketing_drive : [],
-    contract_defaults:
-      s?.contract_defaults && typeof s.contract_defaults === "object"
-        ? s.contract_defaults
-        : {},
+    contract_defaults: s?.contract_defaults && typeof s.contract_defaults === "object" ? s.contract_defaults : {},
     proposal: {
       ...DEFAULT_SETTINGS.proposal,
       ...proposal,
-      sections: {
-        ...DEFAULT_SETTINGS.proposal.sections,
-        ...(proposal.sections ?? {}),
-      },
+      sections: { ...DEFAULT_SETTINGS.proposal.sections, ...(proposal.sections ?? {}) },
     },
   };
 }
@@ -323,20 +297,9 @@ export function mergeSettings(
 /** Formato para salvar no banco (inverso de mergeSettings). */
 export function toStoredSettings(s: CompanySettings) {
   const { kits, app, saveDefaults, maintDefaults, defaults, ...rest } = s;
-  return {
-    ...rest,
-    defaults: {
-      ...defaults,
-      kits,
-      app,
-      save: saveDefaults,
-      maint: maintDefaults,
-    },
-  };
+  return { ...rest, defaults: { ...defaults, kits, app, save: saveDefaults, maint: maintDefaults } };
 }
 
-export function mergeInputs(
-  ...parts: (Partial<ProposalInputs> | null | undefined)[]
-): ProposalInputs {
+export function mergeInputs(...parts: (Partial<ProposalInputs> | null | undefined)[]): ProposalInputs {
   return Object.assign({}, DEFAULT_INPUTS, ...parts.map((p) => p ?? {}));
 }
