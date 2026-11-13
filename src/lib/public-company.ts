@@ -5,7 +5,6 @@ import {
   type CapturePrefs,
   type RoofKey,
 } from "@/lib/defaults";
-import { sanitizeReferral } from "@/lib/referral";
 import { hasSupabase } from "@/lib/supabase/env";
 import { anonSupabase } from "@/lib/supabase/server";
 
@@ -91,7 +90,6 @@ function sanitize(raw: unknown): PublicCompany {
     gaId: /^G-[A-Z0-9]{4,15}$/i.test(String(r.gaId ?? "").trim())
       ? String(r.gaId).trim().toUpperCase()
       : null,
-    referral: sanitizeReferral(r.referral),
     capture: {
       roofImages,
       heroImage: url(cap.heroImage) ?? undefined,

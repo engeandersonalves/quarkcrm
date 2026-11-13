@@ -463,8 +463,7 @@ as $$
     'gallery', data -> 'proposal' -> 'gallery',
     'capture', data -> 'capture',
     'metaPixelId', data -> 'integrations' ->> 'metaPixelId',
-    'gaId', data -> 'integrations' ->> 'gaId',
-    'referral', data -> 'referral'
+    'gaId', data -> 'integrations' ->> 'gaId'
   )
   from public.settings where id = 1;
 $$;

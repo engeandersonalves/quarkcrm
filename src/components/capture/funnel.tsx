@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReferralReward } from "@/lib/referral";
 /* eslint-disable @next/next/no-img-element */
 import {
   AlertTriangle,
@@ -78,8 +77,6 @@ export interface PublicCompany {
   gallery?: string[];
   metaPixelId?: string | null;
   gaId?: string | null;
-  /** Recompensa por indicação (tela /indique). */
-  referral?: ReferralReward;
 }
 
 /** Marca a conversão no Pixel da Meta e no Google Analytics, se estiverem configurados. */

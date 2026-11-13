@@ -2,7 +2,11 @@
 
 import { useSearchParams } from "next/navigation";
 import { useRef, useState, type ReactNode } from "react";
-import { rewardLabel, rewardSuffix, type ReferralReward } from "@/lib/referral";
+import {
+  commissionText,
+  parseCommission,
+  type CommissionKind,
+} from "@/lib/referral";
 
 const cx = (...c: (string | false | null | undefined)[]) =>
   c.filter(Boolean).join(" ");
@@ -278,15 +282,7 @@ function Tile({
   );
 }
 
-function RewardBanner({
-  value,
-  suffix,
-  note,
-}: {
-  value: string;
-  suffix: string;
-  note?: string;
-}) {
+function CommissionBanner() {
   return (
     <div
       className={cx(
@@ -308,22 +304,17 @@ function RewardBanner({
           <p className="text-[12px] font-bold tracking-[0.16em] text-[#A9DE86] uppercase">
             Indicou, fechou, ganhou
           </p>
-          <p className="mt-0.5 leading-none">
-            <span
-              className={cx(
-                "text-[40px] font-bold tracking-[-0.05em] tabular-nums sm:text-[48px]",
-                GT,
-              )}
-            >
-              {value}
-            </span>
-            {suffix && (
-              <span className="ml-1.5 text-[15px] font-semibold text-white/75">
-                {suffix}
-              </span>
+          <p
+            className={cx(
+              "mt-0.5 text-[26px] leading-[1.05] font-bold tracking-[-0.03em] sm:text-[30px]",
+              GT,
             )}
+          >
+            Você escolhe a sua comissão
           </p>
-          {note && <p className="mt-1 text-[13px] text-white/55">{note}</p>}
+          <p className="mt-1 text-[13px] text-white/55">
+            % do valor do projeto ou um valor em R$
+          </p>
         </div>
       </div>
     </div>
@@ -335,6 +326,8 @@ function RewardBanner({
 interface Form {
   referrer: string;
   referrerPhone: string;
+  commissionKind: CommissionKind;
+  commission: string;
   name: string;
   phone: string;
   roof: string | null;
@@ -349,6 +342,8 @@ interface Form {
 const EMPTY: Form = {
   referrer: "",
   referrerPhone: "",
+  commissionKind: "percent",
+  commission: "",
   name: "",
   phone: "",
   roof: null,
@@ -362,10 +357,8 @@ const EMPTY: Form = {
 
 export function ReferralForm({
   company,
-  reward,
 }: {
   company: { company_name: string | null; whatsapp: string | null };
-  reward?: ReferralReward | null;
 }) {
   const params = useSearchParams();
   const seller = params.get("v") ?? "";
@@ -379,17 +372,34 @@ export function ReferralForm({
   const [done, setDone] = useState<string | null>(null);
   const started = useRef(Date.now());
   const brand = company.company_name || "Quark Energia";
-  const prize = reward ? rewardLabel(reward) : null;
-  const set = <K extends keyof Form>(k: K, v: Form[K]) =>
+  const commissionValue = parseCommission(f.commissionKind, f.commission);
+  const commission = commissionValue
+    ? commissionText(f.commissionKind, commissionValue)
+    : null;
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => {
+    setErr(null);
     setF((s) => ({ ...s, [k]: v }));
+  };
 
-  const ok0 = f.referrer.trim().length >= 2;
+  const ok0 =
+    f.referrer.trim().length >= 2 &&
+    digits(f.referrerPhone).length >= 10 &&
+    !!commission;
   const ok1 = f.name.trim().length >= 2 && digits(f.phone).length >= 10;
   const canNext = step === 0 ? ok0 : step === 1 ? ok1 : true;
 
   const next = () => {
     setErr(null);
-    if (step === 0 && !ok0) return setErr("Digite o seu nome.");
+    if (step === 0 && f.referrer.trim().length < 2)
+      return setErr("Digite o seu nome.");
+    if (step === 0 && digits(f.referrerPhone).length < 10)
+      return setErr("Digite o seu WhatsApp com DDD para receber a comissão.");
+    if (step === 0 && !commission)
+      return setErr(
+        f.commissionKind === "percent"
+          ? "Digite a porcentagem que você quer (ex.: 3)."
+          : "Digite o valor em reais que você quer (ex.: 500).",
+      );
     if (step === 1 && !f.name.trim())
       return setErr("Digite o nome de quem você está indicando.");
     if (step === 1 && digits(f.phone).length < 10)
@@ -405,7 +415,8 @@ export function ReferralForm({
     setBusy(true);
     const amount = Number(f.amount.replace(/\./g, "").replace(",", "."));
     const lines = [
-      `Indicação de ${f.referrer.trim()}${digits(f.referrerPhone).length >= 10 ? ` · WhatsApp ${f.referrerPhone}` : ""}`,
+      `Indicação de ${f.referrer.trim()} · WhatsApp ${f.referrerPhone}`,
+      `Comissão escolhida por quem indicou: ${commission}`,
       `Local de instalação: ${f.place}${f.city.trim() ? ` · ${f.city.trim()}` : ""}`,
       `Telhado: ${f.roof || "não sabe"}`,
       amount > 0
@@ -453,6 +464,8 @@ export function ReferralForm({
       ...EMPTY,
       referrer: s.referrer,
       referrerPhone: s.referrerPhone,
+      commissionKind: s.commissionKind,
+      commission: s.commission,
     }));
     setDone(null);
     setStep(1);
@@ -495,11 +508,10 @@ export function ReferralForm({
               <span className={GT}>Indicação recebida.</span>
             </h1>
             <p className="mx-auto mt-4 max-w-md text-[17px] text-white/65">
-              {prize && (
+              {commission && (
                 <>
-                  Se {done} fechar, você ganha{" "}
-                  <b className="text-[#A9DE86]">{prize}</b>
-                  {rewardSuffix(reward!) ? ` ${rewardSuffix(reward!)}` : ""}.{" "}
+                  Se {done} fechar, você recebe a comissão que escolheu:{" "}
+                  <b className="text-[#A9DE86]">{commission}</b>.{" "}
                 </>
               )}
               A nossa equipe vai falar com {done} pelo WhatsApp, com todo
@@ -531,22 +543,15 @@ export function ReferralForm({
           </section>
         ) : (
           <>
-            {prize && step === 0 && (
-              <RewardBanner
-                value={prize}
-                suffix={rewardSuffix(reward!)}
-                note={reward!.note}
-              />
-            )}
-            {prize && step > 0 && (
+            {step === 0 && <CommissionBanner />}
+            {commission && step > 0 && (
               <p className="mt-6 flex items-center justify-center gap-2 rounded-full bg-white/[0.05] px-4 py-2 text-[13px] font-semibold text-white/75 ring-1 ring-white/10">
-                <Ico n="gift" className="h-4 w-4 text-[#A9DE86]" /> Ganhe{" "}
-                <b className="text-[#A9DE86]">{prize}</b>{" "}
-                {rewardSuffix(reward!)} {reward!.note}
+                <Ico n="gift" className="h-4 w-4 text-[#A9DE86]" /> Sua
+                comissão: <b className="text-[#A9DE86]">{commission}</b>
               </p>
             )}
             {step === 0 && (
-              <section className={cx("bf-rise", prize ? "pt-8" : "pt-10")}>
+              <section className="bf-rise pt-8">
                 <h1 className="text-[44px] leading-[0.92] font-bold tracking-[-0.05em] sm:text-[56px]">
                   Indique quem
                   <br />
@@ -561,12 +566,8 @@ export function ReferralForm({
                   {[
                     [
                       "gift",
-                      prize
-                        ? `Ganhe ${prize} ${rewardSuffix(reward!)}`.trim()
-                        : "Você indica, a gente agradece",
-                      prize
-                        ? reward!.note || "E te avisamos de cada passo."
-                        : "E te avisamos de cada passo da sua indicação.",
+                      "Você escolhe a comissão",
+                      "Se a indicação fechar, você recebe o que combinou.",
                     ],
                     [
                       "shield",
@@ -659,7 +660,11 @@ export function ReferralForm({
                       className={INPUT}
                     />
                   </Field>
-                  <Field label="Seu WhatsApp" icon="phone" hint="opcional">
+                  <Field
+                    label="Seu WhatsApp"
+                    icon="phone"
+                    hint="para receber a comissão"
+                  >
                     <input
                       inputMode="tel"
                       autoComplete="tel"
@@ -671,6 +676,102 @@ export function ReferralForm({
                       className={INPUT}
                     />
                   </Field>
+                  <div>
+                    <p className="mb-2 flex items-center gap-2 text-[14px] font-semibold text-white/80">
+                      <span
+                        className={cx(
+                          "grid h-7 w-7 place-items-center rounded-[9px] text-[#0A0D0B]",
+                          GRAD,
+                        )}
+                      >
+                        <Ico n="gift" className="h-4 w-4" w={2.2} />
+                      </span>
+                      Sua comissão
+                      <span className="font-normal text-white/40">
+                        · você escolhe
+                      </span>
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          ["percent", "% do projeto", "sobre o valor fechado"],
+                          ["fixed", "Valor em R$", "um valor fixo"],
+                        ] as const
+                      ).map(([k, t, sub]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          aria-pressed={f.commissionKind === k}
+                          onClick={() => {
+                            set("commissionKind", k);
+                            set("commission", "");
+                          }}
+                          className={cx(
+                            "relative rounded-[18px] p-3.5 text-left ring-1 transition active:scale-[0.98]",
+                            f.commissionKind === k
+                              ? "bg-[#0f2117] ring-2 ring-[#6FBF8E]"
+                              : "bg-white/[0.04] ring-white/10 hover:bg-white/[0.07]",
+                          )}
+                        >
+                          {f.commissionKind === k && (
+                            <span className="absolute top-2.5 right-2.5 grid h-5 w-5 place-items-center rounded-full bg-[#6FBF8E] text-[#0A0D0B]">
+                              <Ico n="check" className="h-3 w-3" w={3.4} />
+                            </span>
+                          )}
+                          <span
+                            className={cx(
+                              "text-[22px] leading-none font-bold",
+                              f.commissionKind === k ? GT : "text-white/70",
+                            )}
+                          >
+                            {k === "percent" ? "%" : "R$"}
+                          </span>
+                          <span className="mt-1.5 block text-[15px] leading-tight font-bold">
+                            {t}
+                          </span>
+                          <span className="text-[12px] text-white/45">
+                            {sub}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="relative mt-2">
+                      {f.commissionKind === "fixed" && (
+                        <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[17px] font-semibold text-white/40">
+                          R$
+                        </span>
+                      )}
+                      <input
+                        id="i-commission"
+                        inputMode="decimal"
+                        value={f.commission}
+                        onChange={(e) =>
+                          set(
+                            "commission",
+                            e.target.value.replace(/[^\d.,]/g, "").slice(0, 10),
+                          )
+                        }
+                        placeholder={
+                          f.commissionKind === "percent"
+                            ? "Quantos %? Ex.: 3"
+                            : "Quanto? Ex.: 500"
+                        }
+                        className={cx(
+                          INPUT,
+                          f.commissionKind === "fixed" ? "pl-12" : "pr-12",
+                        )}
+                      />
+                      {f.commissionKind === "percent" && (
+                        <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-[17px] font-semibold text-white/40">
+                          %
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1.5 text-[12px] text-white/40">
+                      Paga quando a indicação fechar contrato. A equipe confirma
+                      com você.
+                    </p>
+                  </div>
                 </div>
               )}
 

@@ -31,7 +31,6 @@ export default async function IndiquePage() {
             company_name: company.company_name ?? null,
             whatsapp: company.whatsapp ?? null,
           }}
-          reward={company.referral ?? null}
         />
       </Suspense>
     </div>

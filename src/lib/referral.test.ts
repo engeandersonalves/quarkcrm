@@ -1,29 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { rewardLabel as raw, sanitizeReferral } from "./referral.ts";
+import { commissionText, parseCommission } from "./referral.ts";
 
-const rewardLabel = (r: Parameters<typeof raw>[0]) => raw(r)?.replace(/\s/g, " ") ?? null;
+const norm = (s: string) => s.replace(/\s/g, " ");
 
-test("recompensa de indicação: % e valor fixo", () => {
-  assert.equal(
-    rewardLabel(sanitizeReferral({ kind: "fixed", value: 300 })),
-    "R$ 300",
-  );
-  assert.equal(
-    rewardLabel(sanitizeReferral({ kind: "percent", value: "2,5" })),
-    "2,5%",
-  );
-  assert.equal(
-    rewardLabel(sanitizeReferral({ kind: "percent", value: 250 })),
-    "100%",
-  );
-  assert.equal(
-    rewardLabel(sanitizeReferral({ kind: "fixed", value: -5 })),
-    null,
-  );
-  assert.equal(rewardLabel(sanitizeReferral(null)), null);
-  assert.equal(
-    sanitizeReferral({ kind: "fixed", value: 100, note: "  ao fechar  " }).note,
-    "ao fechar",
-  );
+test("comissão escolhida por quem indica: % ou R$", () => {
+  assert.equal(parseCommission("percent", "2,5"), 2.5);
+  assert.equal(parseCommission("percent", "150"), null);
+  assert.equal(parseCommission("fixed", "1.500"), 1500);
+  assert.equal(parseCommission("fixed", "300,50"), 300.5);
+  assert.equal(parseCommission("fixed", ""), null);
+  assert.equal(parseCommission("fixed", "-3"), null);
+  assert.equal(norm(commissionText("fixed", 300)), "R$ 300");
+  assert.equal(commissionText("percent", 2.5), "2,5% do valor do projeto");
 });

@@ -1,4 +1,3 @@
-import type { ReferralReward } from "./referral.ts";
 import type { ProposalInputs } from "./pricing.ts";
 import type { SaveInputs } from "./save.ts";
 import type { MaintInputs } from "./maintenance.ts";
@@ -53,8 +52,6 @@ export interface CompanySettings {
   marketing_drive: DriveFolder[];
   /** Dados padrão dos contratos solares (empresa, fornecedora, garantias, prazos e multas). */
   contract_defaults: ContractDefaults;
-  /** Recompensa por indicação mostrada no topo da tela /indique (pública). */
-  referral?: ReferralReward;
 }
 
 export interface DriveFolder {
