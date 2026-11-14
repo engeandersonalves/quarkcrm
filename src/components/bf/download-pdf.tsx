@@ -113,7 +113,7 @@ export async function downloadArtPng(node: ReactNode, fileName: string, size: { 
     await wait(150);
     const { toPng } = await import("html-to-image");
     const el = host.querySelector<HTMLElement>("[data-art]")!;
-    const opts = { width: size.width, height: size.height, pixelRatio: 1, backgroundColor: "#050706", imagePlaceholder: BLANK };
+    const opts = { width: size.width, height: size.height, pixelRatio: 1, backgroundColor: "#F6F8F2", imagePlaceholder: BLANK };
     await toPng(el, { ...opts, pixelRatio: 0.2 }).catch(() => null);
     const url = await toPng(el, opts);
     const a = document.createElement("a");

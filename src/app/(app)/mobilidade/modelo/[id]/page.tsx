@@ -116,7 +116,7 @@ function Editor({ initial, fromSeed, onSaved }: { initial: MotoProduct; fromSeed
     setArt(kind);
     try {
       await downloadMotoArt(kind, p, brand);
-      toast.success(kind === "venda" ? "Arte de venda baixada" : "Arte da ficha técnica baixada");
+      toast.success(kind === "venda" ? "Arte de venda baixada" : "Arte comparativa baixada");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível gerar a arte");
     } finally {
@@ -140,7 +140,7 @@ function Editor({ initial, fromSeed, onSaved }: { initial: MotoProduct; fromSeed
             <Download className="h-4 w-4" /> Arte de venda
           </Button>
           <Button variant="secondary" onClick={() => download("ficha")} loading={art === "ficha"}>
-            <Download className="h-4 w-4" /> Arte da ficha
+            <Download className="h-4 w-4" /> Arte comparativa
           </Button>
           <Button onClick={save} loading={saving} disabled={!dirty && !fromSeed}>
             <Save className="h-4 w-4" /> {dirty || fromSeed ? "Salvar" : "Salvo"}
@@ -335,7 +335,7 @@ function Editor({ initial, fromSeed, onSaved }: { initial: MotoProduct; fromSeed
                 <button key={k} type="button" onClick={() => download(k)} className="group overflow-hidden rounded-2xl bg-black text-left ring-1 ring-ink-200 transition hover:ring-emerald-400">
                   <ArtPreview>{k === "venda" ? <SaleArt p={p} brand={brand} /> : <SpecsArt p={p} brand={brand} />}</ArtPreview>
                   <p className="flex items-center justify-between px-3 py-2 text-xs font-semibold text-white">
-                    {k === "venda" ? "Arte de venda" : "Arte da ficha"} <Download className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+                    {k === "venda" ? "Arte de venda" : "Arte comparativa"} <Download className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
                   </p>
                 </button>
               ))}

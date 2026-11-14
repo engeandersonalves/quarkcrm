@@ -198,7 +198,7 @@ export function ModelsPanel() {
                   <Download className="h-3.5 w-3.5" /> {art === `${p.slug}-venda` ? "Gerando…" : "Arte de venda"}
                 </button>
                 <button type="button" disabled={!!art} onClick={() => download(p, "ficha")} className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-white/[0.07] text-[12px] font-semibold ring-1 ring-white/10 hover:bg-white/[0.12] disabled:opacity-50">
-                  <Download className="h-3.5 w-3.5" /> {art === `${p.slug}-ficha` ? "Gerando…" : "Arte da ficha"}
+                  <Download className="h-3.5 w-3.5" /> {art === `${p.slug}-ficha` ? "Gerando…" : "Arte comparativa"}
                 </button>
               </div>
             </article>
