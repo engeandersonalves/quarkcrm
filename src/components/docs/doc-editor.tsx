@@ -9,6 +9,7 @@ import {
   CopyPlus,
   Download,
   Eye,
+  FileText,
   FileSignature,
   KeyRound,
   Link2,
@@ -19,6 +20,9 @@ import {
   ShieldCheck,
   Trash2,
 } from "lucide-react";
+import type { MotoData } from "@/lib/moto-sale";
+import { saleCompany } from "../mobilidade/sale-docs";
+import { MotoForm } from "./moto-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -74,7 +78,8 @@ export const partyFromLead = (l: LeadLite): Partial<Party> => ({
 
 export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?: () => void }) {
   const router = useRouter();
-  const { user, settings } = useApp();
+  const { user, settings, profile } = useApp();
+  const [pdfBusy, setPdfBusy] = useState<string | null>(null);
   const [data, setData] = useState<DocData>(initial.data);
   const [leadId, setLeadId] = useState<string | null>(initial.lead_id);
   const [saving, setSaving] = useState(false);
@@ -92,7 +97,7 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
     [],
   );
 
-  const update = (patch: Partial<ProcuracaoData> | Partial<AluguelData> | Partial<ContratoData>) => {
+  const update = (patch: Partial<ProcuracaoData> | Partial<AluguelData> | Partial<ContratoData> | Partial<MotoData>) => {
     setData((d) => ({ ...d, ...patch }) as DocData);
     setDirty(true);
   };
@@ -178,7 +183,7 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
     router.push(backHref);
   };
 
-  const backHref = kind === "contrato" ? "/contratos" : "/documentos";
+  const backHref = kind === "contrato" ? "/contratos" : kind === "moto" ? "/mobilidade" : "/documentos";
 
   const pickLead = (id: string, target: "grantor" | "tenant" | "landlord" | "client") => {
     setLeadId(id || null);
@@ -189,7 +194,34 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
       const d = data as ProcuracaoData;
       update({ grantor: party, ucAddress: d.ucAddress || [lead.address, lead.city && `${lead.city}/${lead.state || "AL"}`].filter(Boolean).join(", ") });
     } else if (kind === "contrato") update({ client: party });
+    else if (kind === "moto") {
+      const d = data as MotoData;
+      update({ client: party, delivery: { ...d.delivery, address: d.delivery.address || [lead.address, lead.city && `${lead.city}/${lead.state || "AL"}`].filter(Boolean).join(", ") } });
+    }
     else update({ [target]: party } as Partial<AluguelData>);
+  };
+
+  /** Orçamento e certificado da venda de scooter, gerados aqui mesmo em PDF. */
+  const motoPdf = async (which: "orcamento" | "certificado") => {
+    const d = data as MotoData;
+    if (!d.client.name.trim()) return toast.error("Preencha o nome do comprador");
+    if (which === "certificado" && !d.chassis.trim()) {
+      if (!confirm("O número do chassi ainda está em branco. Gerar o certificado mesmo assim?")) return;
+    }
+    setPdfBusy(which);
+    try {
+      const id = dirty && !locked ? await save() : initial.id;
+      const c = saleCompany(settings, profile);
+      const m = await import("../mobilidade/sale-pdf");
+      if (which === "orcamento") await m.downloadMotoQuote(d, c, id);
+      else await m.downloadMotoCertificate(d, c, id, signers.find((s) => s.role === "comprador")?.signed_at ?? null);
+      toast.success(which === "orcamento" ? "Orçamento baixado" : "Certificado de garantia baixado");
+      if (leadId) supabase().from("activities").insert({ lead_id: leadId, type: "nota", content: which === "orcamento" ? `Orçamento da scooter ${d.modelName} gerado` : `Certificado de garantia da scooter ${d.modelName} emitido`, created_by: user.id }).then(() => {});
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
+    } finally {
+      setPdfBusy(null);
+    }
   };
 
   const status = DOC_STATUS[initial.status];
@@ -214,8 +246,18 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
               <Save className="h-4 w-4" /> {dirty ? "Salvar" : "Salvo"}
             </Button>
           )}
+          {kind === "moto" && (
+            <>
+              <Button variant="secondary" onClick={() => motoPdf("orcamento")} loading={pdfBusy === "orcamento"} title="Orçamento em PDF, pronto para enviar ao cliente">
+                <FileText className="h-4 w-4" /> Orçamento
+              </Button>
+              <Button variant="secondary" onClick={() => motoPdf("certificado")} loading={pdfBusy === "certificado"} title="Certificado de garantia em PDF">
+                <ShieldCheck className="h-4 w-4" /> Certificado
+              </Button>
+            </>
+          )}
           <Button variant="secondary" onClick={() => window.print()}>
-            <Download className="h-4 w-4" /> PDF
+            <Download className="h-4 w-4" /> {kind === "moto" ? "Contrato" : "PDF"}
           </Button>
           {initial.status !== "cancelado" && (
             <Button variant="sun" onClick={openSend} loading={saving} className="flex-1 sm:flex-none">
@@ -252,6 +294,8 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
         <fieldset disabled={locked} className={cx("no-print grid min-w-0 content-start gap-4", view === "preview" && "hidden lg:grid")}>
           {kind === "procuracao" ? (
             <ProcuracaoForm data={data as ProcuracaoData} update={update} leads={leads ?? []} leadId={leadId} onLead={(id) => pickLead(id, "grantor")} />
+          ) : kind === "moto" ? (
+            <MotoForm data={data as MotoData} update={update} leads={leads ?? []} leadId={leadId} onLead={(id) => pickLead(id, "client")} />
           ) : kind === "contrato" ? (
             <ContratoForm data={data as ContratoData} update={update} leads={leads ?? []} leadId={leadId} onLead={(id) => pickLead(id, "client")} />
           ) : (
@@ -625,6 +669,10 @@ function SendModal({
     const what =
       kind === "procuracao"
         ? `a procuração que nos permite cuidar de todo o processo do seu sistema junto à Equatorial`
+        : kind === "moto"
+          ? s.role === "testemunha1" || s.role === "testemunha2"
+            ? "o contrato de compra da scooter elétrica em que você é testemunha"
+            : "o contrato de compra da sua scooter elétrica. No fim, o app pede uma selfie rápida para confirmar que foi você"
         : kind === "contrato"
           ? s.role === "testemunha1" || s.role === "testemunha2"
             ? "o contrato do sistema de energia solar em que você é testemunha"

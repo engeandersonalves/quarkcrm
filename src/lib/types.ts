@@ -105,7 +105,7 @@ export interface Task {
 
 export interface DocumentRow {
   id: string;
-  kind: "procuracao" | "aluguel" | "contrato";
+  kind: "procuracao" | "aluguel" | "contrato" | "moto";
   title: string;
   lead_id: string | null;
   data: Record<string, unknown>;

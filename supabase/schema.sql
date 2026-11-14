@@ -770,7 +770,7 @@ create trigger leads_cadence after insert or update of status on public.leads
 -- -----------------------------------------------------------------------------
 create table if not exists public.documents (
   id uuid primary key default gen_random_uuid(),
-  kind text not null check (kind in ('procuracao', 'aluguel', 'contrato')),
+  kind text not null check (kind in ('procuracao', 'aluguel', 'contrato', 'moto')),
   title text not null,
   lead_id uuid references public.leads (id) on delete set null,
   data jsonb not null default '{}'::jsonb,
@@ -783,7 +783,7 @@ create table if not exists public.documents (
 create index if not exists documents_lead_idx on public.documents (lead_id);
 -- Bancos criados antes do contrato solar: amplia os tipos aceitos.
 alter table public.documents drop constraint if exists documents_kind_check;
-alter table public.documents add constraint documents_kind_check check (kind in ('procuracao', 'aluguel', 'contrato'));
+alter table public.documents add constraint documents_kind_check check (kind in ('procuracao', 'aluguel', 'contrato', 'moto'));
 
 create table if not exists public.document_signers (
   id uuid primary key default gen_random_uuid(),

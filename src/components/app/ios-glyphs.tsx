@@ -42,7 +42,8 @@ export type GlyphId =
   | "calendario"
   | "folha"
   | "cifrao"
-  | "celular";
+  | "celular"
+  | "scooter";
 
 type Grad = [string, string];
 const C = {
@@ -381,6 +382,19 @@ const GLYPHS: Record<GlyphId, { g: Grad; draw: (f: string, d: string) => ReactNo
       </>
     ),
   },
+  scooter: {
+    g: C.verde,
+    draw: (f, d) => (
+      <>
+        <path d="M15.4 4.2h2.4c.5 0 .9.3 1 .8l1.6 7.2a4.2 4.2 0 0 0-5.3 3.6H9.6a4.2 4.2 0 0 0-5-3.7l.8-2.2c.3-.7.9-1.1 1.6-1.1h5.6c.6 0 1.1.4 1.2 1l.5 2.4 1.4-.2-1.6-7c-.1-.4.2-.8.6-.8h.7z" fill={f} />
+        <circle cx="5.6" cy="16.6" r="3" fill={f} />
+        <circle cx="5.6" cy="16.6" r="1.25" fill={d} opacity=".55" />
+        <circle cx="18.4" cy="16.6" r="3" fill={f} />
+        <circle cx="18.4" cy="16.6" r="1.25" fill={d} opacity=".55" />
+        <path d="m11.6 6.1-1.8 2.6h1.5l-.9 2 2.3-2.9h-1.5l.8-1.7z" fill={d} opacity=".7" />
+      </>
+    ),
+  },
   alerta: {
     g: C.laranja,
     draw: (f, d) => (
@@ -436,6 +450,7 @@ const BY_PATH: [string, GlyphId][] = [
   ["/monitoramento/alarmes", "alerta"],
   ["/monitoramento", "sol"],
   ["/catalogos", "celular"],
+  ["/mobilidade", "scooter"],
   ["/leads", "leads"],
   ["/propostas", "propostas"],
   ["/tarefas", "tarefas"],

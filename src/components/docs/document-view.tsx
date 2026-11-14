@@ -17,6 +17,7 @@ import {
   type ProcuracaoData,
   type SignerInfo,
 } from "@/lib/documents";
+import { motoTotal, type MotoData } from "@/lib/moto-sale";
 
 const NAVY = "#1C1234";
 
@@ -40,6 +41,16 @@ function summary(kind: DocKind, data: DocData): { k: string; v: string }[] {
       { k: "Pagamento", v: pay },
     ];
   }
+  if (kind === "moto") {
+    const d = data as MotoData;
+    const pay = d.payment.method === "cartao" ? `${d.payment.installments}× de ${brlPlain(d.payment.installmentValue)}` : d.payment.method === "pix" ? "À vista" : d.payment.method === "entrada" ? "Entrada + saldo" : "Personalizado";
+    return [
+      { k: "Veículo", v: `${d.modelName || "Scooter"}${d.color ? ` · ${d.color}` : ""}` },
+      { k: "Valor à vista", v: motoTotal(d) > 0 ? brlPlain(motoTotal(d)) : "—" },
+      { k: "Pagamento", v: pay },
+      { k: "Garantia", v: `${d.warrantyDays} dias` },
+    ];
+  }
   if (kind === "procuracao") {
     const d = data as ProcuracaoData;
     return [
@@ -59,7 +70,7 @@ function summary(kind: DocKind, data: DocData): { k: string; v: string }[] {
   ];
 }
 
-const PARTY = /^(contratad[ao]|contratante|outorgante|outorgado|locador|locat[áa]rio)/i;
+const PARTY = /^(contratad[ao]|contratante|outorgante|outorgado|locador|locat[áa]rio|vendedor[a]?|comprador)/i;
 const LEAD = /^(Cláusula \d+ª\.|§\s?\d+º\.|Parágrafo único\.)\s*/;
 const MARK = /^((?:[a-z]|[ivx]+|[IVX]+)[.)])\s+([\s\S]*)$/;
 
@@ -124,13 +135,15 @@ export function DocumentView({
   const people: SignerInfo[] = signers?.length ? signers : signersFor(kind, data).map((s) => ({ role: s.role, name: s.name }));
   const signed = people.filter((s) => s.signed_at);
   // Contrato solar: a CONTRATADA já sai assinada com a assinatura padrão da empresa.
-  const c = kind === "contrato" ? (data as ContratoData).contractor : null;
-  const contractorSig = kind === "contrato" ? (data as ContratoData).contractorSignature : "";
+  const withCompany = kind === "contrato" || kind === "moto";
+  const c = withCompany ? (data as ContratoData | MotoData).contractor : null;
+  const contractorSig = withCompany ? (data as ContratoData | MotoData).contractorSignature : "";
+  const [buyerRole, companyRole] = kind === "moto" ? ["comprador", "vendedora"] : ["contratante", "contratada"];
   const list: (SignerInfo & { fixed?: string })[] = c
     ? [
-        { role: "contratante", name: "", ...people.find((s) => s.role === "contratante") },
-        { role: "contratada", name: c.name || "Contratada", signature: contractorSig || null, fixed: [c.repName, c.repRole].filter(Boolean).join(" · ") },
-        ...people.filter((s) => s.role !== "contratante"),
+        { role: buyerRole, name: "", ...people.find((s) => s.role === buyerRole) },
+        { role: companyRole, name: c.name || "Contratada", signature: contractorSig || null, fixed: [c.repName, c.repRole].filter(Boolean).join(" · ") },
+        ...people.filter((s) => s.role !== buyerRole),
       ]
     : people;
 

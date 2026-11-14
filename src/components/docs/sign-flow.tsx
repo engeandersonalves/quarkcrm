@@ -110,8 +110,10 @@ export function SignFlow({ data, token, scriptFont }: { data: PublicDocument; to
               <Camera className="h-5 w-5 text-[#F3EA3B]" />
             </span>
             <div className="relative min-w-0 flex-1 text-sm">
-              <p className="font-semibold">Falta só a sua selfie de segurança</p>
-              <p className="text-white/65">Para a sua proteção: confirma que foi você quem assinou.</p>
+              <p className="font-semibold">{doc.kind === "moto" ? "Etapa obrigatória: selfie de segurança" : "Falta só a sua selfie de segurança"}</p>
+              <p className="text-white/65">
+                {doc.kind === "moto" ? "Prevista no contrato da sua scooter: confirma que foi você quem assinou e libera a entrega." : "Para a sua proteção: confirma que foi você quem assinou."}
+              </p>
             </div>
             <button onClick={() => setSelfieOpen(true)} className="relative shrink-0 rounded-xl bg-gradient-to-r from-[#F3EA3B] to-[#9BD373] px-3.5 py-2.5 text-xs font-bold text-[#1C1234]">
               Tirar selfie
@@ -145,7 +147,10 @@ export function SignFlow({ data, token, scriptFont }: { data: PublicDocument; to
           <div className="mx-auto flex max-w-[800px] items-center gap-3">
             <div className="hidden min-w-0 flex-1 sm:block">
               <p className="truncate text-sm font-semibold">{doc.title}</p>
-              <p className="text-xs text-ink-500">{read ? "Você chegou ao fim do documento ✓" : "Leia até o fim e assine com o dedo"}</p>
+              <p className="text-xs text-ink-500">
+                {read ? "Você chegou ao fim do documento ✓" : "Leia até o fim e assine com o dedo"}
+                {doc.kind === "moto" ? " · depois, uma selfie rápida" : ""}
+              </p>
             </div>
             {contact && (
               <a

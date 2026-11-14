@@ -54,6 +54,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     title: "Ferramentas",
     items: [
       { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap, glyph: "raio" },
+      { href: "/mobilidade", label: "Mobilidade elétrica", icon: Zap, glyph: "scooter" },
       { href: "/catalogos", label: "Catálogo Mobilidade", icon: Zap, glyph: "celular", badge: "catalog", hint: "acessos ao catálogo hoje" },
       { href: "/documentos", label: "Documentos", icon: FileSignature, glyph: "documentos", badge: "documents", hint: "aguardando assinatura" },
       { href: "/contratos", label: "Contratos", icon: ScrollText, glyph: "contratos" },

@@ -1,10 +1,22 @@
 import { dateBr, dateInWords, digits, endOfTerm, formatCep, formatDoc, moneyFull, numberInWords } from "./br.ts";
+import {
+  WARRANTY_COVERS,
+  WARRANTY_EXCLUDES,
+  accessoriesTotal,
+  cardTotal,
+  contractValue,
+  motoTotal,
+  revisionPlan,
+  vehicleName,
+  warrantyEnd,
+  type MotoData,
+} from "./moto-sale.ts";
 
 const nw = (n: number) => `${n} (${numberInWords(n)})`;
 
 /* ---------------------------------------------------------------- tipos */
 
-export type DocKind = "procuracao" | "aluguel" | "contrato";
+export type DocKind = "procuracao" | "aluguel" | "contrato" | "moto";
 export type DocStatus = "rascunho" | "enviado" | "assinado" | "cancelado";
 
 export interface Party {
@@ -154,7 +166,7 @@ export interface ContratoData {
   date: string;
 }
 
-export type DocData = ProcuracaoData | AluguelData | ContratoData;
+export type DocData = ProcuracaoData | AluguelData | ContratoData | MotoData;
 
 export interface SignerInfo {
   role: string;
@@ -351,6 +363,8 @@ export const ROLE_LABEL: Record<string, string> = {
   testemunha2: "Testemunha 2",
   contratante: "Contratante",
   contratada: "Contratada",
+  comprador: "Comprador(a)",
+  vendedora: "Vendedora",
 };
 
 const signerOf = (role: string, p: Party): SignerSpec => ({
@@ -367,9 +381,9 @@ export function signersFor(kind: DocKind, data: DocData): SignerSpec[] {
     const d = data as ProcuracaoData;
     return [signerOf("outorgante", d.grantor)].filter((s) => s.name);
   }
-  if (kind === "contrato") {
-    const d = data as ContratoData;
-    const list = [signerOf("contratante", d.client)];
+  if (kind === "contrato" || kind === "moto") {
+    const d = data as ContratoData | MotoData;
+    const list = [signerOf(kind === "moto" ? "comprador" : "contratante", d.client)];
     d.witnesses.forEach((w, i) => w.name.trim() && list.push({ role: `testemunha${i + 1}`, name: w.name.trim(), email: "", phone: "", cpf: w.doc }));
     return list.filter((s) => s.name);
   }
@@ -770,8 +784,170 @@ export function contratoBlocks(d: ContratoData): Block[] {
   return blocks;
 }
 
+/* ------------------------------------------ venda de scooter elétrica */
+
+/** Número por extenso no feminino: "21 (vinte e uma)". */
+const nwf = (n: number) => `${num(n, 0)} (${numberInWords(n).replace(/\bum\b/g, "uma").replace(/\bdois\b/g, "duas")})`;
+
+export function motoPaymentText(d: MotoData) {
+  const p = d.payment;
+  const cash = moneyFull(motoTotal(d));
+  switch (p.method) {
+    case "pix":
+      return `O COMPRADOR pagará o valor total de ${cash} à vista, via PIX ou transferência bancária, até a data da entrega.`;
+    case "cartao": {
+      const total = cardTotal(d);
+      return `O COMPRADOR pagará o valor de ${cash} (preço à vista) no cartão de crédito, em ${nwf(p.installments)} ${plural(p.installments, "parcela", "parcelas")} de ${moneyFull(p.installmentValue)}, totalizando ${moneyFull(total)} com os encargos da operadora do cartão${p.multipleCards ? ", podendo ser utilizado mais de 1 (um) cartão de crédito" : ""}.`;
+    }
+    case "entrada": {
+      const rest = Math.max(0, motoTotal(d) - p.entry);
+      return `O COMPRADOR pagará o valor total de ${cash}, sendo ${moneyFull(p.entry)} de entrada, na assinatura deste contrato, e o saldo de ${moneyFull(rest)} ${p.balanceWhen.trim() || "na entrega da scooter"}.`;
+    }
+    default:
+      return p.custom.trim() || `O COMPRADOR pagará o valor total de ${cash}, ${blank("", 40)}.`;
+  }
+}
+
+/** Contrato de compra e venda de scooter elétrica (autopropelido), com garantia e selfie. */
+export function motoBlocks(d: MotoData): Block[] {
+  const c = d.contractor;
+  const sp = d.specs;
+  const vehicle = vehicleName(d);
+  const qty = Math.max(1, Number(d.qty) || 1);
+  const ids = [
+    d.chassis.trim() && `chassi/quadro nº ${d.chassis.trim()}`,
+    d.motorNo.trim() && `motor nº ${d.motorNo.trim()}`,
+    d.batteryNo.trim() && `bateria nº ${d.batteryNo.trim()}`,
+    d.chargerNo.trim() && `carregador nº ${d.chargerNo.trim()}`,
+  ].filter(Boolean);
+  const specs = [sp.power && `motor elétrico de ${sp.power}`, sp.battery && `bateria ${sp.battery}`, sp.range && `autonomia estimada de ${sp.range}`, sp.speed && `velocidade máxima de ${sp.speed}`, sp.load && `carga máxima de ${sp.load}`]
+    .filter(Boolean)
+    .join(", ");
+  const acc = d.accessories.filter((a) => a.name.trim() && a.qty > 0);
+  const deliveryWhere = d.delivery.mode === "entrega" ? `no endereço ${d.delivery.address.trim() || "do COMPRADOR informado neste contrato"}` : "na loja da VENDEDORA";
+  const end = warrantyEnd(d);
+  const plan = revisionPlan(d);
+
+  let n = 0;
+  const cl = () => `Cláusula ${++n}ª.`;
+  const blocks: Block[] = [
+    { t: "title", text: "Contrato de compra e venda" },
+    { t: "sub", text: `${vehicle}${d.color.trim() ? ` · cor ${d.color.trim().toLowerCase()}` : ""} · veículo elétrico autopropelido · garantia de ${d.warrantyDays} dias` },
+    { t: "h", text: "Vendedora" },
+    { t: "p", text: `${contractorQualify(c)}, doravante denominada VENDEDORA.` },
+    { t: "h", text: "Comprador" },
+    { t: "p", text: `${qualify(d.client)}, doravante denominado(a) COMPRADOR.` },
+
+    { t: "h", text: "Do objeto" },
+    {
+      t: "p",
+      text: `${cl()} O presente contrato tem por objeto a compra e venda de ${nwf(qty)} ${plural(qty, "unidade", "unidades")} de ${vehicle.replace(/^Scooter/, "scooter")}, nova, ano ${d.year}${d.color.trim() ? `, na cor ${d.color.trim().toLowerCase()}` : ""}${specs ? `, com ${specs}` : ""}${ids.length ? `, identificada pelos seguintes números de série: ${ids.join("; ")}` : ""}.`,
+    },
+  ];
+  if (acc.length)
+    blocks.push({
+      t: "p",
+      text: `${cl()} Acompanham a scooter, como parte desta venda, os seguintes acessórios: ${acc.map((a) => `${num(a.qty, 0)} ${a.name.trim().toLowerCase()}`).join(", ")}.`,
+    });
+  blocks.push(
+    {
+      t: "p",
+      text: `${cl()} A scooter é entregue montada, testada e com carregador original, manual de uso e certificado de garantia, acompanhada da nota fiscal emitida em nome do COMPRADOR.`,
+    },
+
+    { t: "h", text: "Do enquadramento e do uso" },
+    {
+      t: "p",
+      text: `${cl()} O veículo enquadra-se como equipamento de mobilidade individual autopropelido, nos termos da Resolução CONTRAN nº 996/2023 (potência máxima de 1.000 W, velocidade máxima de 32 km/h, largura de até 70 cm e distância entre eixos de até 130 cm), dispensando registro, licenciamento, emplacamento e habilitação para conduzir, conforme a regulamentação vigente na data deste contrato.`,
+    },
+    {
+      t: "p",
+      text: `${cl()} O COMPRADOR declara ter recebido as orientações de uso e se compromete a conduzir o veículo conforme as regras de circulação do CONTRAN e das autoridades de trânsito locais, respeitando a carga máxima indicada, utilizando capacete e mantendo os faróis acesos à noite. A VENDEDORA não responde por multas, danos ou acidentes decorrentes da condução.`,
+    },
+
+    { t: "h", text: "Do preço e do pagamento" },
+    {
+      t: "p",
+      text: `${cl()} Pela compra, o COMPRADOR pagará à VENDEDORA o valor de ${moneyFull(motoTotal(d))}${d.discount > 0 ? `, já aplicado o desconto de ${moneyFull(d.discount)}` : ""}${d.freight > 0 ? `, incluído o frete de ${moneyFull(d.freight)}` : ""}${accessoriesTotal(d) > 0 ? ` e os acessórios (${moneyFull(accessoriesTotal(d))})` : ""}.`,
+    },
+    { t: "p", text: `${cl()} ${motoPaymentText(d)}` },
+    {
+      t: "p",
+      text: `${cl()} O atraso no pagamento de qualquer valor devido diretamente à VENDEDORA sujeita o COMPRADOR à multa de ${num(d.lateFee)}% (${numberInWords(d.lateFee)} por cento) sobre o valor em atraso, acrescida de juros de ${num(d.interest)}% (${numberInWords(d.interest)} por cento) ao mês e correção monetária.`,
+    },
+
+    { t: "h", text: "Da entrega" },
+    {
+      t: "p",
+      text: `${cl()} A scooter será entregue ${deliveryWhere}, ${d.delivery.date ? `em ${dateBr(d.delivery.date)}` : "em data combinada entre as partes"}, mediante a confirmação do pagamento. Na entrega, as partes realizam juntas a vistoria do veículo e o teste de rodagem, e o COMPRADOR recebe as orientações de recarga e de uso.`,
+    },
+    {
+      t: "p",
+      text: `${cl()} A propriedade e os riscos sobre o veículo transferem-se ao COMPRADOR no momento da entrega. Eventuais avarias aparentes devem ser apontadas na vistoria de entrega.`,
+    },
+
+    { t: "h", text: "Da garantia" },
+    {
+      t: "p",
+      text: `${cl()} A VENDEDORA concede garantia de ${nwd(d.warrantyDays)} dias, contados da data da entrega${end ? ` (válida até ${dateBr(end)})` : ""}, contra defeitos de fabricação, abrangendo: ${WARRANTY_COVERS.map((x) => x.toLowerCase()).join("; ")}. Esta garantia compreende a garantia legal prevista no art. 26, inciso II, do Código de Defesa do Consumidor.`,
+    },
+    {
+      t: "p",
+      text: `${cl()} Constatado o defeito coberto, a VENDEDORA fará o reparo ou a substituição da peça sem custo, no prazo de até 30 (trinta) dias, conforme o art. 18, § 1º, do Código de Defesa do Consumidor. O atendimento é feito na assistência técnica da VENDEDORA em ${c.city.trim() || "Maceió"}/${c.state || "AL"}, mediante apresentação do certificado de garantia ou deste contrato.`,
+    },
+    { t: "p", text: `${cl()} A garantia não cobre: ${WARRANTY_EXCLUDES.map((x) => x.charAt(0).toLowerCase() + x.slice(1)).join("; ")}.` },
+    {
+      t: "p",
+      text: `${cl()} Para a manutenção da garantia, recomenda-se seguir o plano de revisões: ${plan.map((r) => `${r.when.toLowerCase()} (${r.what.toLowerCase()}${r.free ? ", sem custo de mão de obra" : ""})`).join("; ")}. Peças de desgaste natural utilizadas nas revisões são cobradas à parte.`,
+    },
+
+    { t: "h", text: "Do direito de arrependimento" },
+    {
+      t: "p",
+      text: `${cl()} Quando a compra for realizada fora do estabelecimento da VENDEDORA (por telefone, WhatsApp ou internet), o COMPRADOR poderá desistir no prazo de 7 (sete) dias a contar do recebimento, nos termos do art. 49 do Código de Defesa do Consumidor, devolvendo o veículo nas mesmas condições em que o recebeu, sem sinais de uso além do teste, com todos os itens e a nota fiscal.`,
+    },
+
+    { t: "h", text: "Da identificação por selfie e dos dados pessoais" },
+    {
+      t: "p",
+      text: `${cl()} Para a segurança de ambas as partes e a prevenção de fraudes, o COMPRADOR registra, no momento da assinatura eletrônica, uma fotografia do próprio rosto (selfie), que integra o registro de assinatura deste contrato junto com data, hora, endereço IP e código de verificação.`,
+    },
+    {
+      t: "p",
+      text: `${cl()} Os dados pessoais e a imagem do COMPRADOR são tratados exclusivamente para a execução deste contrato, a emissão da nota fiscal, a garantia e a confirmação de identidade, nos termos da Lei nº 13.709/2018 (LGPD), arts. 7º, V, e 11, II, "g", e não serão compartilhados com terceiros, salvo por obrigação legal.`,
+    },
+  );
+
+  const extras = d.extraClauses.trim() ? d.extraClauses.trim().split(/\n+/) : [];
+  if (extras.length) {
+    blocks.push({ t: "h", text: "Disposições especiais" });
+    extras.forEach((text) => blocks.push({ t: "p", text: `${cl()} ${text.trim()}` }));
+  }
+
+  blocks.push(
+    { t: "h", text: "Do foro" },
+    {
+      t: "p",
+      text: `${cl()} Fica eleito o foro da Comarca de ${blank(d.forum, 14)}, no Estado de ${blank(d.forumState, 10)}, sem prejuízo do direito do COMPRADOR de propor ação no foro do seu domicílio, nos termos do Código de Defesa do Consumidor.`,
+    },
+    { t: "p", text: "Por estarem assim justas e contratadas, as partes firmam o presente instrumento eletronicamente." },
+    { t: "p", text: ESIGN },
+
+    { t: "h", text: "Anexo I — Resumo do pedido" },
+    { t: "li", text: `${num(qty, 0)} × ${vehicle}${d.color.trim() ? ` (${d.color.trim()})` : ""}, ano ${d.year} — ${moneyFull((Number(d.price) || 0) * qty)}` },
+    ...acc.map((a) => ({ t: "li" as const, text: `${num(a.qty, 0)} × ${a.name.trim()} — ${a.price > 0 ? moneyFull(a.qty * a.price) : "brinde, sem custo"}` })),
+    ...(d.freight > 0 ? [{ t: "li" as const, text: `Frete e entrega — ${moneyFull(d.freight)}` }] : []),
+    ...(d.discount > 0 ? [{ t: "li" as const, text: `Desconto — menos ${moneyFull(d.discount)}` }] : []),
+    { t: "li", text: `Total à vista: ${moneyFull(motoTotal(d))}${d.payment.method === "cartao" && cardTotal(d) > 0 ? ` · no cartão: ${d.payment.installments}× de ${moneyFull(d.payment.installmentValue)} (${moneyFull(contractValue(d))})` : ""}` },
+    { t: "li", text: `Garantia: ${d.warrantyDays} dias a partir da entrega${end ? `, até ${dateBr(end)}` : ""}` },
+    { t: "place", text: `${blank(d.place, 16)}, ${dateInWords(d.date)}.` },
+  );
+  return blocks;
+}
+
 export function documentBlocks(kind: DocKind, data: DocData) {
   if (kind === "contrato") return contratoBlocks(data as ContratoData);
+  if (kind === "moto") return motoBlocks(data as MotoData);
   return kind === "procuracao" ? procuracaoBlocks(data as ProcuracaoData) : aluguelBlocks(data as AluguelData);
 }
 
@@ -784,6 +960,10 @@ export function documentTitle(kind: DocKind, data: DocData) {
     const d = data as ContratoData;
     const kwp = contractKwp(d);
     return `Contrato — ${d.client.name.trim() || "novo cliente"}${kwp > 0 ? ` · ${num(kwp)} kWp` : ""}`;
+  }
+  if (kind === "moto") {
+    const d = data as MotoData;
+    return `${d.modelName.trim() || "Scooter"} — ${d.client.name.trim() || "novo cliente"}`;
   }
   const d = data as AluguelData;
   return `Locação — ${d.tenant.name.trim() || "locatário"}${d.property.address.trim() ? ` · ${d.property.address.trim().split(",")[0]}` : ""}`;
@@ -802,6 +982,15 @@ export function missingFields(kind: DocKind, data: DocData): string[] {
     if (!d.grantee.name.trim()) miss.push("Nome do outorgado (sua empresa)");
     if (!d.uc.trim()) miss.push("Número da unidade consumidora");
     if (!d.powers.length && !d.extraPowers.trim()) miss.push("Pelo menos um poder");
+  } else if (kind === "moto") {
+    const d = data as MotoData;
+    party(d.client, "comprador");
+    if (!d.client.phone.trim()) miss.push("WhatsApp do comprador");
+    if (!d.client.address.trim()) miss.push("Endereço do comprador");
+    if (!d.contractor.name.trim() || !digits(d.contractor.doc)) miss.push("Dados da vendedora (sua empresa)");
+    if (!d.modelName.trim()) miss.push("Modelo da scooter");
+    if (!(motoTotal(d) > 0)) miss.push("Valor da venda");
+    if (d.payment.method === "cartao" && !(d.payment.installmentValue > 0)) miss.push("Valor da parcela no cartão");
   } else if (kind === "contrato") {
     const d = data as ContratoData;
     party(d.client, "contratante");
@@ -824,6 +1013,7 @@ export const DOC_KINDS: Record<DocKind, { label: string; plural: string; short: 
   procuracao: { label: "Procuração", plural: "Procurações", short: "Procuração" },
   aluguel: { label: "Contrato de aluguel", plural: "Contratos de aluguel", short: "Aluguel" },
   contrato: { label: "Contrato solar", plural: "Contratos solares", short: "Contrato solar" },
+  moto: { label: "Venda de scooter elétrica", plural: "Vendas de scooters", short: "Scooter" },
 };
 
 export const DOC_STATUS: Record<DocStatus, { label: string; cls: string }> = {

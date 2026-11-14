@@ -7,7 +7,9 @@ import { contractFromProposal } from "@/components/docs/contrato-form";
 import { DocEditor, partyFromLead, type EditorDoc } from "@/components/docs/doc-editor";
 import { Card, Empty, Skeleton } from "@/components/ui";
 import { DEFAULT_SIGNATURE } from "@/lib/defaults";
-import { defaultAluguel, defaultContrato, defaultProcuracao, type DocData, type DocKind } from "@/lib/documents";
+import { defaultAluguel, defaultContrato, defaultProcuracao, emptyContractor, type DocData, type DocKind } from "@/lib/documents";
+import { defaultMoto } from "@/lib/moto-sale";
+import type { ModelId } from "@/lib/catalog-mobilidade";
 import { must, useLive } from "@/lib/live";
 import { supabase } from "@/lib/supabase/client";
 import type { DocumentRow, Lead, Proposal } from "@/lib/types";
@@ -22,7 +24,8 @@ function NewDocument() {
   const search = useSearchParams();
   const { settings, settingsLoaded } = useApp();
   const tipo = search.get("tipo");
-  const kind: DocKind = tipo === "aluguel" || tipo === "contrato" ? tipo : "procuracao";
+  const kind: DocKind = tipo === "aluguel" || tipo === "contrato" || tipo === "moto" ? tipo : "procuracao";
+  const modelo = search.get("modelo");
   const leadId = search.get("lead");
 
   const { data: lead, loading } = useLive(
@@ -60,6 +63,20 @@ function NewDocument() {
             party,
             place,
           )
+        : kind === "moto"
+          ? defaultMoto({
+              client: party,
+              contractor: emptyContractor({
+                ...settings.contract_defaults?.contractor,
+                name: settings.contract_defaults?.contractor?.name || (settings.legal_name || settings.company_name).toUpperCase(),
+                doc: settings.contract_defaults?.contractor?.doc || settings.cnpj,
+                address: settings.contract_defaults?.contractor?.address || settings.address,
+                city: settings.contract_defaults?.contractor?.city || (settings.city || "").split("/")[0],
+              }),
+              signature: settings.signature_url || DEFAULT_SIGNATURE,
+              place,
+              model: modelo === "cappuccino" || modelo === "mz" || modelo === "t1" ? (modelo as ModelId) : undefined,
+            })
         : kind === "contrato"
           ? (() => {
               const base = defaultContrato({
@@ -77,7 +94,7 @@ function NewDocument() {
             })()
           : defaultAluguel(party, place);
     return { id: null, kind, data, lead_id: lead?.id ?? null, status: "rascunho", signers: [] };
-  }, [loading, loadingProposals, settingsLoaded, lead, kind, settings, proposals]);
+  }, [loading, loadingProposals, settingsLoaded, lead, kind, settings, proposals, modelo]);
 
   if (!initial) return <EditorSkeleton />;
   return <DocEditor key={`${kind}-${leadId ?? ""}`} initial={initial} />;
