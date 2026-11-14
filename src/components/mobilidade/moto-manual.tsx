@@ -68,9 +68,6 @@ export interface ManualBrand {
   whatsapp: string;
   instagram: string;
   city: string;
-  repName: string;
-  repRole: string;
-  signature: string;
 }
 
 export const emptyOwner = (p: Partial<ManualOwner> = {}): ManualOwner => ({
@@ -215,7 +212,7 @@ function Row({ k, v, w = 140, mono, wide, h = 34 }: { k: string; v: string; w?: 
 }
 
 const COVERS_SHORT = ["Motor elétrico e rolamentos", "Controlador e chicote elétrico", "Bateria (células e BMS)", "Carregador original", "Painel, faróis e setas", "Quadro, garfo e soldas"];
-const EXCLUDES_SHORT = ["Desgaste natural (pneus, pastilhas, lâmpadas)", "Quedas, colisões e mau uso", "Água em excesso ou jato de alta pressão", "Carregador não original", "Excesso de carga", "Reparos fora da assistência Quark"];
+const EXCLUDES_SHORT = ["Desgaste natural (pneus, pastilhas, lâmpadas)", "Quedas, colisões e mau uso", "Água em excesso ou jato de alta pressão", "Carregador não original", "Excesso de carga", "Alterações e aumento de potência"];
 
 /* ======================================================================= */
 
@@ -378,7 +375,7 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
             {[
               ["1", "Carga completa", "Antes do primeiro passeio, carregue a bateria até 100%."],
               ["2", "Comece devagar", "Nos primeiros 50 km, use o modo mais lento para se acostumar."],
-              ["3", "Revisão de 30 dias", "Agende com a assistência Quark o reaperto geral (por conta do proprietário)."],
+              ["3", "Reaperto aos 300 km", "Recomendamos um reaperto geral na oficina de sua preferência."],
             ].map(([n, t, d]) => (
               <div key={n}>
                 <span className="grid h-8 w-8 place-items-center rounded-full text-[13px] font-extrabold text-[#0B1A12]" style={{ background: GRAD }}>
@@ -578,7 +575,7 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
           {[
             ["Toda semana", "Calibrar os pneus e conferir o desgaste."],
             ["Todo mês", "Conferir freios (pastilhas e lonas), conectores elétricos e parafusos."],
-            ...revisionPlan({ warrantyDays: days }).map((r) => [r.when, `${r.what}.`]),
+            ...revisionPlan().map((r) => [r.when, `Revisão recomendada: ${r.what.charAt(0).toLowerCase()}${r.what.slice(1)}.`]),
           ].map(([w, t], i) => (
             <div key={w} className={cx("grid grid-cols-[150px_1fr] px-5 py-2 text-[12px]", i > 0 && "border-t border-[#0B1A12]/[0.07]")}>
               <span className="font-extrabold">{w}</span>
@@ -586,7 +583,7 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
             </div>
           ))}
         </Card>
-        <p className="mt-2 text-[10.5px] text-[#0B1A12]/45">As revisões a partir de 30 dias são feitas na assistência técnica Quark, com agendamento, e pagas pelo proprietário. Revisões e peças de desgaste natural não fazem parte da garantia.</p>
+        <p className="mt-2 text-[10.5px] text-[#0B1A12]/45">A Quark não oferece serviço de revisão: recomendamos que você revise a scooter onde preferir, quando achar necessário. Revisões e peças de desgaste natural não fazem parte da garantia.</p>
 
         <Sub className="mt-5">Se algo não funcionar</Sub>
         <div className="mt-2.5 grid gap-2">
@@ -613,7 +610,7 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
             <p className="text-[13px] font-extrabold">Advertências</p>
           </div>
           <p className="mt-1 text-[11px] leading-relaxed text-[#0B1A12]/65">
-            Montagem ou reparo por pessoas não autorizadas pode causar danos ou lesões e anula a garantia · Use apenas peças originais · Não use a scooter com componentes danificados · Faça a manutenção periódica descrita
+            Alterações na parte elétrica, aumento de potência ou violação de lacres podem causar danos ou lesões e anulam a garantia · Use apenas peças originais · Não use a scooter com componentes danificados · Faça a manutenção periódica descrita
             neste manual.
           </p>
         </Card>
@@ -699,7 +696,7 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
             );
           })}
         </div>
-        <p className="mt-2 text-[10px] text-[#0B1A12]/45">Constatado o defeito, o reparo ou a troca da peça é feito sem custo em até 30 dias (CDC, art. 18, § 1º). Revisões periódicas não fazem parte da garantia.</p>
+        <p className="mt-2 text-[10px] text-[#0B1A12]/45">Constatado o defeito de fabricação, o reparo ou a troca da peça é feito sem custo em até 30 dias (CDC, art. 18, § 1º). Revisões não fazem parte da garantia.</p>
 
         <Card className="mt-2.5 flex items-center gap-4 rounded-[18px] px-5 py-3">
           <Tile icon={Award} dark />
@@ -711,18 +708,10 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
 
         <div className="mt-3 grid grid-cols-2 gap-10">
           <div className="min-w-0 text-center">
-            <div className="flex h-[50px] items-end justify-center overflow-hidden">
-              {brand.signature && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={brand.signature} alt="" className="max-h-[50px] max-w-[220px] object-contain" />
-              )}
-            </div>
+            <div className="h-[50px]" />
             <div className="border-t border-[#0B1A12]/40 pt-1.5">
               <p className="truncate text-[11.5px] font-bold">{clean(brand.legalName) || clean(brand.company)}</p>
-              <p className="truncate text-[10px] text-[#0B1A12]/55">
-                {[clean(brand.repName), clean(brand.repRole)].filter(Boolean).join(" · ") || "Vendedora"}
-                {brand.cnpj ? ` · CNPJ ${formatDoc(brand.cnpj)}` : ""}
-              </p>
+              <p className="h-[15px] truncate text-[10px] text-[#0B1A12]/55">{brand.cnpj ? `CNPJ ${formatDoc(brand.cnpj)}` : "Vendedora"}</p>
             </div>
           </div>
           <div className="min-w-0 text-center">
@@ -739,18 +728,6 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
           </p>
         )}
 
-        <div className="grow" />
-        <div className="mt-3 mb-2">
-          <Sub>Registro de revisões · carimbo da assistência</Sub>
-          <div className="mt-2 grid grid-cols-3 gap-2.5">
-            {revisionPlan({ warrantyDays: days }).map((r) => (
-              <div key={r.when} className="h-[62px] rounded-[14px] border border-dashed border-[#0B1A12]/20 px-3 py-2">
-                <p className="text-[11px] font-extrabold">{r.when}</p>
-                <p className="mt-1 text-[9.5px] text-[#0B1A12]/45">Data ____/____/______ · km ________</p>
-              </div>
-            ))}
-          </div>
-        </div>
       </Page>
     </div>
   );
@@ -762,22 +739,16 @@ export async function downloadMotoManual(p: MotoProduct, brand: ManualBrand, own
   await downloadPagesPdf(<MotoManualPages p={p} brand={brand} owner={owner} />, `Manual-e-garantia-${pdfFileSlug(p.name)}${owner?.name ? `-${pdfFileSlug(owner.name)}` : ""}.pdf`, { background: "#F7F9F4" });
 }
 
-/** Dados da empresa para o manual (a partir das configurações e da vendedora do contrato). */
-export function manualBrand(
-  s: { company_name: string; legal_name: string; cnpj: string; whatsapp: string; phone: string; instagram: string; city: string; signature_url?: string; contract_defaults?: { contractor?: { repName?: string; repRole?: string; name?: string } } },
-  fallbackSignature = "",
-): ManualBrand {
+/** Dados da empresa para o manual (só a empresa: sem dados de vendedor ou representante). */
+export function manualBrand(s: { company_name: string; legal_name: string; cnpj: string; whatsapp: string; phone: string; instagram: string; city: string; contract_defaults?: { contractor?: { name?: string; doc?: string } } }): ManualBrand {
   const c = s.contract_defaults?.contractor ?? {};
   return {
     company: s.company_name || "Quark",
     legalName: c.name || s.legal_name || s.company_name || "",
-    cnpj: s.cnpj || "",
+    cnpj: s.cnpj || c.doc || "",
     whatsapp: s.whatsapp || s.phone || "",
     instagram: s.instagram || "",
     city: s.city || "",
-    repName: c.repName || "",
-    repRole: c.repRole || "",
-    signature: s.signature_url || fallbackSignature,
   };
 }
 
@@ -785,14 +756,14 @@ type BrandSettings = Parameters<typeof manualBrand>[0];
 
 /**
  * Manual + garantia de uma venda: busca o modelo cadastrado (ou monta com os dados da
- * venda) e preenche o certificado com o cliente, os números de série e a vendedora do contrato.
+ * venda) e preenche o certificado com o cliente, os números de série e os dados da empresa no contrato.
  */
 export async function downloadSaleManual(d: MotoData, id: string | null, settings: BrandSettings, signedAt?: string | null) {
   const [{ fetchProduct }, { newProduct }, { motoPhoto }] = await Promise.all([import("@/lib/moto-products-db"), import("@/lib/moto-products"), import("@/lib/moto-sale")]);
   const base = d.model ? await fetchProduct(d.model) : null;
   const photo = motoPhoto(d);
   const p = base ?? newProduct({ slug: d.model || "scooter", name: d.modelName || "Scooter", photo, specs: { ...newProduct().specs, ...d.specs } });
-  const brand = manualBrand(settings, d.contractorSignature);
+  const brand = manualBrand(settings);
   const c = d.contractor;
   await downloadMotoManual(
     { ...p, name: d.modelName || p.name, photo: photo || p.photo },
@@ -800,9 +771,6 @@ export async function downloadSaleManual(d: MotoData, id: string | null, setting
       ...brand,
       legalName: c?.name || brand.legalName,
       cnpj: c?.doc || brand.cnpj,
-      repName: c?.repName || brand.repName,
-      repRole: c?.repRole || brand.repRole,
-      signature: d.contractorSignature || brand.signature,
     },
     ownerFromSale(d, id, signedAt),
   );

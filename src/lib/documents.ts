@@ -826,7 +826,7 @@ export function motoBlocks(d: MotoData): Block[] {
   const acc = d.accessories.filter((a) => a.name.trim() && a.qty > 0);
   const deliveryWhere = d.delivery.mode === "entrega" ? `no endereço ${d.delivery.address.trim() || "do COMPRADOR informado neste contrato"}` : "na loja da VENDEDORA";
   const end = warrantyEnd(d);
-  const plan = revisionPlan(d);
+  const plan = revisionPlan();
 
   let n = 0;
   const cl = () => `Cláusula ${++n}ª.`;
@@ -834,7 +834,7 @@ export function motoBlocks(d: MotoData): Block[] {
     { t: "title", text: "Contrato de compra e venda" },
     { t: "sub", text: `${vehicle}${d.color.trim() ? ` · cor ${d.color.trim().toLowerCase()}` : ""} · veículo elétrico autopropelido · garantia de ${d.warrantyDays} dias` },
     { t: "h", text: "Vendedora" },
-    { t: "p", text: `${contractorQualify(c)}, doravante denominada VENDEDORA.` },
+    { t: "p", text: `${contractorQualify({ ...c, repName: "" })}, doravante denominada VENDEDORA.` },
     { t: "h", text: "Comprador" },
     { t: "p", text: `${qualify(d.client)}, doravante denominado(a) COMPRADOR.` },
 
@@ -898,7 +898,7 @@ export function motoBlocks(d: MotoData): Block[] {
     { t: "p", text: `${cl()} A garantia não cobre: ${WARRANTY_EXCLUDES.map((x) => x.charAt(0).toLowerCase() + x.slice(1)).join("; ")}.` },
     {
       t: "p",
-      text: `${cl()} Para a conservação do veículo e da garantia, recomenda-se seguir o plano de revisões: ${plan.map((r) => `${r.when.toLowerCase()} (${r.what.toLowerCase()})`).join("; ")}. As revisões periódicas, a mão de obra e as peças de desgaste natural são de responsabilidade do COMPRADOR.`,
+      text: `${cl()} A VENDEDORA não oferece serviço de revisão. Recomenda-se que o COMPRADOR faça revisões periódicas onde preferir e quando julgar necessário, como: ${plan.map((r) => `${r.when.toLowerCase()} (${r.what.toLowerCase()})`).join("; ")}. Revisões, mão de obra e peças de desgaste natural são de responsabilidade do COMPRADOR.`,
     },
 
     { t: "h", text: "Da compra presencial" },

@@ -1,7 +1,7 @@
 import { BadgeCheck, Camera, CheckCircle2, Clock, Fingerprint, MapPin, PenLine, ShieldCheck, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { cx } from "@/components/ui";
-import { brlPlain, dateBr, maskDoc } from "@/lib/br";
+import { brlPlain, dateBr, formatDoc, maskDoc } from "@/lib/br";
 import {
   DOC_KINDS,
   EQUIP_KINDS,
@@ -142,7 +142,7 @@ export function DocumentView({
   const list: (SignerInfo & { fixed?: string })[] = c
     ? [
         { role: buyerRole, name: "", ...people.find((s) => s.role === buyerRole) },
-        { role: companyRole, name: c.name || "Contratada", signature: contractorSig || null, fixed: [c.repName, c.repRole].filter(Boolean).join(" · ") },
+        { role: companyRole, name: c.name || "Contratada", signature: contractorSig || null, fixed: kind === "moto" ? (c.doc ? `CNPJ ${formatDoc(c.doc)}` : "") : [c.repName, c.repRole].filter(Boolean).join(" · ") },
         ...people.filter((s) => s.role !== buyerRole),
       ]
     : people;

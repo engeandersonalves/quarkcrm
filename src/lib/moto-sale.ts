@@ -263,12 +263,14 @@ export const CARE_TIPS = [
   "Respeite a carga máxima e use capacete. Acenda os faróis à noite e em dias de chuva.",
 ];
 
-/** Revisões recomendadas (por conta do proprietário; a Quark não oferece revisão gratuita). */
-export function revisionPlan(d: Pick<MotoData, "warrantyDays">) {
+/**
+ * Revisões apenas recomendadas: a Quark não oferece serviço de revisão. O proprietário faz
+ * onde preferir, quando achar necessário, por conta própria.
+ */
+export function revisionPlan() {
   return [
-    { when: "30 dias ou 300 km", what: "Reaperto geral, freios, folgas, sistema elétrico e saúde da bateria" },
-    { when: `${d.warrantyDays} dias`, what: "Revisão de fim da garantia: diagnóstico do motor, controlador e bateria" },
-    { when: "A cada 6 meses", what: "Revisão completa do sistema elétrico, rolamentos e suspensão" },
+    { when: "Primeiros 300 km", what: "Reaperto geral, freios e folgas" },
+    { when: "A cada 6 meses", what: "Sistema elétrico, rolamentos, suspensão e saúde da bateria" },
   ];
 }
 

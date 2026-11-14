@@ -284,7 +284,7 @@ export function MotoForm({
         </div>
       </Section>
 
-      <Section icon={<Building2 className="h-4 w-4" />} title="Vendedora" subtitle="Sua empresa no contrato">
+      <Section icon={<Building2 className="h-4 w-4" />} title="Vendedora" subtitle="Só os dados da empresa saem no contrato">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Razão social" className="col-span-2">
             <Input value={d.contractor.name} onChange={(e) => setContractor({ name: e.target.value })} />
@@ -297,12 +297,6 @@ export function MotoForm({
           </Field>
           <Field label="Endereço" className="col-span-2">
             <Input value={d.contractor.address} onChange={(e) => setContractor({ address: e.target.value })} />
-          </Field>
-          <Field label="Representante">
-            <Input value={d.contractor.repName} onChange={(e) => setContractor({ repName: e.target.value })} />
-          </Field>
-          <Field label="Cargo">
-            <Input value={d.contractor.repRole} onChange={(e) => setContractor({ repRole: e.target.value })} />
           </Field>
         </div>
       </Section>
