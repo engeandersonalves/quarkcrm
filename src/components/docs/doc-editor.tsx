@@ -206,16 +206,14 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
     const d = data as MotoData;
     if (!d.client.name.trim()) return toast.error("Preencha o nome do comprador");
     if (which === "certificado" && !d.chassis.trim()) {
-      if (!confirm("O número do chassi ainda está em branco. Gerar o certificado mesmo assim?")) return;
+      if (!confirm("O número do chassi ainda está em branco. Gerar o manual com a garantia mesmo assim?")) return;
     }
     setPdfBusy(which);
     try {
       const id = dirty && !locked ? await save() : initial.id;
-      const c = saleCompany(settings, profile);
-      const m = await import("../mobilidade/sale-pdf");
-      if (which === "orcamento") await m.downloadMotoQuote(d, c, id);
-      else await m.downloadMotoCertificate(d, c, id, signers.find((s) => s.role === "comprador")?.signed_at ?? null);
-      toast.success(which === "orcamento" ? "Orçamento baixado" : "Certificado de garantia baixado");
+      if (which === "orcamento") await (await import("../mobilidade/sale-pdf")).downloadMotoQuote(d, saleCompany(settings, profile), id);
+      else await (await import("../mobilidade/moto-manual")).downloadSaleManual(d, id, settings, signers.find((s) => s.role === "comprador")?.signed_at ?? null);
+      toast.success(which === "orcamento" ? "Orçamento baixado" : "Manual com certificado de garantia baixado");
       if (leadId) supabase().from("activities").insert({ lead_id: leadId, type: "nota", content: which === "orcamento" ? `Orçamento da scooter ${d.modelName} gerado` : `Certificado de garantia da scooter ${d.modelName} emitido`, created_by: user.id }).then(() => {});
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
@@ -251,8 +249,8 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
               <Button variant="secondary" onClick={() => motoPdf("orcamento")} loading={pdfBusy === "orcamento"} title="Orçamento em PDF, pronto para enviar ao cliente">
                 <FileText className="h-4 w-4" /> Orçamento
               </Button>
-              <Button variant="secondary" onClick={() => motoPdf("certificado")} loading={pdfBusy === "certificado"} title="Certificado de garantia em PDF">
-                <ShieldCheck className="h-4 w-4" /> Certificado
+              <Button variant="secondary" onClick={() => motoPdf("certificado")} loading={pdfBusy === "certificado"} title="Manual do proprietário com o certificado de garantia preenchido">
+                <ShieldCheck className="h-4 w-4" /> Manual + garantia
               </Button>
             </>
           )}

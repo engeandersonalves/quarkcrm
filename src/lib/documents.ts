@@ -898,7 +898,7 @@ export function motoBlocks(d: MotoData): Block[] {
     { t: "p", text: `${cl()} A garantia não cobre: ${WARRANTY_EXCLUDES.map((x) => x.charAt(0).toLowerCase() + x.slice(1)).join("; ")}.` },
     {
       t: "p",
-      text: `${cl()} Para a manutenção da garantia, recomenda-se seguir o plano de revisões: ${plan.map((r) => `${r.when.toLowerCase()} (${r.what.toLowerCase()}${r.free ? ", sem custo de mão de obra" : ""})`).join("; ")}. Peças de desgaste natural utilizadas nas revisões são cobradas à parte.`,
+      text: `${cl()} Para a conservação do veículo e da garantia, recomenda-se seguir o plano de revisões: ${plan.map((r) => `${r.when.toLowerCase()} (${r.what.toLowerCase()})`).join("; ")}. As revisões periódicas, a mão de obra e as peças de desgaste natural são de responsabilidade do COMPRADOR.`,
     },
 
     { t: "h", text: "Da compra presencial" },

@@ -60,7 +60,7 @@ export interface MotoData {
   };
   delivery: { mode: "retirada" | "entrega"; address: string; date: string };
   warrantyDays: number;
-  /** Revisão de 30 dias (ou 300 km) com mão de obra gratuita. */
+  /** Descontinuado: a Quark não oferece revisão gratuita (mantido só para vendas antigas). */
   freeRevision: boolean;
   quoteValidityDays: number;
   quoteNotes: string;
@@ -172,7 +172,7 @@ export function defaultMoto(opts: { client?: Partial<Party>; contractor: Contrac
     payment: { method: "cartao", installments: 21, installmentValue: 0, entry: 0, balanceWhen: "na entrega da scooter", multipleCards: true, custom: "" },
     delivery: { mode: "entrega", address: "", date: iso(delivery) },
     warrantyDays: 90,
-    freeRevision: true,
+    freeRevision: false,
     quoteValidityDays: 7,
     quoteNotes: "",
     lateFee: 2,
@@ -263,11 +263,12 @@ export const CARE_TIPS = [
   "Respeite a carga máxima e use capacete. Acenda os faróis à noite e em dias de chuva.",
 ];
 
-export function revisionPlan(d: Pick<MotoData, "freeRevision" | "warrantyDays">) {
+/** Revisões recomendadas (por conta do proprietário; a Quark não oferece revisão gratuita). */
+export function revisionPlan(d: Pick<MotoData, "warrantyDays">) {
   return [
-    { when: "Na entrega", what: "Vistoria completa, teste de rodagem, ajuste de freios e orientação de uso", free: true },
-    { when: "30 dias ou 300 km", what: "Reaperto geral, freios, folgas, sistema elétrico e saúde da bateria", free: d.freeRevision },
-    { when: `${d.warrantyDays} dias`, what: "Revisão de fim da garantia: diagnóstico completo do motor, controlador e bateria", free: false },
+    { when: "30 dias ou 300 km", what: "Reaperto geral, freios, folgas, sistema elétrico e saúde da bateria" },
+    { when: `${d.warrantyDays} dias`, what: "Revisão de fim da garantia: diagnóstico do motor, controlador e bateria" },
+    { when: "A cada 6 meses", what: "Revisão completa do sistema elétrico, rolamentos e suspensão" },
   ];
 }
 

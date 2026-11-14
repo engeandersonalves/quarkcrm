@@ -278,9 +278,6 @@ export function MotoForm({
           <Field label="Validade do orçamento">
             <NumberInput value={d.quoteValidityDays} digits={0} suffix="dias" onChange={(v) => update({ quoteValidityDays: Math.max(1, Math.round(v) || 7) })} />
           </Field>
-          <div className="col-span-2">
-            <Switch checked={d.freeRevision} onChange={(v) => update({ freeRevision: v })} label="Revisão de 30 dias (ou 300 km) com mão de obra gratuita" />
-          </div>
           <Field label="Observações do orçamento" className="col-span-2">
             <Textarea rows={2} value={d.quoteNotes} onChange={(e) => update({ quoteNotes: e.target.value })} placeholder="Ex.: Test ride na loja · cor sujeita a disponibilidade" />
           </Field>

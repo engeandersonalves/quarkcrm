@@ -17,7 +17,7 @@ import { brlPlain, dateBr } from "@/lib/br";
 import { DOC_STATUS } from "@/lib/documents";
 import { relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
-import { installmentValue, newProduct, profitOf, unitCost, type MotoProduct } from "@/lib/moto-products";
+import { installmentValue, profitOf, unitCost, type MotoProduct } from "@/lib/moto-products";
 import { useMotoProducts } from "@/lib/moto-products-db";
 import { contractValue, motoPhoto, motoTotal, vehicleName, warrantyActive, warrantyEnd, type MotoData } from "@/lib/moto-sale";
 import { supabase } from "@/lib/supabase/client";
@@ -175,25 +175,16 @@ function Vendas({ sales, products }: { sales: ReturnType<typeof useSales>; produ
   const noSelfie = all.filter((d) => (d.signers ?? []).some((s) => s.role === "comprador" && s.signed_at && !s.selfie_at)).length;
   const active = products.filter((p) => p.active && p.price > 0);
 
-  const pdf = async (d: DocumentRow, which: "orcamento" | "certificado" | "manual") => {
+  const pdf = async (d: DocumentRow, which: "orcamento" | "manual") => {
     setBusy(`${d.id}-${which}`);
     try {
       if (which === "manual") {
-        const s = sale(d);
-        const base = products.find((x) => x.slug === s.model);
-        const prod = base ?? newProduct({ slug: s.model, name: s.modelName || "Scooter", photo: motoPhoto(s), specs: { ...newProduct().specs, ...s.specs } });
-        const { downloadMotoManual } = await import("@/components/mobilidade/moto-manual");
-        await downloadMotoManual(
-          { ...prod, photo: prod.photo || motoPhoto(s) },
-          { company: settings.company_name, whatsapp: settings.whatsapp || settings.phone, instagram: settings.instagram, city: settings.city },
-          { name: s.client.name, doc: s.client.doc, color: s.color, chassis: s.chassis, motorNo: s.motorNo, batteryNo: s.batteryNo, delivery: s.delivery.date, warrantyDays: s.warrantyDays },
-        );
+        const { downloadSaleManual } = await import("@/components/mobilidade/moto-manual");
+        await downloadSaleManual(sale(d), d.id, settings, (d.signers ?? []).find((s) => s.role === "comprador")?.signed_at ?? null);
         return;
       }
       const m = await import("@/components/mobilidade/sale-pdf");
-      const c = saleCompany(settings, profile);
-      if (which === "orcamento") await m.downloadMotoQuote(sale(d), c, d.id);
-      else await m.downloadMotoCertificate(sale(d), c, d.id, (d.signers ?? []).find((s) => s.role === "comprador")?.signed_at ?? null);
+      await m.downloadMotoQuote(sale(d), saleCompany(settings, profile), d.id);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
     } finally {
@@ -326,14 +317,9 @@ function Vendas({ sales, products }: { sales: ReturnType<typeof useSales>; produ
                   <button type="button" disabled={!!busy} onClick={() => pdf(d, "orcamento")} className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold ring-1 ring-ink-200 hover:ring-ink-300 disabled:opacity-50 sm:flex-none">
                     <FileText className="h-3.5 w-3.5" /> {busy === `${d.id}-orcamento` ? "Gerando…" : "Orçamento"}
                   </button>
-                  <button type="button" disabled={!!busy} onClick={() => pdf(d, "manual")} title="Manual do cliente com o nome e o chassi dele" className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold ring-1 ring-ink-200 hover:ring-ink-300 disabled:opacity-50 sm:flex-none">
-                    <BookOpen className="h-3.5 w-3.5" /> {busy === `${d.id}-manual` ? "Gerando…" : "Manual"}
+                  <button type="button" disabled={!!busy} onClick={() => pdf(d, "manual")} title="Manual do proprietário com o certificado de garantia já preenchido" className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold ring-1 ring-ink-200 hover:ring-ink-300 disabled:opacity-50 sm:flex-none">
+                    <ShieldCheck className="h-3.5 w-3.5" /> {busy === `${d.id}-manual` ? "Gerando…" : "Manual + garantia"}
                   </button>
-                  {d.status === "assinado" && (
-                    <button type="button" disabled={!!busy} onClick={() => pdf(d, "certificado")} className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold ring-1 ring-ink-200 hover:ring-ink-300 disabled:opacity-50 sm:flex-none">
-                      <ShieldCheck className="h-3.5 w-3.5" /> {busy === `${d.id}-certificado` ? "Gerando…" : "Certificado"}
-                    </button>
-                  )}
                 </div>
               </article>
             );

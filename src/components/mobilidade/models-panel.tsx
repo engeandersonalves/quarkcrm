@@ -9,7 +9,9 @@ import { Button, Modal, Skeleton, Textarea, cx } from "@/components/ui";
 import { brlPlain } from "@/lib/br";
 import { installmentValue, parseProducts, profitOf, seedProducts, unitCost, type MotoProduct } from "@/lib/moto-products";
 import { saveProducts, useMotoProducts } from "@/lib/moto-products-db";
+import { ManualOwnerModal } from "./manual-owner-modal";
 import { downloadMotoArt } from "./moto-arts";
+import type { ManualOwner } from "./moto-manual";
 
 const brl0 = (v: number) => brlPlain(v).replace(/,00$/, "");
 
@@ -93,13 +95,28 @@ export function ModelsPanel() {
     }
   };
 
+  const [manualFor, setManualFor] = useState<MotoProduct | null>(null);
+  const [manualBusy, setManualBusy] = useState(false);
+  const makeManual = async (owner: ManualOwner | null) => {
+    if (!manualFor) return;
+    setManualBusy(true);
+    try {
+      const { downloadMotoManual, manualBrand } = await import("./moto-manual");
+      await downloadMotoManual(manualFor, manualBrand(settings), owner);
+      toast.success(owner ? `Manual + garantia de ${owner.name} baixado` : "Manual + garantia em branco baixado");
+      setManualFor(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o manual");
+    } finally {
+      setManualBusy(false);
+    }
+  };
+
   const download = async (p: MotoProduct, kind: "venda" | "ficha" | "manual") => {
     setArt(`${p.slug}-${kind}`);
     try {
-      if (kind === "manual") {
-        const { downloadMotoManual } = await import("./moto-manual");
-        await downloadMotoManual(p, { ...brand, company: settings.company_name });
-      } else await downloadMotoArt(kind, p, brand);
+      if (kind === "manual") return setManualFor(p);
+      await downloadMotoArt(kind, p, brand);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível gerar a arte");
     } finally {
@@ -218,6 +235,7 @@ export function ModelsPanel() {
         </Link>
       </div>
 
+      <ManualOwnerModal product={manualFor} onClose={() => setManualFor(null)} onGenerate={makeManual} busy={manualBusy} />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} existing={fromSeed ? [] : products} onSaved={reload} />
     </div>
   );

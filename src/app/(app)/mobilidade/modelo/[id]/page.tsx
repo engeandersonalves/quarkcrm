@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
+import { ManualOwnerModal } from "@/components/mobilidade/manual-owner-modal";
+import type { ManualOwner } from "@/components/mobilidade/moto-manual";
 import { ART_H, ART_W, SaleArt, SpecsArt, downloadMotoArt, type ArtBrand } from "@/components/mobilidade/moto-arts";
 import { Button, Card, Field, ImageField, Input, MoneyInput, NumberInput, Skeleton, Switch, Textarea, cx } from "@/components/ui";
 import { brlPlain } from "@/lib/br";
@@ -111,16 +113,27 @@ function Editor({ initial, fromSeed, onSaved }: { initial: MotoProduct; fromSeed
     }
   };
 
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualBusy, setManualBusy] = useState(false);
+  const makeManual = async (owner: ManualOwner | null) => {
+    setManualBusy(true);
+    try {
+      const { downloadMotoManual, manualBrand } = await import("@/components/mobilidade/moto-manual");
+      await downloadMotoManual(p, manualBrand(settings), owner);
+      toast.success(owner ? `Manual + garantia de ${owner.name} baixado` : "Manual + garantia em branco baixado");
+      setManualOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o manual");
+    } finally {
+      setManualBusy(false);
+    }
+  };
+
   const download = async (kind: "venda" | "ficha" | "manual") => {
     if (!p.name.trim() || (kind !== "manual" && !(p.price > 0))) return toast.error("Preencha nome e preço antes de gerar a arte");
     setArt(kind);
     try {
-      if (kind === "manual") {
-        const { downloadMotoManual } = await import("@/components/mobilidade/moto-manual");
-        await downloadMotoManual(p, { ...brand, company: settings.company_name });
-        toast.success("Manual do cliente baixado");
-        return;
-      }
+      if (kind === "manual") return setManualOpen(true);
       await downloadMotoArt(kind, p, brand);
       toast.success(kind === "venda" ? "Arte de venda baixada" : "Arte comparativa baixada");
     } catch (e) {
@@ -362,6 +375,7 @@ function Editor({ initial, fromSeed, onSaved }: { initial: MotoProduct; fromSeed
           </div>
         </div>
       </div>
+      <ManualOwnerModal product={manualOpen ? p : null} onClose={() => setManualOpen(false)} onGenerate={makeManual} busy={manualBusy} />
     </div>
   );
 }

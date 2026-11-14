@@ -107,3 +107,14 @@ export async function deleteProduct(id: string) {
   const { error } = await supabase().from("moto_products").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
+
+/** Modelo pelo slug (banco ou, na falta, catálogo de lançamento). Nunca lança erro. */
+export async function fetchProduct(slug: string): Promise<MotoProduct | null> {
+  try {
+    const { data } = await supabase().from("moto_products").select("*").eq("slug", slug).maybeSingle();
+    if (data) return rowToProduct(data as Row);
+  } catch {
+    /* sem tabela ou sem rede: usa o catálogo de lançamento */
+  }
+  return seedProducts().find((p) => p.slug === slug) ?? null;
+}
