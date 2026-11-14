@@ -2,12 +2,12 @@
 
 import { Bike, Building2, CreditCard, Hash, PackagePlus, Plus, ShieldCheck, Trash2, Truck, User, Users } from "lucide-react";
 import { digits, formatDoc } from "@/lib/br";
-import { SCOOTERS, type ModelId } from "@/lib/catalog-mobilidade";
 import {
   MOTO_ACCESSORIES,
   MOTO_COLORS,
   accessoriesTotal,
   applyModel,
+  applyProduct,
   cardTotal,
   motoTotal,
   newItem,
@@ -18,15 +18,12 @@ import {
 } from "@/lib/moto-sale";
 import { brl } from "@/lib/pricing";
 import { dateBr } from "@/lib/br";
-import { MOTO_PHOTO } from "../mobilidade/sale-docs";
+import { useMotoProducts } from "@/lib/moto-products-db";
+import { installmentValue } from "@/lib/moto-products";
 import { Field, Input, MoneyInput, NumberInput, Segmented, Switch, Textarea, cx } from "../ui";
 import { LeadPicker, PlaceDate, Section, type LeadLite } from "./form-bits";
 import { PartyFields } from "./party-fields";
 
-const MODELS: { id: ModelId | "outro"; name: string; sub: string }[] = [
-  ...SCOOTERS.map((s) => ({ id: s.id, name: s.name, sub: s.kicker })),
-  { id: "outro", name: "Outro", sub: "modelo fora do catálogo" },
-];
 
 const SPEC_FIELDS: { k: keyof MotoSpecs; label: string; ph: string }[] = [
   { k: "power", label: "Motor", ph: "1.000W" },
@@ -60,8 +57,11 @@ export function MotoForm({
   const setDelivery = (p: Partial<MotoData["delivery"]>) => update({ delivery: { ...d.delivery, ...p } });
   const setContractor = (p: Partial<MotoData["contractor"]>) => update({ contractor: { ...d.contractor, ...p } });
   const setAcc = (id: string, p: Partial<MotoData["accessories"][number]>) => update({ accessories: d.accessories.map((a) => (a.id === id ? { ...a, ...p } : a)) });
-  const scooter = d.model !== "outro" ? SCOOTERS.find((s) => s.id === d.model) : undefined;
-  const colors = MOTO_COLORS[d.model] ?? [];
+  const { products } = useMotoProducts();
+  const catalog = products.filter((p) => p.active || p.slug === d.model);
+  const product = catalog.find((p) => p.slug === d.model);
+  const colors = product?.colors.length ? product.colors : (MOTO_COLORS[d.model] ?? []);
+  const plan = product ? { n: product.installments, each: installmentValue(product.price, product.installments, product.rate), rate: product.rate } : null;
 
   return (
     <>
@@ -74,11 +74,11 @@ export function MotoForm({
 
       <Section icon={<Bike className="h-4 w-4" />} title="Scooter" subtitle="Modelo, cor e ficha técnica (vem do catálogo e pode ser ajustada)">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {MODELS.map((m) => (
+          {[...catalog.map((p) => ({ id: p.slug, name: p.name, sub: p.kicker || "Scooter elétrica", photo: p.photo, product: p })), { id: "outro", name: "Outro", sub: "modelo fora do catálogo", photo: "/mob/cmp-scooter.webp", product: null }].map((m) => (
             <button
               key={m.id}
               type="button"
-              onClick={() => update(applyModel(d, m.id))}
+              onClick={() => update(m.product ? applyProduct(d, m.product) : applyModel(d, "outro"))}
               className={cx(
                 "group relative overflow-hidden rounded-2xl p-2.5 text-left ring-1 transition",
                 d.model === m.id ? "bg-[#0f2117] text-white ring-2 ring-[#6FBF8E] shadow-[0_10px_30px_-12px_rgba(111,191,142,0.7)]" : "bg-ink-50 ring-ink-200 hover:ring-ink-300",
@@ -86,7 +86,7 @@ export function MotoForm({
             >
               <div className="grid h-16 place-items-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={MOTO_PHOTO[m.id]} alt="" className="max-h-16 w-auto object-contain" />
+                <img src={m.photo || "/mob/cmp-scooter.webp"} alt="" className="max-h-16 w-auto object-contain" />
               </div>
               <p className="mt-1 text-sm leading-tight font-bold">{m.name}</p>
               <p className={cx("text-[11px] leading-tight", d.model === m.id ? "text-white/60" : "text-ink-500")}>{m.sub}</p>
@@ -119,7 +119,7 @@ export function MotoForm({
         </div>
 
         <details className="mt-3 rounded-xl bg-ink-50 p-3 ring-1 ring-ink-200/70">
-          <summary className="cursor-pointer text-sm font-semibold">Ficha técnica {scooter ? `da ${scooter.name}` : ""}</summary>
+          <summary className="cursor-pointer text-sm font-semibold">Ficha técnica {product ? `da ${product.name}` : ""}</summary>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {SPEC_FIELDS.map((f) => (
               <Field key={f.k} label={f.label}>
@@ -213,9 +213,9 @@ export function MotoForm({
                 <MoneyInput value={d.payment.installmentValue} onChange={(v) => setPay({ installmentValue: v })} />
               </Field>
             </div>
-            {scooter && (
-              <button type="button" onClick={() => setPay({ installments: scooter.installments, installmentValue: scooter.installment })} className="justify-self-start text-xs font-semibold text-emerald-700 hover:underline">
-                Usar a condição da Black: {scooter.installments}x de {brl(scooter.installment)}
+            {plan && (
+              <button type="button" onClick={() => setPay({ installments: plan.n, installmentValue: plan.each })} className="justify-self-start text-xs font-semibold text-emerald-700 hover:underline">
+                Usar a tabela do modelo: {plan.n}x de {brl(plan.each)} ({plan.rate.toLocaleString("pt-BR")}% a.m.)
               </button>
             )}
             <Switch checked={d.payment.multipleCards} onChange={(v) => setPay({ multipleCards: v })} label="Aceita mais de um cartão" />

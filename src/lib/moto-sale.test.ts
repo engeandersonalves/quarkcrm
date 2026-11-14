@@ -43,6 +43,8 @@ test("contrato da scooter: cláusulas essenciais, assinantes e pendências", () 
   assert.match(text, /garantia de 90 \(noventa\) dias/i);
   assert.match(text, /selfie/i);
   assert.match(text, /CONTRAN nº 996\/2023/);
+  assert.match(text, /presencialmente/);
+  assert.doesNotMatch(text, /poderá desistir/);
   assert.match(text, /QK2026T1-0001/);
   assert.match(text, /21 \(vinte e uma\) parcelas de R\$\s385,00/);
   assert.match(text, /1 \(uma\) unidade de scooter elétrica T1/);

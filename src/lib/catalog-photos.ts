@@ -32,3 +32,16 @@ export async function loadCatalogPhotos(): Promise<CatalogPhotos> {
     return {};
   }
 }
+
+/** Modelos cadastrados no CRM para o catálogo online (só dados públicos, sem custos). */
+export async function loadCatalogModels() {
+  if (!hasSupabase) return [];
+  try {
+    const { data, error } = await anonSupabase().rpc("get_public_motos");
+    if (error || !Array.isArray(data)) return [];
+    const { productToScooter, newProduct } = await import("@/lib/moto-products");
+    return (data as Record<string, unknown>[]).map((r) => productToScooter({ ...newProduct(), ...(r as object), specs: { ...newProduct().specs, ...((r.specs as object) ?? {}) } } as Parameters<typeof productToScooter>[0]));
+  } catch {
+    return [];
+  }
+}

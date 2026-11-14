@@ -16,6 +16,7 @@ import {
   shortNo,
   vehicleName,
   warrantyEnd,
+  motoPhoto,
   type MotoData,
 } from "@/lib/moto-sale";
 
@@ -235,7 +236,7 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
           <div className="relative h-[360px]">
             <div className="absolute inset-0 bg-[radial-gradient(closest-side,rgba(159,219,124,0.32),rgba(159,219,124,0))]" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={MOTO_PHOTO[d.model] ?? MOTO_PHOTO.outro} data-fallback="/mob/cmp-scooter.webp" alt="" className="relative h-full w-full object-contain drop-shadow-[0_30px_40px_rgba(0,0,0,0.7)]" />
+            <img src={motoPhoto(d)} data-fallback="/mob/cmp-scooter.webp" alt="" className="relative h-full w-full object-contain drop-shadow-[0_30px_40px_rgba(0,0,0,0.7)]" />
           </div>
         </div>
 
@@ -542,7 +543,7 @@ export function MotoCertificatePages({ d, c, id, signedAt }: { d: MotoData; c: S
           </div>
           <div className="relative flex flex-col justify-center rounded-[22px] bg-[#0F2A1C] p-5 text-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={MOTO_PHOTO[d.model] ?? MOTO_PHOTO.outro} data-fallback="/mob/cmp-scooter.webp" alt="" className="mx-auto h-[120px] w-auto object-contain" />
+            <img src={motoPhoto(d)} data-fallback="/mob/cmp-scooter.webp" alt="" className="mx-auto h-[120px] w-auto object-contain" />
             <div className="mt-3 grid gap-2 text-[12px]">
               <div>
                 <p className="text-[10px] font-bold tracking-[0.16em] text-[#A9DE86] uppercase">Compra</p>

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { MobilidadeCatalog } from "@/components/mobilidade/catalog";
-import { loadCatalogPhotos } from "@/lib/catalog-photos";
+import { loadCatalogModels, loadCatalogPhotos } from "@/lib/catalog-photos";
 import { loadCompany } from "@/lib/public-company";
 
 export const dynamic = "force-dynamic";
@@ -20,10 +20,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: "#050706" };
 
 export default async function CatalogoMobilidadePage() {
-  const [company, photos] = await Promise.all([loadCompany(), loadCatalogPhotos()]);
+  const [company, photos, models] = await Promise.all([loadCompany(), loadCatalogPhotos(), loadCatalogModels()]);
   return (
     <div translate="no" className="notranslate">
-      <MobilidadeCatalog whatsapp={company.whatsapp ?? null} photos={photos} />
+      <MobilidadeCatalog whatsapp={company.whatsapp ?? null} photos={photos} models={models} />
     </div>
   );
 }

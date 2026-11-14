@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -17,7 +19,7 @@ import {
   CATALOG_ID,
   MOB_HOURS,
   MOB_WHATSAPP,
-  SCOOTERS,
+  SCOOTERS as LAUNCH_MODELS,
   SERVICES,
   TABLE_ROWS,
   VERSUS,
@@ -37,6 +39,10 @@ const cx = (...c: (string | false | null | undefined)[]) =>
 const GRAD = "bg-[linear-gradient(95deg,#F3E93B_0%,#9FDB7C_45%,#4FC38A_100%)]";
 const GT = `${GRAD} bg-clip-text text-transparent`;
 const STORE = `quark-catalogo-${CATALOG_ID}`;
+
+/** Modelos exibidos: os cadastrados no CRM (quando houver) ou os de lançamento. */
+const ModelsCtx = createContext<Scooter[]>(LAUNCH_MODELS);
+const useModels = () => useContext(ModelsCtx);
 
 /* =============================================================== ícones */
 
@@ -179,7 +185,7 @@ type ExtraPhotos = Partial<
   Record<ModelId, { url: string; caption: string | null }[]>
 >;
 
-export function MobilidadeCatalog({
+function MobilidadeCatalogInner({
   whatsapp,
   photos = {},
 }: {
@@ -258,6 +264,7 @@ function maskPhone(v: string) {
 }
 
 function Gate({ onAccess }: { onAccess: (a: Access) => void }) {
+  const SCOOTERS = useModels();
   const [f, setF] = useState({ name: "", phone: "", email: "", website: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -955,6 +962,7 @@ function Catalog({
   wa: string;
   photos: ExtraPhotos;
 }) {
+  const SCOOTERS = useModels();
   const send = useTracking(access.token);
   const [scrolled, setScrolled] = useState(false);
   const [picked, setPicked] = useState<ModelId | null>(null);
@@ -1728,6 +1736,7 @@ const money = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function Savings({ onCta }: { onCta: () => void }) {
+  const SCOOTERS = useModels();
   const [km, setKm] = useState(30);
   const [fuel, setFuel] = useState(6.3);
   const [bus, setBus] = useState(4);
@@ -2105,13 +2114,14 @@ function Quiz({
   onWant: (s: Scooter) => void;
   onSee: (s: Scooter) => void;
 }) {
+  const SCOOTERS = useModels();
   const [step, setStep] = useState(0);
   const [ans, setAns] = useState<Record<string, string>>({});
   const done = step >= QUESTIONS.length;
   const best = done
-    ? SCOOTERS.find(
+    ? (SCOOTERS.find(
         (s) => s.id === recommend(ans as Parameters<typeof recommend>[0]),
-      )!
+      ) ?? SCOOTERS[0])
     : null;
   useEffect(() => {
     if (best) onResult(best.id);
@@ -2230,5 +2240,14 @@ function Quiz({
         </div>
       </div>
     </section>
+  );
+}
+
+/** Catálogo online. `models`: modelos cadastrados no CRM (vazio = os de lançamento). */
+export function MobilidadeCatalog({ models, ...rest }: Parameters<typeof MobilidadeCatalogInner>[0] & { models?: Scooter[] }) {
+  return (
+    <ModelsCtx.Provider value={models?.length ? models : LAUNCH_MODELS}>
+      <MobilidadeCatalogInner {...rest} />
+    </ModelsCtx.Provider>
   );
 }

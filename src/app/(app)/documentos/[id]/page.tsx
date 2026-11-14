@@ -8,7 +8,9 @@ import { DocEditor, partyFromLead, type EditorDoc } from "@/components/docs/doc-
 import { Card, Empty, Skeleton } from "@/components/ui";
 import { DEFAULT_SIGNATURE } from "@/lib/defaults";
 import { defaultAluguel, defaultContrato, defaultProcuracao, emptyContractor, type DocData, type DocKind } from "@/lib/documents";
-import { applyCadastro, defaultMoto } from "@/lib/moto-sale";
+import { applyCadastro, applyProduct, defaultMoto } from "@/lib/moto-sale";
+import { useMotoProducts } from "@/lib/moto-products-db";
+import type { MotoProduct } from "@/lib/moto-products";
 import { CADASTRO_DRAFT } from "@/components/mobilidade/cadastro-panel";
 import type { Cadastro } from "@/lib/cadastro-parser";
 import type { ModelId } from "@/lib/catalog-mobilidade";
@@ -28,6 +30,7 @@ function NewDocument() {
   const tipo = search.get("tipo");
   const kind: DocKind = tipo === "aluguel" || tipo === "contrato" || tipo === "moto" ? tipo : "procuracao";
   const modelo = search.get("modelo");
+  const { products, loading: loadingProducts } = useMotoProducts();
   const leadId = search.get("lead");
 
   const { data: lead, loading } = useLive(
@@ -48,7 +51,7 @@ function NewDocument() {
   );
 
   const initial = useMemo<EditorDoc | null>(() => {
-    if (loading || loadingProposals || !settingsLoaded) return null;
+    if (loading || loadingProposals || !settingsLoaded || (kind === "moto" && loadingProducts)) return null;
     const party = lead ? partyFromLead(lead) : {};
     const place = settings.city ? (settings.city.includes("/") ? settings.city : `${settings.city}/AL`) : "Maceió/AL";
     const data: DocData =
@@ -66,7 +69,7 @@ function NewDocument() {
             place,
           )
         : kind === "moto"
-          ? withCadastro(defaultMoto({
+          ? withCadastro(withProduct(defaultMoto({
               client: party,
               contractor: emptyContractor({
                 ...settings.contract_defaults?.contractor,
@@ -78,7 +81,7 @@ function NewDocument() {
               signature: settings.signature_url || DEFAULT_SIGNATURE,
               place,
               model: modelo === "cappuccino" || modelo === "mz" || modelo === "t1" ? (modelo as ModelId) : undefined,
-            }), search.get("cadastro") === "1")
+            }), products, modelo), search.get("cadastro") === "1")
         : kind === "contrato"
           ? (() => {
               const base = defaultContrato({
@@ -96,7 +99,7 @@ function NewDocument() {
             })()
           : defaultAluguel(party, place);
     return { id: null, kind, data, lead_id: lead?.id ?? null, status: "rascunho", signers: [] };
-  }, [loading, loadingProposals, settingsLoaded, lead, kind, settings, proposals, modelo]);
+  }, [loading, loadingProposals, loadingProducts, settingsLoaded, lead, kind, settings, proposals, modelo, products]);
 
   if (!initial) return <EditorSkeleton />;
   return <DocEditor key={`${kind}-${leadId ?? ""}`} initial={initial} />;
@@ -121,6 +124,13 @@ function ExistingDocument({ id }: { id: string }) {
   const locked = data.status === "cancelado" || (data.signers ?? []).some((s) => s.signed_at);
   const key = `${data.id}-${locked}`;
   return <DocEditor key={key} initial={initial} onReload={reload} />;
+}
+
+/** Venda nova: começa com o modelo do catálogo do CRM (o escolhido, ou o primeiro ativo). */
+function withProduct<T extends Parameters<typeof applyProduct>[0]>(d: T, products: MotoProduct[], slug: string | null): T {
+  const list = products.filter((p) => p.active && p.price > 0);
+  const p = list.find((x) => x.slug === slug) ?? list[0];
+  return p ? (applyProduct(d, p) as T) : d;
 }
 
 /** Venda criada pela aba Cadastro: aplica os dados organizados guardados na sessão. */

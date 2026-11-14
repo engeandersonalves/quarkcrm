@@ -5,6 +5,7 @@
 import type { Contractor, Party } from "./documents.ts";
 import { SCOOTERS, type ModelId } from "./catalog-mobilidade.ts";
 import { fullAddress, type Cadastro } from "./cadastro-parser.ts";
+import { installmentValue, type MotoProduct } from "./moto-products.ts";
 
 export type MotoPayMethod = "pix" | "cartao" | "entrada" | "personalizado";
 
@@ -40,6 +41,8 @@ export interface MotoData {
   batteryNo: string;
   chargerNo: string;
   specs: MotoSpecs;
+  /** Foto do modelo cadastrado (quando vem do catálogo do CRM). */
+  photo?: string;
   /** Preço unitário da scooter (à vista). */
   price: number;
   accessories: MotoItem[];
@@ -306,3 +309,22 @@ export function applyCadastro(d: MotoData, c: Cadastro): MotoData {
   }
   return next;
 }
+
+/** Aplica um modelo cadastrado no CRM: nome, cor, foto, ficha técnica, preço e parcela (Tabela Price). */
+export function applyProduct(d: MotoData, p: MotoProduct): MotoData {
+  const s = p.specs;
+  return {
+    ...d,
+    model: p.slug,
+    modelName: p.name,
+    color: p.colors[0] ?? d.color,
+    photo: p.photo || undefined,
+    specs: { power: s.power, battery: s.battery, range: s.range, speed: s.speed, load: s.load, brakes: s.brakes, recharge: s.recharge, weight: s.weight },
+    price: p.price,
+    payment: { ...d.payment, installments: p.installments, installmentValue: installmentValue(p.price, p.installments, p.rate) },
+  };
+}
+
+/** Foto da scooter da venda (modelo cadastrado ou do catálogo de lançamento). */
+export const motoPhoto = (d: Pick<MotoData, "photo" | "model">) =>
+  d.photo || ({ t1: "/mob/t1-perfil.webp", cappuccino: "/mob/cappuccino-estudio.png", mz: "/mob/mz-perfil.webp" } as Record<string, string>)[d.model] || "/mob/cmp-scooter.webp";

@@ -1447,3 +1447,49 @@ drop policy if exists "catalog_photos_team" on public.catalog_photos;
 create policy "catalog_photos_team" on public.catalog_photos for all to authenticated using (public.is_member()) with check (public.is_member());
 
 notify pgrst, 'reload schema';
+
+-- Modelos de scooter cadastrados no CRM (ficha técnica, custos, preço e parcelamento)
+create table if not exists public.moto_products (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null unique,
+  name text not null,
+  kicker text not null default '',
+  pitch text not null default '',
+  for_who text not null default '',
+  accent text not null default '#9FDB7C',
+  photo text not null default '',
+  gallery jsonb not null default '[]'::jsonb,
+  colors text[] not null default '{}',
+  specs jsonb not null default '{}'::jsonb,
+  costs jsonb not null default '{}'::jsonb,
+  price numeric not null default 0,
+  installments int not null default 21,
+  rate numeric not null default 2.1,
+  active boolean not null default true,
+  position int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.moto_products enable row level security;
+drop policy if exists "moto_products_team" on public.moto_products;
+create policy "moto_products_team" on public.moto_products for all to authenticated using (public.is_member()) with check (public.is_member());
+
+-- Catálogo online: só os dados públicos dos modelos ativos (nunca os custos).
+create or replace function public.get_public_motos()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', id, 'slug', slug, 'name', name, 'kicker', kicker, 'pitch', pitch, 'forWho', for_who,
+    'accent', accent, 'photo', photo, 'gallery', gallery, 'colors', to_jsonb(colors), 'specs', specs,
+    'price', price, 'installments', installments, 'rate', rate
+  ) order by position, name), '[]'::jsonb)
+  from public.moto_products where active and price > 0;
+$$;
+revoke all on function public.get_public_motos() from public;
+grant execute on function public.get_public_motos() to anon, authenticated;
+
+notify pgrst, 'reload schema';

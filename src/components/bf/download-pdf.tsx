@@ -97,3 +97,33 @@ export const pdfFileSlug = slug;
 export function downloadProposalPdf(data: PublicProposal, onProgress?: (done: number, total: number) => void) {
   return downloadPagesPdf(<ProposalPdfPages data={data} />, `Proposta-${data.proposal.number}-${slug(data.lead.name)}.pdf`, { onProgress });
 }
+
+/** Monta a arte fora da tela e baixa em PNG (elemento com data-art, no tamanho exato). */
+export async function downloadArtPng(node: ReactNode, fileName: string, size: { width: number; height: number }) {
+  const host = document.createElement("div");
+  host.setAttribute("aria-hidden", "true");
+  host.style.cssText = `position:fixed;left:-20000px;top:0;width:${size.width}px;pointer-events:none;z-index:-1;`;
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  try {
+    root.render(node);
+    for (let i = 0; i < 50 && !host.querySelector("[data-art]"); i++) await wait(40);
+    await ensureImages(host);
+    await (document.fonts?.ready ?? Promise.resolve());
+    await wait(150);
+    const { toPng } = await import("html-to-image");
+    const el = host.querySelector<HTMLElement>("[data-art]")!;
+    const opts = { width: size.width, height: size.height, pixelRatio: 1, backgroundColor: "#050706", imagePlaceholder: BLANK };
+    await toPng(el, { ...opts, pixelRatio: 0.2 }).catch(() => null);
+    const url = await toPng(el, opts);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    root.unmount();
+    host.remove();
+  }
+}

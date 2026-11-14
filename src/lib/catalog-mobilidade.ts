@@ -8,7 +8,8 @@ export const CATALOG_NAME = "Quark Mobilidade · Black Friday";
 export const MOB_WHATSAPP = "5582991831476";
 export const MOB_HOURS = "Atendimento de segunda a sexta, das 7h às 17h";
 
-export type ModelId = "t1" | "cappuccino" | "mz";
+/** Modelos de lançamento (t1, cappuccino, mz) ou o slug de um modelo cadastrado no CRM. */
+export type ModelId = string;
 
 export interface GalleryPhoto {
   src: string;

@@ -354,6 +354,133 @@ export function Plug3D(p: P) {
   );
 }
 
+export function Battery3D(p: P) {
+  return (
+    <Svg {...p} label="Bateria">
+      {(id) => (
+        <>
+          <defs>
+            <linearGradient id={id("body")} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="#2A2F3A" />
+              <stop offset="0.5" stopColor="#4A5262" />
+              <stop offset="1" stopColor="#1B1F27" />
+            </linearGradient>
+            <linearGradient id={id("cell")} x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stopColor="#3E9E5A" />
+              <stop offset="0.6" stopColor="#9BD373" />
+              <stop offset="1" stopColor="#E9FF8F" />
+            </linearGradient>
+          </defs>
+          <Shadow id={id} rx={14} />
+          <rect x="26" y="5" width="12" height="6" rx="2" fill="#7A8296" />
+          <rect x="18.5" y="10.5" width="29" height="46" rx="7" fill="#0E1117" />
+          <rect x="17" y="9" width="29" height="46" rx="7" fill={`url(#${id("body")})`} />
+          <rect x="21" y="27" width="21" height="24" rx="4" fill={`url(#${id("cell")})`} />
+          <path d="M33 30 l-6 9 h5 l-3 8 8 -11 h-5 l3 -6 z" fill="#fff" opacity="0.92" />
+          <rect x="20" y="12" width="5" height="38" rx="2.5" fill="#fff" opacity="0.18" />
+        </>
+      )}
+    </Svg>
+  );
+}
+
+export function Shield3D(p: P) {
+  const d = "M32 5 L52 13 V30 C52 44 43 53 32 58 C21 53 12 44 12 30 V13 Z";
+  return (
+    <Svg {...p} label="Garantia">
+      {(id) => (
+        <>
+          <defs>
+            <linearGradient id={id("g")} x1="0.2" y1="0" x2="0.8" y2="1">
+              <stop offset="0" stopColor="#E9FF8F" />
+              <stop offset="0.55" stopColor="#6CC690" />
+              <stop offset="1" stopColor="#1F7A4A" />
+            </linearGradient>
+          </defs>
+          <Shadow id={id} rx={16} />
+          <path d={d} fill="#14512F" transform="translate(2 2.5)" />
+          <path d={d} fill={`url(#${id("g")})`} />
+          <path d="M23 31 l6.5 6.5 L42 24" stroke="#fff" strokeWidth="4.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M32 9 L48 15.5 V22" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.55" />
+        </>
+      )}
+    </Svg>
+  );
+}
+
+export function Route3D(p: P) {
+  return (
+    <Svg {...p} label="Autonomia">
+      {(id) => (
+        <>
+          <defs>
+            <linearGradient id={id("pin")} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#FFE680" />
+              <stop offset="1" stopColor="#F59E0B" />
+            </linearGradient>
+          </defs>
+          <Shadow id={id} rx={18} />
+          <path d="M8 52 C 20 40, 30 54, 44 44 S 56 30, 56 30" stroke="#0E1117" strokeWidth="7" fill="none" strokeLinecap="round" />
+          <path d="M8 52 C 20 40, 30 54, 44 44 S 56 30, 56 30" stroke="#9BD373" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeDasharray="4 5" />
+          <path d="M26 6 a12 12 0 0 1 12 12 c0 9 -12 20 -12 20 s-12 -11 -12 -20 a12 12 0 0 1 12 -12 z" fill="#B4610B" transform="translate(1.8 2)" />
+          <path d="M26 6 a12 12 0 0 1 12 12 c0 9 -12 20 -12 20 s-12 -11 -12 -20 a12 12 0 0 1 12 -12 z" fill={`url(#${id("pin")})`} />
+          <circle cx="26" cy="18" r="4.6" fill="#fff" />
+          <ellipse cx="21" cy="11.5" rx="4" ry="2" fill="#fff" opacity="0.45" transform="rotate(-30 21 11.5)" />
+        </>
+      )}
+    </Svg>
+  );
+}
+
+export function Weight3D(p: P) {
+  return (
+    <Svg {...p} label="Carga">
+      {(id) => (
+        <>
+          <defs>
+            <linearGradient id={id("g")} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#6B7280" />
+              <stop offset="1" stopColor="#1F2430" />
+            </linearGradient>
+          </defs>
+          <Shadow id={id} rx={18} />
+          <path d="M24 20 a8 8 0 0 1 16 0" stroke="#0E1117" strokeWidth="7" fill="none" transform="translate(1.5 1.5)" />
+          <path d="M24 20 a8 8 0 0 1 16 0" stroke="#8C93A3" strokeWidth="6" fill="none" />
+          <path d="M14 24 h36 l6 30 H8 z" fill="#0E1117" transform="translate(1.8 2)" />
+          <path d="M14 24 h36 l6 30 H8 z" fill={`url(#${id("g")})`} />
+          <text x="32" y="46" textAnchor="middle" fontSize="13" fontWeight="800" fill="#E9FF8F" fontFamily="system-ui, sans-serif">kg</text>
+          <path d="M15 26 h12" stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity="0.45" />
+        </>
+      )}
+    </Svg>
+  );
+}
+
+export function Card3D(p: P) {
+  return (
+    <Svg {...p} label="Cartão">
+      {(id) => (
+        <>
+          <defs>
+            <linearGradient id={id("g")} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#F3E93B" />
+              <stop offset="0.5" stopColor="#9FDB7C" />
+              <stop offset="1" stopColor="#2F9E64" />
+            </linearGradient>
+          </defs>
+          <Shadow id={id} rx={20} />
+          <rect x="8" y="17" width="48" height="32" rx="6" fill="#174D30" transform="translate(2 2.5)" />
+          <rect x="8" y="17" width="48" height="32" rx="6" fill={`url(#${id("g")})`} />
+          <rect x="8" y="24" width="48" height="6" fill="#0E1117" opacity="0.75" />
+          <rect x="14" y="36" width="10" height="7" rx="1.6" fill="#fff" opacity="0.85" />
+          <rect x="30" y="38.5" width="18" height="2.6" rx="1.3" fill="#0E1117" opacity="0.5" />
+          <path d="M11 20 h20" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" opacity="0.6" />
+        </>
+      )}
+    </Svg>
+  );
+}
+
 /** Ícone 3D sobre uma base de vidro (para cartões de indicadores). */
 export function IconTile({ children, tone = "#9BD373", className = "" }: { children: ReactNode; tone?: string; className?: string }) {
   return (

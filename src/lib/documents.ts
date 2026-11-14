@@ -901,10 +901,10 @@ export function motoBlocks(d: MotoData): Block[] {
       text: `${cl()} Para a manutenção da garantia, recomenda-se seguir o plano de revisões: ${plan.map((r) => `${r.when.toLowerCase()} (${r.what.toLowerCase()}${r.free ? ", sem custo de mão de obra" : ""})`).join("; ")}. Peças de desgaste natural utilizadas nas revisões são cobradas à parte.`,
     },
 
-    { t: "h", text: "Do direito de arrependimento" },
+    { t: "h", text: "Da compra presencial" },
     {
       t: "p",
-      text: `${cl()} Quando a compra for realizada fora do estabelecimento da VENDEDORA (por telefone, WhatsApp ou internet), o COMPRADOR poderá desistir no prazo de 7 (sete) dias a contar do recebimento, nos termos do art. 49 do Código de Defesa do Consumidor, devolvendo o veículo nas mesmas condições em que o recebeu, sem sinais de uso além do teste, com todos os itens e a nota fiscal.`,
+      text: `${cl()} A compra foi realizada presencialmente, no estabelecimento da VENDEDORA, onde o COMPRADOR pôde ver, conferir e testar o veículo antes de decidir. Por isso, não se aplica o direito de arrependimento previsto no art. 49 do Código de Defesa do Consumidor, que é exclusivo das compras feitas fora do estabelecimento comercial. Após a entrega, eventuais problemas são tratados pela garantia prevista neste contrato.`,
     },
 
     { t: "h", text: "Da identificação por selfie e dos dados pessoais" },
