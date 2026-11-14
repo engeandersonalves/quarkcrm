@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { documentBlocks, documentTitle, missingFields, signersFor } from "./documents.ts";
-import { applyModel, cardTotal, contractValue, defaultMoto, motoTotal, warrantyActive, warrantyEnd } from "./moto-sale.ts";
+import { parseCadastro } from "./cadastro-parser.ts";
+import { applyCadastro, applyModel, cardTotal, contractValue, defaultMoto, motoTotal, warrantyActive, warrantyEnd } from "./moto-sale.ts";
 
 const contractor = { name: "QUARK ENERGIA LTDA", doc: "12345678000195", address: "Rua A, 1", city: "Maceió", state: "AL", cep: "57000000", repName: "Fulano", repDoc: "", repRole: "Diretor", repNationality: "brasileiro", repMarital: "" };
 
@@ -47,4 +48,21 @@ test("contrato da scooter: cláusulas essenciais, assinantes e pendências", () 
   assert.match(text, /1 \(uma\) unidade de scooter elétrica T1/);
   assert.equal(documentTitle("moto", d), "T1 — Maria Souza");
   assert.deepEqual(signersFor("moto", d).map((s) => s.role), ["comprador", "testemunha1"]);
+});
+
+test("cadastro colado preenche a venda", () => {
+  const base = defaultMoto({ contractor, model: "t1" });
+  const { data: c } = parseCadastro("Nome: Ana Paula Reis\nCPF 529.982.247-25\nRua do Sol, 45 - Centro\nMaceió/AL\n(82) 99123-4567\nQuero a MZ preta em 21x no cartão\nChassi: MZ25-0099");
+  const d = applyCadastro(base, c);
+  assert.equal(d.client.name, "Ana Paula Reis");
+  assert.equal(d.client.doc, "52998224725");
+  assert.equal(d.client.address, "Rua do Sol, 45, Centro");
+  assert.equal(d.client.city, "Maceió");
+  assert.equal(d.model, "mz");
+  assert.equal(d.color, "Preta");
+  assert.equal(d.price, 8799);
+  assert.equal(d.payment.method, "cartao");
+  assert.equal(d.payment.installments, 21);
+  assert.equal(d.chassis, "MZ25-0099");
+  assert.match(d.delivery.address, /Rua do Sol, 45, Centro, Maceió\/AL/);
 });

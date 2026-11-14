@@ -1,8 +1,10 @@
 "use client";
 
-import { Camera, ChevronRight, FileText, Plus, ShieldCheck, ShieldAlert, Wallet } from "lucide-react";
+import { BookOpen, Camera, ChevronRight, FileText, Plus, ShieldCheck, ShieldAlert, UserPlus, Wallet } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { CadastroPanel } from "@/components/mobilidade/cadastro-panel";
+import { CatalogPanel } from "@/components/mobilidade/catalog-panel";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
@@ -23,8 +25,44 @@ type Filter = "todas" | "rascunho" | "enviado" | "assinado" | "garantia";
 
 const DAY = 86_400_000;
 
+type Aba = "vendas" | "cadastro" | "catalogo";
+
 export default function MobilidadePage() {
   const router = useRouter();
+  const params = useSearchParams();
+  const raw = params.get("aba");
+  const aba: Aba = raw === "cadastro" || raw === "catalogo" ? raw : "vendas";
+  const go = (a: Aba) => router.replace(a === "vendas" ? "/mobilidade" : `/mobilidade?aba=${a}`, { scroll: false });
+
+  return (
+    <div className="animate-fade-up mx-auto max-w-6xl">
+      <PageHeader
+        icon={<GlyphTile id="scooter" size="md" />}
+        eyebrow="Quark Mobilidade"
+        title="Mobilidade elétrica"
+        subtitle="Vendas, cadastro de clientes e catálogo das scooters, tudo em um lugar"
+        actions={
+          <Button onClick={() => router.push("/documentos/novo?tipo=moto")}>
+            <Plus className="h-4 w-4" /> Nova venda
+          </Button>
+        }
+      />
+      <Segmented
+        className="mb-5"
+        value={aba}
+        onChange={go}
+        options={[
+          { value: "vendas", label: <><Wallet className="h-3.5 w-3.5" /> Vendas</> },
+          { value: "cadastro", label: <><UserPlus className="h-3.5 w-3.5" /> Cadastro</> },
+          { value: "catalogo", label: <><BookOpen className="h-3.5 w-3.5" /> Catálogo</> },
+        ]}
+      />
+      {aba === "cadastro" ? <CadastroPanel /> : aba === "catalogo" ? <CatalogPanel /> : <Vendas />}
+    </div>
+  );
+}
+
+function Vendas() {
   const { settings, profile } = useApp();
   const [filter, setFilter] = useState<Filter>("todas");
   const [busy, setBusy] = useState<string | null>(null);
@@ -76,18 +114,7 @@ export default function MobilidadePage() {
   };
 
   return (
-    <div className="animate-fade-up mx-auto max-w-5xl">
-      <PageHeader
-        icon={<GlyphTile id="scooter" size="md" />}
-        eyebrow="Quark Mobilidade"
-        title="Mobilidade elétrica"
-        subtitle="Orçamento, contrato com selfie e certificado de garantia das scooters, tudo em um lugar"
-        actions={
-          <Button onClick={() => router.push("/documentos/novo?tipo=moto")}>
-            <Plus className="h-4 w-4" /> Nova venda
-          </Button>
-        }
-      />
+    <div>
 
       {/* vitrine: começar uma venda por modelo */}
       <div className="relative mb-5 overflow-hidden rounded-[28px] bg-[#050706] p-5 text-white ring-1 ring-white/[0.06] sm:p-7">

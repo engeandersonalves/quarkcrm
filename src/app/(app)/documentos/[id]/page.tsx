@@ -8,7 +8,9 @@ import { DocEditor, partyFromLead, type EditorDoc } from "@/components/docs/doc-
 import { Card, Empty, Skeleton } from "@/components/ui";
 import { DEFAULT_SIGNATURE } from "@/lib/defaults";
 import { defaultAluguel, defaultContrato, defaultProcuracao, emptyContractor, type DocData, type DocKind } from "@/lib/documents";
-import { defaultMoto } from "@/lib/moto-sale";
+import { applyCadastro, defaultMoto } from "@/lib/moto-sale";
+import { CADASTRO_DRAFT } from "@/components/mobilidade/cadastro-panel";
+import type { Cadastro } from "@/lib/cadastro-parser";
 import type { ModelId } from "@/lib/catalog-mobilidade";
 import { must, useLive } from "@/lib/live";
 import { supabase } from "@/lib/supabase/client";
@@ -64,7 +66,7 @@ function NewDocument() {
             place,
           )
         : kind === "moto"
-          ? defaultMoto({
+          ? withCadastro(defaultMoto({
               client: party,
               contractor: emptyContractor({
                 ...settings.contract_defaults?.contractor,
@@ -76,7 +78,7 @@ function NewDocument() {
               signature: settings.signature_url || DEFAULT_SIGNATURE,
               place,
               model: modelo === "cappuccino" || modelo === "mz" || modelo === "t1" ? (modelo as ModelId) : undefined,
-            })
+            }), search.get("cadastro") === "1")
         : kind === "contrato"
           ? (() => {
               const base = defaultContrato({
@@ -119,6 +121,18 @@ function ExistingDocument({ id }: { id: string }) {
   const locked = data.status === "cancelado" || (data.signers ?? []).some((s) => s.signed_at);
   const key = `${data.id}-${locked}`;
   return <DocEditor key={key} initial={initial} onReload={reload} />;
+}
+
+/** Venda criada pela aba Cadastro: aplica os dados organizados guardados na sessão. */
+function withCadastro<T extends Parameters<typeof applyCadastro>[0]>(d: T, enabled: boolean): T {
+  if (!enabled || typeof window === "undefined") return d;
+  try {
+    const raw = sessionStorage.getItem(CADASTRO_DRAFT);
+    if (!raw) return d;
+    return applyCadastro(d, JSON.parse(raw) as Cadastro) as T;
+  } catch {
+    return d;
+  }
 }
 
 function EditorSkeleton() {

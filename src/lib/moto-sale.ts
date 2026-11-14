@@ -4,6 +4,7 @@
  */
 import type { Contractor, Party } from "./documents.ts";
 import { SCOOTERS, type ModelId } from "./catalog-mobilidade.ts";
+import { fullAddress, type Cadastro } from "./cadastro-parser.ts";
 
 export type MotoPayMethod = "pix" | "cartao" | "entrada" | "personalizado";
 
@@ -265,4 +266,43 @@ export function revisionPlan(d: Pick<MotoData, "freeRevision" | "warrantyDays">)
     { when: "30 dias ou 300 km", what: "Reaperto geral, freios, folgas, sistema elétrico e saúde da bateria", free: d.freeRevision },
     { when: `${d.warrantyDays} dias`, what: "Revisão de fim da garantia: diagnóstico completo do motor, controlador e bateria", free: false },
   ];
+}
+
+/** Preenche a venda com o cadastro organizado (aba Cadastro). */
+export function applyCadastro(d: MotoData, c: Cadastro): MotoData {
+  const address = fullAddress(c);
+  let next: MotoData = {
+    ...d,
+    client: {
+      ...d.client,
+      kind: c.doc.replace(/\D/g, "").length > 11 ? "pj" : "pf",
+      name: c.name || d.client.name,
+      doc: c.doc.replace(/\D/g, "") || d.client.doc,
+      rg: c.rg || d.client.rg,
+      nationality: c.nationality || d.client.nationality,
+      marital: c.marital || d.client.marital,
+      profession: c.profession || d.client.profession,
+      address: address || d.client.address,
+      city: c.city || d.client.city,
+      state: c.state || d.client.state,
+      cep: c.cep.replace(/\D/g, "") || d.client.cep,
+      email: c.email || d.client.email,
+      phone: c.phone || d.client.phone,
+    },
+    chassis: c.chassis || d.chassis,
+    motorNo: c.motorNo || d.motorNo,
+    batteryNo: c.batteryNo || d.batteryNo,
+  };
+  if (c.model && c.model !== next.model) next = applyModel(next, c.model);
+  if (c.color) next = { ...next, color: c.color };
+  if (address) next = { ...next, delivery: { ...next.delivery, address: [address, c.city && `${c.city}/${c.state || "AL"}`].filter(Boolean).join(", ") } };
+  const pay = c.payment.toLowerCase();
+  if (pay) {
+    const n = pay.match(/(\d{1,2})\s*x/);
+    if (/pix|[àa] vista|dinheiro/.test(pay)) next = { ...next, payment: { ...next.payment, method: "pix" } };
+    else if (/entrada/.test(pay)) next = { ...next, payment: { ...next.payment, method: "entrada" } };
+    else if (n || /cart[aã]o|cr[eé]dito/.test(pay)) next = { ...next, payment: { ...next.payment, method: "cartao", installments: n ? Number(n[1]) : next.payment.installments } };
+    else next = { ...next, payment: { ...next.payment, method: "personalizado", custom: c.payment } };
+  }
+  return next;
 }
