@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Calculator, Download, Eye, EyeOff, ImagePlus, Palette, Save, Sparkles, Tag, Trash2, Wrench, X } from "lucide-react";
+import { ArrowLeft, BookOpen, Calculator, Download, Eye, EyeOff, ImagePlus, Palette, Save, Sparkles, Tag, Trash2, Wrench, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -10,7 +10,7 @@ import { ART_H, ART_W, SaleArt, SpecsArt, downloadMotoArt, type ArtBrand } from 
 import { Button, Card, Field, ImageField, Input, MoneyInput, NumberInput, Skeleton, Switch, Textarea, cx } from "@/components/ui";
 import { brlPlain } from "@/lib/br";
 import { deleteProduct, saveProduct, useMotoProducts } from "@/lib/moto-products-db";
-import { installmentTable, installmentValue, newProduct, priceForMargin, profitOf, slugify, unitCost, type MotoCosts, type MotoProduct, type MotoSpecsFull } from "@/lib/moto-products";
+import { MANUAL_SPEC_FIELDS, installmentTable, installmentValue, newProduct, priceForMargin, profitOf, slugify, unitCost, type MotoCosts, type MotoProduct, type MotoSpecsFull } from "@/lib/moto-products";
 
 const SPEC_FIELDS: { k: keyof MotoSpecsFull; label: string; ph: string }[] = [
   { k: "power", label: "Motor", ph: "1.000W" },
@@ -55,7 +55,7 @@ function Editor({ initial, fromSeed, onSaved }: { initial: MotoProduct; fromSeed
   const [p, setP] = useState<MotoProduct>(initial);
   const [dirty, setDirty] = useState(!initial.id);
   const [saving, setSaving] = useState(false);
-  const [art, setArt] = useState<"venda" | "ficha" | null>(null);
+  const [art, setArt] = useState<"venda" | "ficha" | "manual" | null>(null);
   const [target, setTarget] = useState(25);
   const [color, setColor] = useState("");
   const brand: ArtBrand = { whatsapp: settings.whatsapp || settings.phone, instagram: settings.instagram, city: settings.city };
@@ -111,10 +111,16 @@ function Editor({ initial, fromSeed, onSaved }: { initial: MotoProduct; fromSeed
     }
   };
 
-  const download = async (kind: "venda" | "ficha") => {
-    if (!p.name.trim() || !(p.price > 0)) return toast.error("Preencha nome e preço antes de gerar a arte");
+  const download = async (kind: "venda" | "ficha" | "manual") => {
+    if (!p.name.trim() || (kind !== "manual" && !(p.price > 0))) return toast.error("Preencha nome e preço antes de gerar a arte");
     setArt(kind);
     try {
+      if (kind === "manual") {
+        const { downloadMotoManual } = await import("@/components/mobilidade/moto-manual");
+        await downloadMotoManual(p, { ...brand, company: settings.company_name });
+        toast.success("Manual do cliente baixado");
+        return;
+      }
       await downloadMotoArt(kind, p, brand);
       toast.success(kind === "venda" ? "Arte de venda baixada" : "Arte comparativa baixada");
     } catch (e) {
@@ -141,6 +147,9 @@ function Editor({ initial, fromSeed, onSaved }: { initial: MotoProduct; fromSeed
           </Button>
           <Button variant="secondary" onClick={() => download("ficha")} loading={art === "ficha"}>
             <Download className="h-4 w-4" /> Arte comparativa
+          </Button>
+          <Button variant="secondary" onClick={() => download("manual")} loading={art === "manual"} title="Manual do cliente em PDF">
+            <BookOpen className="h-4 w-4" /> Manual
           </Button>
           <Button onClick={save} loading={saving} disabled={!dirty && !fromSeed}>
             <Save className="h-4 w-4" /> {dirty || fromSeed ? "Salvar" : "Salvo"}
@@ -237,6 +246,16 @@ function Editor({ initial, fromSeed, onSaved }: { initial: MotoProduct; fromSeed
                 </Field>
               ))}
             </div>
+            <details className="mt-4 rounded-2xl bg-ink-50 p-3 ring-1 ring-ink-200/70" open={MANUAL_SPEC_FIELDS.some((f) => p.specs[f.k])}>
+              <summary className="cursor-pointer text-sm font-semibold">Ficha completa do manual do cliente (tensão, dimensões, pneus…)</summary>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {MANUAL_SPEC_FIELDS.map((f) => (
+                  <Field key={f.k} label={f.label}>
+                    <Input value={(p.specs[f.k] as string | undefined) ?? ""} onChange={(e) => setSpec(f.k, e.target.value)} placeholder={f.ph} />
+                  </Field>
+                ))}
+              </div>
+            </details>
           </Block>
 
           <Block icon={<Calculator className="h-4 w-4" />} title="Custos e preço" subtitle="O lucro é calculado na hora, ao lado">

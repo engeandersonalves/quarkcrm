@@ -15,7 +15,36 @@ export interface MotoSpecsFull {
   weight: string;
   security: string;
   highlight: string;
+  /** Ficha completa do manual (opcional). */
+  voltage?: string;
+  motorType?: string;
+  dimensions?: string;
+  wheelbase?: string;
+  wheels?: string;
+  tires?: string;
+  gears?: string;
+  panel?: string;
+  controller?: string;
+  charger?: string;
+  frame?: string;
+  extras?: string;
 }
+
+/** Campos extras da ficha completa, na ordem do manual. */
+export const MANUAL_SPEC_FIELDS: { k: keyof MotoSpecsFull; label: string; ph: string }[] = [
+  { k: "voltage", label: "Tensão nominal", ph: "60 V" },
+  { k: "motorType", label: "Tipo de motor", ph: "Motor traseiro sem escovas (brushless)" },
+  { k: "dimensions", label: "Dimensões", ph: "165 × 45 × 87 cm" },
+  { k: "wheelbase", label: "Entre-eixos", ph: "1.285 mm" },
+  { k: "wheels", label: "Rodas", ph: "10 polegadas" },
+  { k: "tires", label: "Pneus", ph: "3.0 × 10 para uso urbano" },
+  { k: "gears", label: "Marchas", ph: "3 velocidades + ré" },
+  { k: "panel", label: "Painel", ph: "Digital com NFC" },
+  { k: "controller", label: "Controlador", ph: "12 tubos" },
+  { k: "charger", label: "Carregador", ph: "60V 3A bivolt (100–240V), plugue 3 pinos" },
+  { k: "frame", label: "Quadro", ph: "Aço" },
+  { k: "extras", label: "Itens", ph: "Encosto, alarme, marcha ré" },
+];
 
 export interface MotoCosts {
   /** Custo de compra no fornecedor. */
@@ -193,6 +222,27 @@ export function productToScooter(p: PublicMoto): Scooter {
   };
 }
 
+/** Ficha completa dos manuais dos fornecedores. */
+const MANUAL_SEED: Record<string, Partial<MotoSpecsFull>> = {
+  cappuccino: {
+    voltage: "60 V",
+    motorType: "Motor traseiro sem escovas (brushless) de 1.000 W",
+    dimensions: "165 × 45 × 87 cm",
+    wheelbase: "1.285 mm",
+    wheels: "10 polegadas",
+    tires: "3.0 × 10 polegadas para uso urbano",
+    gears: "3 velocidades + marcha ré",
+    panel: "Digital com NFC",
+    controller: "12 tubos",
+    charger: "60V 3A bivolt (100–240V), plugue de 3 pinos padrão INMETRO",
+    frame: "Aço",
+    extras: "Encosto, alarme e marcha ré",
+    battery: "Lítio 60V 20Ah (1.200 Wh)",
+    recharge: "6 h",
+    brakes: "Disco dianteiro e tambor traseiro",
+  },
+};
+
 /** Os 3 modelos do catálogo de lançamento, como produtos (custos em branco). */
 export function seedProducts(): MotoProduct[] {
   return SCOOTERS.map((s, i) =>
@@ -217,6 +267,7 @@ export function seedProducts(): MotoProduct[] {
         weight: s.table.Peso ?? "",
         security: s.specs.find((x) => x.icon === "lock")?.value ?? "",
         highlight: s.table.Destaque ?? "",
+        ...(MANUAL_SEED[s.id] ?? {}),
       },
       price: s.cash,
       position: i,
