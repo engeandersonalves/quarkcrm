@@ -4,9 +4,25 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, hasSupabase } from "@/lib/supabase/env
 
 const PUBLIC_PREFIXES = ["/p/", "/cliente", "/captura", "/black-friday", "/catalogo/", "/anamnese", "/indique", "/assinar/", "/verificar", "/scooters", "/api/"];
 
+const SHORT_LINKS = new Map(
+  [
+    ...["/scooters", "/scooter", "/motos", "/moto", "/bio", "/link", "/links", "/mobilidade-eletrica"].map((p) => [p, "/scooters"] as const),
+    ["/cliente", "/cliente"] as const,
+    ["/verificar", "/verificar"] as const,
+    ["/catalogo/mobilidade", "/catalogo/mobilidade"] as const,
+  ],
+);
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
+  // Links curtos digitados à mão (bio do Instagram, cartão): maiúsculas não podem cair no login.
+  const lower = pathname.toLowerCase().replace(/\/+$/, "");
+  if (lower !== pathname && SHORT_LINKS.has(lower)) {
+    const url = request.nextUrl.clone();
+    url.pathname = SHORT_LINKS.get(lower)!;
+    return NextResponse.redirect(url);
+  }
   // Páginas públicas e APIs (que validam o próprio acesso) não precisam de sessão aqui.
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return response;
 
