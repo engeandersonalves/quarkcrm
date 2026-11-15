@@ -1,6 +1,11 @@
 "use client";
 
 import {
+  Ban,
+  ChevronDown,
+  CopyPlus,
+  PencilLine,
+  Settings2,
   ArrowLeftRight,
   ArrowLeft,
   BadgeCheck,
@@ -34,7 +39,7 @@ import { STAGE, brl0, useSaleActions, useSales, wa, type SaleActions, type SaleD
 import { Button, Empty, Field, Input, Skeleton, Textarea, cx } from "@/components/ui";
 import { dateBr, digits, formatCep, formatDoc } from "@/lib/br";
 import { formatPhone, relativeTime } from "@/lib/format";
-import { buyerOf, closedAt, saleStage, todos, warrantyOf } from "@/lib/moto-board";
+import { buyerOf, closedAt, saleStage, todos, warrantyOf, type SaleStage } from "@/lib/moto-board";
 import { groupClients, portalMessage, type MotoClient } from "@/lib/moto-clients";
 import { fetchCustomerPhoto, saveCustomer, saveSaleInfo, toPortrait } from "@/lib/moto-customers-db";
 import { portalPin } from "@/lib/moto-overrides";
@@ -232,7 +237,7 @@ function ClientView({ c, all, actions, reload }: { c: MotoClient; all: SaleDoc[]
 
       {tab === "resumo" && <Summary rows={rows} go={go} actions={actions} />}
       {tab === "dados" && <DataTab c={c} latest={latest} customerKey={c.key} reload={reload} hasNotes={!!customer?.notes} />}
-      {tab === "scooters" && <ScootersTab rows={rows} reload={reload} />}
+      {tab === "scooters" && <ScootersTab rows={rows} reload={reload} actions={actions} />}
       {tab === "documentos" && <DocsTab rows={rows} actions={actions} photo={photo} />}
       {tab === "acesso" && <AccessTab c={c} rows={rows} portal={portal} />}
       {tab === "notas" && <NotesTab customerKey={c.key} initial={customer?.notes ?? ""} reload={reload} />}
@@ -439,7 +444,7 @@ function ScooterNumbers({ r, reload }: { r: SaleDoc; reload: () => Promise<void>
   );
 }
 
-function ScootersTab({ rows, reload }: { rows: SaleDoc[]; reload: () => Promise<void> }) {
+function ScootersTab({ rows, reload, actions }: { rows: SaleDoc[]; reload: () => Promise<void>; actions: SaleActions }) {
   return (
     <div className="grid gap-3">
       {rows.map((r) => {
@@ -453,7 +458,7 @@ function ScootersTab({ rows, reload }: { rows: SaleDoc[]; reload: () => Promise<
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={motoPhoto(d)} alt="" className="max-h-16 w-auto object-contain" />
               </span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-[calc(100%-8rem)] sm:basis-auto">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-[18px] font-semibold">
                     {model(d)}
@@ -471,9 +476,71 @@ function ScootersTab({ rows, reload }: { rows: SaleDoc[]; reload: () => Promise<
               </Link>
             </div>
             <ScooterNumbers key={`${r.id}-${r.info?.updated_at ?? ""}`} r={r} reload={reload} />
+            <Manage r={r} stage={stage} actions={actions} />
           </section>
         );
       })}
+    </div>
+  );
+}
+
+/** Corrigir, cancelar ou excluir a scooter/venda. Contrato assinado não é editado: corrige-se com uma nova versão. */
+function Manage({ r, stage, actions }: { r: SaleDoc; stage: SaleStage; actions: SaleActions }) {
+  const [open, setOpen] = useState(false);
+  const spin = (k: string) => actions.busy === `${r.id}-${k}`;
+  const ROW = "flex w-full items-start gap-3 rounded-2xl px-3.5 py-3 text-left ring-1 transition disabled:opacity-50";
+  return (
+    <div className="mt-4 border-t border-ink-100 pt-3 dark:border-white/[0.06]">
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-600 hover:text-ink-900 dark:text-ink-300 dark:hover:text-white">
+        <Settings2 className="h-4 w-4" /> Corrigir, cancelar ou excluir
+        <ChevronDown className={cx("h-4 w-4 transition", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {stage === "orcamento" ? (
+            <>
+              <Link href={`/documentos/${r.id}`} className={cx(ROW, "ring-ink-200 hover:ring-ink-300 dark:ring-white/10")}>
+                <PencilLine className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <span>
+                  <span className="block text-[14px] font-semibold">Editar orçamento</span>
+                  <span className="block text-[12.5px] text-ink-500">Modelo, cor, preço, pagamento</span>
+                </span>
+              </Link>
+              <button type="button" disabled={!!actions.busy} onClick={() => actions.remove(r)} className={cx(ROW, "ring-rose-200 hover:ring-rose-300 dark:ring-rose-500/30")}>
+                {spin("apagar") ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" /> : <Trash2 className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />}
+                <span>
+                  <span className="block text-[14px] font-semibold text-rose-700">Apagar orçamento</span>
+                  <span className="block text-[12.5px] text-ink-500">Remove de vez</span>
+                </span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" disabled={!!actions.busy} onClick={() => actions.revise(r)} className={cx(ROW, "ring-ink-200 hover:ring-ink-300 dark:ring-white/10")}>
+                {spin("revisar") ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" /> : <CopyPlus className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />}
+                <span>
+                  <span className="block text-[14px] font-semibold">Criar versão corrigida</span>
+                  <span className="block text-[12.5px] text-ink-500">Copia como orçamento para mudar modelo, preço ou condição</span>
+                </span>
+              </button>
+              <button type="button" disabled={!!actions.busy} onClick={() => actions.cancel(r)} className={cx(ROW, "ring-amber-200 hover:ring-amber-300 dark:ring-amber-500/30")}>
+                {spin("cancelar") ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" /> : <Ban className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />}
+                <span>
+                  <span className="block text-[14px] font-semibold">{stage === "vendida" ? "Cancelar venda" : "Cancelar contrato"}</span>
+                  <span className="block text-[12.5px] text-ink-500">Tira das listas e do cliente. Dá para desfazer</span>
+                </span>
+              </button>
+              <button type="button" disabled={!!actions.busy} onClick={() => actions.purge(r)} className={cx(ROW, "ring-rose-200 hover:ring-rose-300 dark:ring-rose-500/30")}>
+                {spin("excluir") ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" /> : <Trash2 className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />}
+                <span>
+                  <span className="block text-[14px] font-semibold text-rose-700">Excluir definitivamente</span>
+                  <span className="block text-[12.5px] text-ink-500">Apaga contrato e histórico. Sem volta</span>
+                </span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

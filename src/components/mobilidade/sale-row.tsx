@@ -1,7 +1,8 @@
 "use client";
 
-import { BadgeCheck, BookOpen, Ban, FileText, Loader2, MessageCircle, MoreHorizontal, PencilLine, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
+import { BadgeCheck, BookOpen, Ban, CopyPlus, FileText, Loader2, MessageCircle, MoreHorizontal, PencilLine, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
@@ -80,9 +81,10 @@ export const wa = (phone: string | null | undefined, text = "") => {
 
 const BTN = "inline-flex h-10 items-center justify-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold whitespace-nowrap ring-1 ring-ink-200 transition hover:ring-ink-300 disabled:opacity-50 dark:ring-white/[0.12] dark:hover:ring-white/25";
 
-/** Ações de documento: PDFs, apagar orçamento e cancelar contrato não assinado. */
+/** Ações de documento: PDFs, apagar orçamento, cancelar, excluir e criar versão corrigida. */
 export function useSaleActions(sales: Sales) {
   const { settings, profile } = useApp();
+  const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
 
   const pdf = async (doc: DocumentRow, which: "orcamento" | "manual" | "comprovante") => {
@@ -135,15 +137,40 @@ export function useSaleActions(sales: Sales) {
     }
   };
 
+  /**
+   * Cancela uma venda em qualquer etapa (contrato aguardando ou já assinado). Ela some das
+   * listas, o link de assinatura para de funcionar e a verificação do QR passa a dizer
+   * "cancelado". Dá para desfazer logo em seguida.
+   */
   const cancel = async (doc: DocumentRow) => {
     const d = doc.data as unknown as MotoData;
-    if (!confirm(`Cancelar o contrato de ${d.client.name || "cliente"}? O link de assinatura deixa de funcionar.`)) return;
+    const stage = saleStage(doc);
+    const who = d.client.name || "cliente";
+    const text =
+      stage === "vendida"
+        ? `Cancelar a venda da ${vehicleName(d)} de ${who}?\n\nA venda sai das listas, o cartão do proprietário passa a constar como CANCELADO na verificação e a scooter some da área do cliente. O contrato assinado fica guardado.`
+        : `Cancelar o contrato de ${who}? O link de assinatura deixa de funcionar.`;
+    if (!confirm(text)) return;
+    const before = doc.status;
     setBusy(`${doc.id}-cancelar`);
     try {
       const { error } = await supabase().from("documents").update({ status: "cancelado" }).eq("id", doc.id);
       if (error) throw new Error(error.message);
       drop(doc.id);
-      toast.success("Contrato cancelado");
+      toast.success(stage === "vendida" ? "Venda cancelada" : "Contrato cancelado", {
+        duration: 10000,
+        action: {
+          label: "Desfazer",
+          onClick: async () => {
+            const { error: e2 } = await supabase().from("documents").update({ status: before }).eq("id", doc.id);
+            if (e2) toast.error("Não foi possível desfazer");
+            else {
+              toast.success("Cancelamento desfeito");
+              void sales.reload();
+            }
+          },
+        },
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível cancelar");
     } finally {
@@ -151,7 +178,50 @@ export function useSaleActions(sales: Sales) {
     }
   };
 
-  return { busy, pdf, remove, removeMany, cancel };
+  /** Exclui de vez (contrato, assinaturas, dados pós-venda e pedidos de transferência). */
+  const purge = async (doc: DocumentRow) => {
+    const d = doc.data as unknown as MotoData;
+    const typed = prompt(
+      `Excluir DEFINITIVAMENTE a ${vehicleName(d)} de ${d.client.name || "cliente"}?\n\nApaga o contrato, as assinaturas, os números da scooter e o histórico. Não tem como desfazer. Se for só para tirar das listas, use "Cancelar venda".\n\nPara confirmar, digite EXCLUIR:`,
+    );
+    if (typed === null) return;
+    if (typed.trim().toUpperCase() !== "EXCLUIR") return void toast.message("Nada foi excluído: digite EXCLUIR para confirmar.");
+    setBusy(`${doc.id}-excluir`);
+    try {
+      const { error } = await supabase().from("documents").delete().eq("id", doc.id);
+      if (error) throw new Error(error.message);
+      drop(doc.id);
+      toast.success("Venda excluída");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível excluir");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /**
+   * Contrato assinado não muda. Para corrigir modelo, preço ou condição, cria uma cópia
+   * como orçamento novo (já com os dados atualizados da ficha) para editar e reenviar.
+   */
+  const revise = async (doc: SaleDoc) => {
+    const stage = saleStage(doc);
+    if (!confirm(`Criar uma versão corrigida desta ${stage === "vendida" ? "venda" : "proposta"}?\n\nUma cópia é aberta como orçamento para você editar e enviar de novo. A original continua como está: depois de assinar a nova, cancele a antiga.`)) return;
+    setBusy(`${doc.id}-revisar`);
+    try {
+      const data = { ...(doc.data as Record<string, unknown>) };
+      delete data.transferredAt;
+      const { data: row, error } = await supabase().from("documents").insert({ kind: doc.kind, title: doc.title, data, lead_id: doc.lead_id ?? null, status: "rascunho" }).select("id").single();
+      if (error || !row) throw new Error(error?.message ?? "Não foi possível criar a cópia");
+      toast.success("Cópia criada. Edite e envie para assinatura.");
+      router.push(`/documentos/${(row as { id: string }).id}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível criar a cópia");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { busy, pdf, remove, removeMany, cancel, purge, revise };
 }
 export type SaleActions = ReturnType<typeof useSaleActions>;
 
@@ -210,7 +280,7 @@ export function SaleRow({ doc, actions, hideClient, profit }: { doc: DocumentRow
   const buyer = buyerOf(doc) as (ReturnType<typeof buyerOf> & { token?: string }) | null;
   const w = stage === "vendida" ? warrantyOf(d) : null;
   const model = vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter";
-  const { busy, pdf, remove, cancel } = actions;
+  const { busy, pdf, remove, cancel, purge, revise } = actions;
   const signLink = buyer?.token && typeof window !== "undefined" ? `${window.location.origin}/assinar/${buyer.token}` : "";
   const nudge = stage === "aguardando" ? wa(d.client.phone, `Olá, ${d.client.name.trim().split(/\s+/)[0]}! Seu contrato da scooter ${model} está pronto para assinar pelo celular, leva 1 minuto${signLink ? `: ${signLink}` : "."}`) : null;
   const spin = (k: string) => busy === `${doc.id}-${k}`;
@@ -224,7 +294,9 @@ export function SaleRow({ doc, actions, hideClient, profit }: { doc: DocumentRow
     { label: stage === "vendida" ? "Abrir venda" : "Abrir e editar", icon: <PencilLine className="h-4 w-4" />, href: `/documentos/${doc.id}` },
     ...(stage !== "orcamento" ? [{ label: "Baixar orçamento", icon: <FileText className="h-4 w-4" />, onClick: () => pdf(doc, "orcamento") }] : []),
     ...(stage === "orcamento" ? [{ label: "Apagar orçamento", icon: <Trash2 className="h-4 w-4" />, onClick: () => remove(doc), danger: true }] : []),
-    ...(stage === "aguardando" ? [{ label: "Cancelar contrato", icon: <Ban className="h-4 w-4" />, onClick: () => cancel(doc), danger: true }] : []),
+    ...(stage !== "orcamento" ? [{ label: "Criar versão corrigida", icon: <CopyPlus className="h-4 w-4" />, onClick: () => revise(doc as SaleDoc) }] : []),
+    ...(stage !== "orcamento" ? [{ label: stage === "vendida" ? "Cancelar venda" : "Cancelar contrato", icon: <Ban className="h-4 w-4" />, onClick: () => cancel(doc), danger: true }] : []),
+    ...(stage !== "orcamento" ? [{ label: "Excluir definitivamente", icon: <Trash2 className="h-4 w-4" />, onClick: () => purge(doc), danger: true }] : []),
   ];
 
   return (
