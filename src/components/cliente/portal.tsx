@@ -30,6 +30,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { dateBr, digits } from "@/lib/br";
 import { REFERRAL_BONUS, firstName, maskDocInput, maskPhoneInput, referralNotes, validDoc, warrantyStatus, type PortalCompany, type PortalResult, type PortalSale } from "@/lib/client-portal";
 import { motoPhoto, vehicleName } from "@/lib/moto-sale";
+import { WalletSection } from "./wallet-card";
 
 /* ------------------------------------------------------------------ visual */
 
@@ -76,9 +77,10 @@ function Backdrop() {
 /* ------------------------------------------------------------------ raiz */
 
 type Company = { company_name: string | null; whatsapp: string | null; instagram: string | null };
-type Session = { sales: PortalSale[]; company: PortalCompany | null };
+type Session = { sales: PortalSale[]; company: PortalCompany | null; creds: { cpf: string; check: string } };
+type WalletFlags = { apple: boolean; google: boolean };
 
-export function ClientPortal({ company, models }: { company: Company; models: string[] }) {
+export function ClientPortal({ company, models, wallet }: { company: Company; models: string[]; wallet: WalletFlags }) {
   const [phase, setPhase] = useState<"restoring" | "login" | "welcome" | "home">("restoring");
   const [session, setSession] = useState<Session | null>(null);
 
@@ -88,7 +90,7 @@ export function ClientPortal({ company, models }: { company: Company; models: st
       const j = (await res.json().catch(() => ({ ok: false, error: "erro" }))) as PortalResult;
       if (!j.ok) return j.error;
       if (!j.sales.length) return "nao_encontrado";
-      setSession({ sales: j.sales, company: j.company });
+      setSession({ sales: j.sales, company: j.company, creds: { cpf, check } });
       try {
         sessionStorage.setItem(SESSION, JSON.stringify({ cpf, check }));
       } catch {
@@ -135,7 +137,7 @@ export function ClientPortal({ company, models }: { company: Company; models: st
       )}
       {phase === "login" && <Login company={company} onLogin={login} />}
       {phase === "welcome" && session && <Welcome sale={session.sales[0]} onDone={() => setPhase("home")} />}
-      {phase === "home" && session && <Home session={session} fallback={company} models={models} onLogout={logout} />}
+      {phase === "home" && session && <Home session={session} fallback={company} models={models} wallet={wallet} onLogout={logout} />}
     </main>
   );
 }
@@ -347,7 +349,7 @@ function brandSettings(c: PortalCompany | null, f: Company) {
   };
 }
 
-function Home({ session, fallback, models, onLogout }: { session: Session; fallback: Company; models: string[]; onLogout: () => void }) {
+function Home({ session, fallback, models, wallet, onLogout }: { session: Session; fallback: Company; models: string[]; wallet: WalletFlags; onLogout: () => void }) {
   const { sales, company } = session;
   const [idx, setIdx] = useState(0);
   const sale = sales[Math.min(idx, sales.length - 1)];
@@ -448,6 +450,7 @@ function Home({ session, fallback, models, onLogout }: { session: Session; fallb
           </section>
 
           <WarrantyCard w={w} days={d.warrantyDays} claim={claim} />
+          {signed && <WalletSection d={d} id={sale.id} signed={signed} company={{ name: d.contractor?.name || brand.legal_name || brand.company_name, cnpj: d.contractor?.doc || brand.cnpj }} creds={session.creds} wallet={wallet} />}
         </div>
 
         {/* coluna 2: documentos, indicação e cuidados */}

@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { ClientPortal } from "@/components/cliente/portal";
 import { hasSupabase } from "@/lib/supabase/env";
 import { anonSupabase } from "@/lib/supabase/server";
+import { appleWalletConfig } from "@/lib/wallet-apple";
+import { googleWalletConfig } from "@/lib/wallet-google";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +29,7 @@ export default async function ClientePage() {
   const { company, models } = await load();
   return (
     <div translate="no" className="notranslate">
-      <ClientPortal company={company} models={models.length ? models : ["T1", "Cappuccino", "MZ"]} />
+      <ClientPortal company={company} models={models.length ? models : ["T1", "Cappuccino", "MZ"]} wallet={{ apple: !!appleWalletConfig(), google: !!googleWalletConfig() }} />
     </div>
   );
 }
