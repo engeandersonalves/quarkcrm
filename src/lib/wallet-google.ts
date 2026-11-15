@@ -44,7 +44,26 @@ export function parseServiceAccount(value: string | undefined): { clientEmail: s
   return email && key ? { clientEmail: email, privateKey: key.replace(/\\n/g, "\n") } : null;
 }
 
-const issuerOf = (v: string | undefined) => v?.match(/\d{10,25}/)?.[0] ?? "";
+/** Número do emissor: 19 dígitos (aceita espaços, pontos ou texto junto, como "Issuer ID: 3388…"). */
+export function issuerOf(v: string | undefined) {
+  if (!v) return "";
+  const run = v.match(/\d{15,25}/)?.[0];
+  if (run) return run;
+  const all = v.replace(/\D/g, "");
+  return !/BCR2DN/i.test(v) && all.length >= 15 && all.length <= 25 ? all : "";
+}
+
+/** Descreve (sem revelar segredo) o que foi colado no lugar do Issuer ID. */
+function issuerHint(v: string | undefined) {
+  const t = (v ?? "").trim();
+  if (!t) return "a variável está vazia";
+  if (/BCR2DN/i.test(t)) return `o valor começa com "${t.slice(0, 6)}…", que é o ID do perfil da empresa, não o Issuer ID`;
+  if (/^https?:/i.test(t)) return "o valor é um endereço (link), não o número";
+  const d = t.replace(/\D/g, "");
+  if (d.length && d.length < 15) return `o valor tem só ${d.length} dígitos (o Issuer ID tem 19)`;
+  if (d.length > 25) return `o valor tem ${d.length} dígitos (o Issuer ID tem 19)`;
+  return `o valor colado (${t.length} caracteres) não é o número de 19 dígitos`;
+}
 
 /** Variáveis de ambiente relacionadas ao Wallet (só os nomes, para o diagnóstico). */
 export function walletEnvNames(env: Env = process.env) {
@@ -117,16 +136,19 @@ export async function checkGoogleWallet(env: Record<string, string | undefined> 
   if (!cfg) {
     const names = walletEnvNames(env);
     const found = names.length ? ` Variáveis encontradas: ${names.join(", ")}.` : " Nenhuma variável com WALLET ou ISSUER foi encontrada neste deploy.";
-    const issuer = names.some((k) => issuerOf(env[k]));
-    const account = Object.keys(env).some((k) => ACCOUNT_KEYS.test(k) && parseServiceAccount(env[k]));
+    const issuerKeys = names.filter((k) => /ISSU/i.test(k));
+    const issuer = issuerKeys.some((k) => issuerOf(env[k]));
+    const account = !!parseServiceAccount(env.GOOGLE_WALLET_SERVICE_ACCOUNT) || Object.keys(env).some((k) => /WALLET/i.test(k) && ACCOUNT_KEYS.test(k) && parseServiceAccount(env[k]));
     const where = env.VERCEL_ENV ? ` (ambiente: ${env.VERCEL_ENV})` : "";
     const message = !names.length
       ? `O app não encontrou as variáveis do Google Wallet${where}. Confira se foram salvas marcando "Production" e se você fez o Redeploy depois.${found}`
       : !issuer
-        ? `Não achei o Issuer ID (um número com 19 dígitos). Crie GOOGLE_WALLET_ISSUER_ID com esse número.${found}`
+        ? issuerKeys.length
+          ? `O Issuer ID está errado: ${issuerHint(env[issuerKeys[0]])}. Em pay.google.com/business/console → Google Wallet API, copie o número de 19 dígitos que começa com 3388 e troque o valor de ${issuerKeys[0]} na Vercel (depois faça o Redeploy).${found}`
+          : `Não achei o Issuer ID (um número com 19 dígitos que começa com 3388). Crie GOOGLE_WALLET_ISSUER_ID com esse número.${found}`
         : !account
           ? `Não consegui ler o JSON da conta de serviço. Crie GOOGLE_WALLET_SERVICE_ACCOUNT e cole o arquivo .json inteiro, do { ao }.${found}`
-          : `Configuração incompleta.${found}`;
+          : `Configuração incompleta: confira o Issuer ID e o JSON da conta de serviço.${found}`;
     return { ok: false, step: "config", message };
   }
   if (!/^\d{10,25}$/.test(cfg.issuerId)) return { ok: false, step: "config", message: "O Issuer ID deve ter só números (ex.: 3388000000022…). Confira GOOGLE_WALLET_ISSUER_ID.", serviceEmail: cfg.clientEmail };

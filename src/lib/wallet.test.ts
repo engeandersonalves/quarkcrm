@@ -84,3 +84,16 @@ test("wallet: aceita nomes e formatos diferentes das variáveis", async () => {
   assert.equal(cfg?.clientEmail, "w@x.iam.gserviceaccount.com");
   assert.deepEqual(walletEnvNames({ GOOGLE_WALLET_SERVICE: "x", OTHER: "y", GOOGLE_WALLET_ISSUER_ID: "" }), ["GOOGLE_WALLET_SERVICE"]);
 });
+
+test("wallet: Issuer ID errado gera mensagem clara", async () => {
+  const { checkGoogleWallet, issuerOf } = await import("./wallet-google.ts");
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const sa = JSON.stringify({ client_id: "112233445566778899001", client_email: "w@x.iam.gserviceaccount.com", private_key: privateKey.export({ type: "pkcs8", format: "pem" }).toString() });
+  const bad = await checkGoogleWallet({ GOOGLE_WALLET_ISSUER_ID: "BCR2DN4TX7ABCDEF", GOOGLE_WALLET_SERVICE_ACCOUNT: sa });
+  assert.match(!bad.ok ? bad.message : "", /ID do perfil da empresa/);
+  const short = await checkGoogleWallet({ GOOGLE_WALLET_ISSUER_ID: "123456789", GOOGLE_WALLET_SERVICE_ACCOUNT: sa });
+  assert.match(!short.ok ? short.message : "", /só 9 dígitos/);
+  assert.equal(issuerOf("3388 0000 0002 2123 456"), "3388000000022123456");
+  assert.equal(issuerOf("3388.0000.0002.2123.456"), "3388000000022123456");
+  assert.equal(issuerOf("BCR2DN4TX7ABCDEF"), "");
+});
