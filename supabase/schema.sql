@@ -1540,6 +1540,9 @@ create table if not exists public.moto_sale_info (
 alter table public.moto_sale_info enable row level security;
 drop policy if exists "moto_sale_info_team" on public.moto_sale_info;
 create policy "moto_sale_info_team" on public.moto_sale_info for all to authenticated using (public.is_member()) with check (public.is_member());
+-- Transferência de propriedade: o novo dono passa a valer por cima do comprador do contrato.
+alter table public.moto_sale_info add column if not exists owner jsonb;
+alter table public.moto_sale_info add column if not exists transferred_at timestamptz;
 
 -- Venda com as atualizações da ficha aplicadas (o que o cliente vê).
 create or replace function public.moto_effective_data(p_data jsonb, p_info public.moto_sale_info, p_cust public.moto_customers)
@@ -1550,10 +1553,44 @@ returns jsonb language sql immutable as $$
          'batteryNo', nullif(p_info.battery_no, ''), 'chargerNo', nullif(p_info.charger_no, '')))
     || jsonb_build_object(
          'delivery', coalesce(p_data -> 'delivery', '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object('date', p_info.delivery_date::text)),
-         'client', coalesce(p_data -> 'client', '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
+         'transferredAt', p_info.transferred_at,
+         'client', coalesce(p_info.owner, p_data -> 'client', '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
            'phone', nullif(p_cust.phone, ''), 'email', nullif(p_cust.email, ''), 'address', nullif(p_cust.address, ''),
            'city', nullif(p_cust.city, ''), 'state', nullif(p_cust.state, ''), 'cep', nullif(p_cust.cep, ''))));
 $$;
+
+-- Documento (só dígitos) do dono atual: o novo dono, se houve transferência; senão o comprador.
+create or replace function public.moto_owner_doc(p_data jsonb, p_info public.moto_sale_info)
+returns text language sql immutable as $$
+  select regexp_replace(coalesce(nullif(p_info.owner ->> 'doc', ''), p_data -> 'client' ->> 'doc', ''), '\D', '', 'g');
+$$;
+create or replace function public.moto_owner_phone(p_data jsonb, p_info public.moto_sale_info)
+returns text language sql immutable as $$
+  select regexp_replace(coalesce(nullif(p_info.owner ->> 'phone', ''), p_data -> 'client' ->> 'phone', ''), '\D', '', 'g');
+$$;
+
+create table if not exists public.moto_transfers (
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null references public.documents (id) on delete cascade,
+  status text not null default 'analise' check (status in ('analise', 'aprovada', 'recusada', 'concluida', 'cancelada')),
+  from_name text,
+  from_doc text not null,
+  new_owner jsonb not null,
+  reason text,
+  notes text,
+  fee numeric not null default 50,
+  paid_at timestamptz,
+  decision_note text,
+  decided_at timestamptz,
+  completed_at timestamptz,
+  ip text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists moto_transfers_doc on public.moto_transfers (document_id, created_at desc);
+alter table public.moto_transfers enable row level security;
+drop policy if exists "moto_transfers_team" on public.moto_transfers;
+create policy "moto_transfers_team" on public.moto_transfers for all to authenticated using (public.is_member()) with check (public.is_member());
 
 create or replace function public.get_client_portal(p_cpf text, p_check text, p_ip text default null)
 returns jsonb
@@ -1587,9 +1624,10 @@ begin
   -- Senha = 4 últimos dígitos do celular (o atualizado na ficha vale; o da venda também).
   select exists (
     select 1 from public.documents d
+    left join public.moto_sale_info i on i.document_id = d.id
     where d.kind = 'moto' and d.status in ('enviado', 'assinado')
-      and regexp_replace(coalesce(d.data -> 'client' ->> 'doc', ''), '\D', '', 'g') = v_doc
-      and (right(regexp_replace(coalesce(d.data -> 'client' ->> 'phone', ''), '\D', '', 'g'), 4) = v_check
+      and public.moto_owner_doc(d.data, i) = v_doc
+      and (right(public.moto_owner_phone(d.data, i), 4) = v_check
            or right(regexp_replace(coalesce(v_cust.phone, ''), '\D', '', 'g'), 4) = v_check)
   ) into v_ok;
 
@@ -1608,14 +1646,19 @@ begin
            'signed_at', s.signed_at,
            'token', s.token,
            -- Foto 3/4 do cartão: a salva na ficha ou, na falta, a selfie da assinatura.
-           'selfie', coalesce(v_cust.photo, s.selfie)
+           -- Depois de transferida, a selfie do comprador original não vale para o novo dono.
+           'selfie', coalesce(v_cust.photo, case when i.owner is null then s.selfie end),
+           'transfer', (select jsonb_build_object('id', t.id, 'status', t.status, 'created_at', t.created_at, 'new_owner', t.new_owner ->> 'name',
+                                                  'decision_note', t.decision_note, 'fee', t.fee, 'paid', t.paid_at is not null)
+                          from public.moto_transfers t where t.document_id = d.id and t.from_doc = v_doc
+                         order by t.created_at desc limit 1)
          ) order by d.created_at desc), '[]'::jsonb)
     into v_sales
     from public.documents d
     left join public.document_signers s on s.document_id = d.id and s.role = 'comprador'
     left join public.moto_sale_info i on i.document_id = d.id
    where d.kind = 'moto' and d.status in ('enviado', 'assinado')
-     and regexp_replace(coalesce(d.data -> 'client' ->> 'doc', ''), '\D', '', 'g') = v_doc;
+     and public.moto_owner_doc(d.data, i) = v_doc;
 
   return jsonb_build_object(
     'ok', true,
@@ -1703,7 +1746,7 @@ begin
   end if;
   select * into s from public.document_signers where document_id = d.id and role = 'comprador' limit 1;
   select * into i from public.moto_sale_info where document_id = d.id;
-  v_doc := regexp_replace(coalesce(d.data -> 'client' ->> 'doc', ''), '\D', '', 'g');
+  v_doc := public.moto_owner_doc(d.data, i);
   select * into c from public.moto_customers where key = 'doc:' || v_doc;
   v_data := public.moto_effective_data(d.data, i, c);
 
@@ -1718,7 +1761,8 @@ begin
     'state', v_state,
     'id', d.id,
     'signed_at', coalesce(s.signed_at, d.completed_at),
-    'photo', case when v_state = 'original' then coalesce(c.photo, s.selfie) end,
+    'photo', case when v_state = 'original' then coalesce(c.photo, case when i.owner is null then s.selfie end) end,
+    'transferred_at', i.transferred_at,
     'data', jsonb_build_object(
       'client', jsonb_build_object(
         'name', v_data -> 'client' ->> 'name',
@@ -1749,3 +1793,131 @@ end;
 $$;
 revoke all on function public.verify_owner_card(text) from public;
 grant execute on function public.verify_owner_card(text) to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Pedido de transferência de propriedade, feito pelo dono na área do cliente.
+-- A Quark analisa; aprovado e pago (taxa de R$ 50), a equipe conclui e o novo
+-- dono passa a valer no cartão, na verificação e na área do cliente.
+-- ---------------------------------------------------------------------------
+create or replace function public.request_owner_transfer(p_cpf text, p_check text, p_document uuid, p_new jsonb, p_reason text, p_notes text, p_ip text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_doc text := regexp_replace(coalesce(p_cpf, ''), '\D', '', 'g');
+  v_portal jsonb;
+  v_sale jsonb;
+  v_new_doc text := regexp_replace(coalesce(p_new ->> 'doc', ''), '\D', '', 'g');
+  v_new_phone text := regexp_replace(coalesce(p_new ->> 'phone', ''), '\D', '', 'g');
+  v_id uuid;
+begin
+  v_portal := public.get_client_portal(p_cpf, p_check, p_ip);
+  if not coalesce((v_portal ->> 'ok')::boolean, false) then
+    return jsonb_build_object('ok', false, 'error', 'acesso');
+  end if;
+  select x into v_sale from jsonb_array_elements(v_portal -> 'sales') x where x ->> 'id' = p_document::text;
+  if v_sale is null then
+    return jsonb_build_object('ok', false, 'error', 'venda');
+  end if;
+  if v_sale ->> 'status' <> 'assinado' and v_sale ->> 'signed_at' is null then
+    return jsonb_build_object('ok', false, 'error', 'nao_assinada');
+  end if;
+  if length(trim(coalesce(p_new ->> 'name', ''))) < 5 or length(v_new_doc) not in (11, 14) or length(v_new_phone) not between 10 and 13 then
+    return jsonb_build_object('ok', false, 'error', 'dados');
+  end if;
+  if v_new_doc = v_doc then
+    return jsonb_build_object('ok', false, 'error', 'mesmo_dono');
+  end if;
+  if exists (select 1 from public.moto_transfers where document_id = p_document and status in ('analise', 'aprovada')) then
+    return jsonb_build_object('ok', false, 'error', 'em_andamento');
+  end if;
+  -- Contra abuso: no máximo 3 pedidos por venda em 24 horas.
+  if (select count(*) from public.moto_transfers where document_id = p_document and created_at > now() - interval '1 day') >= 3 then
+    return jsonb_build_object('ok', false, 'error', 'limite');
+  end if;
+
+  insert into public.moto_transfers (document_id, from_name, from_doc, new_owner, reason, notes, ip)
+  values (
+    p_document,
+    v_sale -> 'data' -> 'client' ->> 'name',
+    v_doc,
+    jsonb_build_object(
+      'name', left(trim(p_new ->> 'name'), 120),
+      'doc', v_new_doc,
+      'kind', case when length(v_new_doc) = 14 then 'pj' else 'pf' end,
+      'phone', v_new_phone,
+      'email', left(trim(coalesce(p_new ->> 'email', '')), 120),
+      'cep', left(regexp_replace(coalesce(p_new ->> 'cep', ''), '\D', '', 'g'), 8),
+      'address', left(trim(coalesce(p_new ->> 'address', '')), 200),
+      'city', left(trim(coalesce(p_new ->> 'city', '')), 80),
+      'state', upper(left(trim(coalesce(p_new ->> 'state', '')), 2))),
+    left(trim(coalesce(p_reason, '')), 40),
+    left(trim(coalesce(p_notes, '')), 600),
+    left(nullif(trim(p_ip), ''), 64))
+  returning id into v_id;
+  return jsonb_build_object('ok', true, 'id', v_id);
+end;
+$$;
+revoke all on function public.request_owner_transfer(text, text, uuid, jsonb, text, text, text) from public;
+grant execute on function public.request_owner_transfer(text, text, uuid, jsonb, text, text, text) to anon, authenticated;
+
+-- Decisão da equipe: aprovar, recusar, marcar pago, concluir ou cancelar.
+create or replace function public.decide_owner_transfer(p_id uuid, p_action text, p_note text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  t public.moto_transfers;
+begin
+  if not public.is_member() then
+    return jsonb_build_object('ok', false, 'error', 'permissao');
+  end if;
+  select * into t from public.moto_transfers where id = p_id for update;
+  if not found then
+    return jsonb_build_object('ok', false, 'error', 'nao_encontrado');
+  end if;
+
+  if p_action = 'aprovar' and t.status = 'analise' then
+    update public.moto_transfers set status = 'aprovada', decision_note = nullif(trim(coalesce(p_note, '')), ''), decided_at = now(), updated_at = now() where id = p_id;
+  elsif p_action = 'recusar' and t.status in ('analise', 'aprovada') then
+    if length(trim(coalesce(p_note, ''))) < 3 then
+      return jsonb_build_object('ok', false, 'error', 'motivo');
+    end if;
+    update public.moto_transfers set status = 'recusada', decision_note = trim(p_note), decided_at = now(), updated_at = now() where id = p_id;
+  elsif p_action = 'pago' and t.status = 'aprovada' then
+    update public.moto_transfers set paid_at = coalesce(paid_at, now()), updated_at = now() where id = p_id;
+  elsif p_action = 'concluir' and t.status = 'aprovada' then
+    if t.paid_at is null then
+      return jsonb_build_object('ok', false, 'error', 'nao_pago');
+    end if;
+    insert into public.moto_sale_info (document_id, owner, transferred_at, updated_at)
+    values (t.document_id, t.new_owner, now(), now())
+    on conflict (document_id) do update set owner = excluded.owner, transferred_at = excluded.transferred_at, updated_at = now();
+    update public.moto_transfers set status = 'concluida', completed_at = now(), updated_at = now() where id = p_id;
+  elsif p_action = 'cancelar' and t.status in ('analise', 'aprovada') then
+    update public.moto_transfers set status = 'cancelada', decision_note = nullif(trim(coalesce(p_note, '')), ''), updated_at = now() where id = p_id;
+  else
+    return jsonb_build_object('ok', false, 'error', 'estado');
+  end if;
+  return jsonb_build_object('ok', true);
+end;
+$$;
+revoke all on function public.decide_owner_transfer(uuid, text, text) from public;
+grant execute on function public.decide_owner_transfer(uuid, text, text) to authenticated;
+
+-- Atualização ao vivo no CRM (ficha, dados pós-venda e transferências).
+do $$
+declare t text;
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    foreach t in array array['moto_customers', 'moto_sale_info', 'moto_transfers'] loop
+      if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+        execute format('alter publication supabase_realtime add table public.%I', t);
+      end if;
+    end loop;
+  end if;
+end $$;

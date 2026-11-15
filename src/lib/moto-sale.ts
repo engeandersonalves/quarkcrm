@@ -71,6 +71,8 @@ export interface MotoData {
   extraClauses: string;
   witnesses: { name: string; doc: string }[];
   contractorSignature: string;
+  /** Quando a scooter mudou de dono (transferência concluída). */
+  transferredAt?: string | null;
   place: string;
   date: string;
 }

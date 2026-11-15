@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowLeftRight,
   ArrowLeft,
   BadgeCheck,
   BookOpen,
@@ -250,6 +251,7 @@ function Summary({ rows, go, actions }: { rows: SaleDoc[]; go: (t: Tab) => void;
       const b = buyerOf(r);
       const out: { at: string; icon: ReactNode; title: string; text: string; future?: boolean }[] = [{ at: r.created_at, icon: <FileText className="h-4 w-4" />, title: `Orçamento da ${m}`, text: `${brl0(contractValue(d))}${d.color ? ` · ${d.color}` : ""}` }];
       if (b?.signed_at) out.push({ at: b.signed_at, icon: <FileSignature className="h-4 w-4" />, title: "Contrato assinado", text: `${m}${b.selfie_at ? " · com selfie" : ""}` });
+      if (d.transferredAt) out.push({ at: d.transferredAt, icon: <ArrowLeftRight className="h-4 w-4" />, title: "Recebeu por transferência", text: `${m} · antes de ${r.original?.client?.name?.trim() || "outro dono"}` });
       if (saleStage(r) === "vendida") {
         if (d.delivery?.date) out.push({ at: `${d.delivery.date}T12:00:00`, icon: <CalendarCheck className="h-4 w-4" />, title: d.delivery.mode === "entrega" ? "Entrega em casa" : "Retirada na loja", text: m, future: d.delivery.date > new Date().toISOString().slice(0, 10) });
         const w = warrantyOf(d);

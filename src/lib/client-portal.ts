@@ -15,7 +15,23 @@ export interface PortalSale {
   token: string | null;
   /** Selfie da assinatura do contrato (foto 3/4 do cartão do proprietário). */
   selfie?: string | null;
+  /** Último pedido de transferência de propriedade feito por este dono. */
+  transfer?: PortalTransfer | null;
 }
+
+export type TransferStatus = "analise" | "aprovada" | "recusada" | "concluida" | "cancelada";
+export interface PortalTransfer {
+  id: string;
+  status: TransferStatus;
+  created_at: string;
+  new_owner: string | null;
+  decision_note: string | null;
+  fee: number;
+  paid: boolean;
+}
+
+/** Taxa da transferência de propriedade. */
+export const TRANSFER_FEE = 50;
 
 export interface PortalCompany {
   company_name: string | null;

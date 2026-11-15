@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Home, LayoutGrid, Link2, Plus, ShieldCheck, Users, Wallet } from "lucide-react";
+import { ArrowLeftRight, BookOpen, Home, LayoutGrid, Link2, Plus, ShieldCheck, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, type ReactNode } from "react";
@@ -12,6 +12,7 @@ import { CustomersPanel, NegotiationPanel } from "@/components/mobilidade/client
 import { DashboardPanel } from "@/components/mobilidade/dashboard-panel";
 import { ModelsPanel } from "@/components/mobilidade/models-panel";
 import { useSaleActions, useSales } from "@/components/mobilidade/sale-row";
+import { TransfersPanel, useTransfers } from "@/components/mobilidade/transfers-panel";
 import { cx } from "@/components/ui";
 import { saleStage, todos, warrantyOf } from "@/lib/moto-board";
 import { groupClients } from "@/lib/moto-clients";
@@ -19,8 +20,8 @@ import { useMotoProducts } from "@/lib/moto-products-db";
 import { contractValue, type MotoData } from "@/lib/moto-sale";
 import type { DocumentRow } from "@/lib/types";
 
-type Aba = "painel" | "negociacao" | "clientes" | "garantias" | "modelos" | "catalogo";
-const ABAS: Aba[] = ["painel", "negociacao", "clientes", "garantias", "modelos", "catalogo"];
+type Aba = "painel" | "negociacao" | "clientes" | "garantias" | "transferencias" | "modelos" | "catalogo";
+const ABAS: Aba[] = ["painel", "negociacao", "clientes", "garantias", "transferencias", "modelos", "catalogo"];
 /** Endereços antigos continuam funcionando. */
 const ALIAS: Record<string, Aba> = { inicio: "painel", vendas: "negociacao", cadastro: "negociacao" };
 const sale = (d: DocumentRow) => d.data as unknown as MotoData;
@@ -35,6 +36,9 @@ export default function MobilidadePage() {
   const actions = useSaleActions(sales);
   const { products } = useMotoProducts();
   const all = useMemo(() => sales.data ?? [], [sales.data]);
+  const transfers = useTransfers();
+  const review = (transfers.data ?? []).filter((t) => t.status === "analise").length;
+  const openTransfers = (transfers.data ?? []).filter((t) => t.status === "analise" || t.status === "aprovada").length;
 
   const stats = useMemo(() => {
     const sold = all.filter((d) => saleStage(d) === "vendida");
@@ -52,6 +56,7 @@ export default function MobilidadePage() {
     { id: "negociacao", label: "Negociação", icon: <Wallet className="h-4 w-4" />, count: stats.waiting + stats.quotes },
     { id: "clientes", label: "Clientes", icon: <Users className="h-4 w-4" />, count: stats.clients },
     { id: "garantias", label: "Garantias", icon: <ShieldCheck className="h-4 w-4" />, count: stats.warranty },
+    { id: "transferencias", label: "Transferências", icon: <ArrowLeftRight className="h-4 w-4" />, count: openTransfers, alert: review > 0 },
     { id: "modelos", label: "Modelos", icon: <LayoutGrid className="h-4 w-4" />, count: products.length },
     { id: "catalogo", label: "Catálogo online", icon: <BookOpen className="h-4 w-4" /> },
   ];
@@ -121,6 +126,7 @@ export default function MobilidadePage() {
       {aba === "negociacao" && <NegotiationPanel sales={sales} actions={actions} startWithCadastro={raw === "cadastro"} />}
       {aba === "clientes" && <CustomersPanel sales={sales} />}
       {aba === "garantias" && <WarrantyPanel sales={sales} actions={actions} />}
+      {aba === "transferencias" && <TransfersPanel sales={sales} transfers={transfers} />}
       {aba === "modelos" && <ModelsPanel />}
       {aba === "catalogo" && <CatalogPanel />}
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowLeftRight,
   ArrowRight,
   Bike,
   FolderOpen,
@@ -33,6 +34,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { dateBr, digits } from "@/lib/br";
 import { REFERRAL_BONUS, firstName, maskDocInput, maskPhoneInput, referralNotes, validDoc, warrantyStatus, type PortalCompany, type PortalResult, type PortalSale } from "@/lib/client-portal";
 import { motoPhoto, vehicleName } from "@/lib/moto-sale";
+import { TransferPanel } from "./transfer-panel";
 import { PRINT_CSS, WalletLocked, WalletSection } from "./wallet-card";
 
 /* ------------------------------------------------------------------ visual */
@@ -334,11 +336,12 @@ function Welcome({ sale, onDone }: { sale: PortalSale; onDone: () => void }) {
 
 /* ------------------------------------------------------------------ início */
 
-type PTab = "documento" | "scooter" | "arquivos" | "indique";
+type PTab = "documento" | "scooter" | "arquivos" | "transferir" | "indique";
 const PTABS: { id: PTab; label: string; icon: LucideIcon }[] = [
   { id: "documento", label: "Meu documento", icon: IdCard },
   { id: "scooter", label: "Minha scooter", icon: Bike },
   { id: "arquivos", label: "Arquivos", icon: FolderOpen },
+  { id: "transferir", label: "Transferir", icon: ArrowLeftRight },
   { id: "indique", label: "Indique e ganhe", icon: Gift },
 ];
 
@@ -559,6 +562,8 @@ function Home({ session, fallback, models, wallet, onLogout }: { session: Sessio
           </section>
 
       </div>}
+
+      {ptab === "transferir" && <TransferPanel key={sale.id} sale={sale} creds={session.creds} whatsapp={brand.whatsapp || null} />}
 
       {ptab === "indique" && <div className="mx-auto mt-5 max-w-xl">
           <ReferralCard onOpen={() => setRefer(true)} />

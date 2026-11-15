@@ -55,7 +55,8 @@ export function useSales() {
         const original = doc.data as unknown as MotoData;
         if (!original?.client) return doc;
         const info = infoBy.get(doc.id) ?? null;
-        const customer = custBy.get(clientKey(original)) ?? null;
+        // Depois de uma transferência, a ficha que vale é a do novo dono.
+        const customer = custBy.get(clientKey(applyOverrides(original, info, null))) ?? null;
         return { ...doc, original, info, customer, data: applyOverrides(original, info, customer) as unknown as Record<string, unknown> };
       });
     },

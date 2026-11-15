@@ -21,3 +21,21 @@ test("ficha: atualizações valem por cima do contrato, sem apagar o que não mu
   assert.equal(applyOverrides(d, null, null), d);
   assert.equal(portalPin("(82) 9 1111-2222"), "2222");
 });
+
+test("transferência: o novo dono substitui o comprador e a ficha dele vale por cima", () => {
+  const d = defaultMoto({ contractor });
+  d.client.name = "Maria Lima";
+  d.client.doc = "52998224725";
+  d.client.address = "Rua da Maria, 1";
+  d.client.phone = "82999887766";
+  const info = { document_id: "x", chassis: null, motor_no: null, battery_no: null, charger_no: null, delivery_date: null, owner: { name: "João Pereira", doc: "11144477735", phone: "82988881234", city: "Maceió" }, transferred_at: "2026-11-20T10:00:00Z" };
+  const e = applyOverrides(d, info, { ...emptyCustomer("doc:11144477735"), email: "joao@x.com" });
+  assert.equal(e.client.name, "João Pereira");
+  assert.equal(e.client.doc, "11144477735");
+  assert.equal(e.client.address, "");
+  assert.equal(e.client.email, "joao@x.com");
+  assert.equal(e.transferredAt, "2026-11-20T10:00:00Z");
+  assert.equal(portalPin(e.client.phone), "1234");
+  // Sem dono novo, nada muda no comprador.
+  assert.equal(applyOverrides(d, { ...info, owner: null }, null).client.name, "Maria Lima");
+});
