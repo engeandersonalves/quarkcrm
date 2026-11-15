@@ -2146,3 +2146,17 @@ select 'city', 'City', 'A estilosa de pneu largo',
        7197, 21, 1.928, true,
        coalesce((select max(position) + 1 from public.moto_products), 0)
 where not exists (select 1 from public.moto_products where slug = 'city');
+
+-- Modelo A2 (cadastro inicial, DESATIVADO): só fotos e apresentação. Complete a ficha
+-- técnica, o preço e as cores em Mobilidade → Modelos e ative para aparecer no catálogo.
+insert into public.moto_products (slug, name, kicker, pitch, for_who, accent, photo, gallery, colors, specs, price, installments, rate, active, position)
+select 'a2', 'A2', 'A charmosa retrô',
+       'Visual retrô, banco largo com encosto e para-brisa.',
+       'quer estilo clássico e conforto para o dia a dia e para a garupa.',
+       '#8E2C3A', '/mob/a2-perfil.webp',
+       '[{"src":"/mob/a2-perfil.webp","caption":"Perfil","fit":"contain"},{"src":"/mob/a2-frente.webp","caption":"De frente","fit":"contain"}]'::jsonb,
+       array['Branca e vinho'],
+       '{"power":"","battery":"","range":"","speed":"","recharge":"","load":"","brakes":"","weight":"","security":"","highlight":"Para-brisa e encosto"}'::jsonb,
+       0, 21, 2.1, false,
+       coalesce((select max(position) + 1 from public.moto_products), 0)
+where not exists (select 1 from public.moto_products where slug = 'a2');
