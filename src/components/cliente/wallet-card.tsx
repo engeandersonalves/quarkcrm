@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, FileDown, ImageDown, Loader2, Smartphone } from "lucide-react";
+import { Camera, FileDown, ImageDown, Loader2, Printer, Smartphone } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { receiptQrText } from "@/lib/moto-receipt";
 import { vehicleName, type MotoData } from "@/lib/moto-sale";
@@ -76,6 +76,7 @@ export function WalletSection({
   const [busy, setBusy] = useState<Busy>(null);
   const [err, setErr] = useState<string | null>(null);
   const [photo, setPhoto] = useState<string | null>(selfie);
+  const [photoState, setPhotoState] = useState<"idle" | "saving" | "saved" | "local">("idle");
   const fileRef = useRef<HTMLInputElement>(null);
   const model = (vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter").replace(/\W+/g, "");
 
@@ -121,12 +122,27 @@ export function WalletSection({
     }
   };
 
+  /** Troca a foto e salva na ficha (fica guardada para os próximos acessos). */
   const pick = async (f: File | undefined) => {
     if (!f) return;
+    setErr(null);
+    let p: string;
     try {
-      setPhoto(await toPortrait(f));
+      p = await toPortrait(f);
     } catch {
-      setErr("Não consegui abrir essa foto. Tente outra.");
+      return setErr("Não consegui abrir essa foto. Tente outra.");
+    }
+    setPhoto(p);
+    if (!creds) return setPhotoState("local");
+    setPhotoState("saving");
+    try {
+      const r = await fetch("/api/public/cliente/photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...creds, photo: p }) });
+      const j = (await r.json().catch(() => ({}))) as { ok?: boolean };
+      setPhotoState(j.ok ? "saved" : "local");
+      if (!j.ok) setErr("A foto aparece no cartão agora, mas não foi possível guardá-la. Tente de novo em instantes.");
+    } catch {
+      setPhotoState("local");
+      setErr("Sem conexão: a foto aparece no cartão agora, mas não foi guardada.");
     }
   };
 
@@ -149,13 +165,14 @@ export function WalletSection({
         <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 font-semibold text-[#1F9D55] hover:bg-[#EAF6EC]">
           <Camera className="h-4 w-4" /> {photo ? "Trocar a foto" : "Adicionar foto"}
         </button>
-        {photo && photo !== selfie && (
-          <button type="button" onClick={() => setPhoto(selfie)} className="rounded-full px-3 py-2 font-semibold text-[#0B1A12]/50 hover:bg-[#0B1A12]/[0.04]">
-            Desfazer
-          </button>
+        {photoState === "saving" && (
+          <span className="inline-flex items-center gap-1.5 text-[#0B1A12]/55">
+            <Loader2 className="h-4 w-4 animate-spin" /> Salvando…
+          </span>
         )}
+        {photoState === "saved" && <span className="font-semibold text-[#1F9D55]">✓ Foto salva</span>}
       </div>
-      <p className="text-center text-[11.5px] text-[#0B1A12]/45">{selfie ? "Usamos a selfie da assinatura do contrato." : "Tire uma foto de rosto, de frente, com fundo claro."} A foto nova fica só no seu celular.</p>
+      <p className="text-center text-[11.5px] text-[#0B1A12]/45">{photo ? "A foto fica guardada no seu cadastro." : "Tire uma foto de rosto, de frente, com fundo claro."}</p>
 
       <div className="mt-4 grid gap-2.5">
         {wallet.google && signed && (
@@ -163,16 +180,32 @@ export function WalletSection({
             {spin("google", <Smartphone className="h-5 w-5" />)} Adicionar ao Google Wallet
           </button>
         )}
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-3 gap-2.5">
+          <button type="button" onClick={() => window.print()} disabled={!!busy} className={`${btn} bg-[#F4F7F1] text-[#0B1A12] ring-1 ring-[#0B1A12]/[0.08] hover:bg-[#EAF6EC]`}>
+            <Printer className="h-5 w-5 text-[#1F9D55]" /> Imprimir
+          </button>
           <button type="button" onClick={pdf} disabled={!!busy} className={`${btn} bg-[#0B1A12] text-white hover:bg-[#13291c]`}>
-            {spin("pdf", <FileDown className="h-5 w-5" />)} Salvar PDF
+            {spin("pdf", <FileDown className="h-5 w-5" />)} PDF
           </button>
           <button type="button" onClick={image} disabled={!!busy} className={`${btn} bg-[#F4F7F1] text-[#0B1A12] ring-1 ring-[#0B1A12]/[0.08] hover:bg-[#EAF6EC]`}>
-            {spin("image", <ImageDown className="h-5 w-5 text-[#1F9D55]" />)} Salvar imagem
+            {spin("image", <ImageDown className="h-5 w-5 text-[#1F9D55]" />)} Imagem
           </button>
         </div>
       </div>
       <div aria-live="polite">{err && <p className="mt-3 rounded-2xl bg-[#FDECEA] px-4 py-3 text-[13px] text-[#A12A17]">{err}</p>}</div>
+
+      {/* Impressão: frente e verso no tamanho real de cartão (85,6 × 54 mm), para recortar. */}
+      <div data-print-card aria-hidden className="hidden">
+        <p className="qp-print-title">Cartão do proprietário · recorte na linha e plastifique</p>
+        <div className="qp-print-row">
+          <div className="qp-print-card">
+            <OwnerCardFront d={d} id={id} photo={photo} flat />
+          </div>
+          <div className="qp-print-card">
+            <OwnerCardBack d={d} id={id} qr={qr} contact={contact} flat />
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -196,3 +229,16 @@ export function WalletLocked({ token }: { token: string | null }) {
     </section>
   );
 }
+
+/** Regras de impressão do cartão (só o cartão sai no papel). */
+export const PRINT_CSS = `
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body * { visibility: hidden !important; }
+  [data-print-card], [data-print-card] * { visibility: visible !important; }
+  [data-print-card] { display: block !important; position: absolute; left: 0; top: 0; width: 100%; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .qp-print-title { font: 600 10pt system-ui, sans-serif; color: #444; margin: 0 0 6mm; }
+  .qp-print-row { display: flex; gap: 8mm; flex-wrap: wrap; }
+  .qp-print-card { width: 85.6mm; outline: 0.2mm dashed #888; outline-offset: 1.5mm; border-radius: 3mm; }
+}
+`;

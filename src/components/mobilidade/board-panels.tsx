@@ -7,6 +7,7 @@ import { Empty, Skeleton, cx } from "@/components/ui";
 import { GlyphTile } from "@/components/app/ios-glyphs";
 import { brlPlain, dateBr, digits } from "@/lib/br";
 import { saleStage, todos, warrantyOf, type SaleStage, type TodoKind } from "@/lib/moto-board";
+import { clientHref, clientKey } from "@/lib/moto-clients";
 import { installmentValue, profitOf, unitCost, type MotoProduct } from "@/lib/moto-products";
 import { motoPhoto, vehicleName, type MotoData } from "@/lib/moto-sale";
 import type { DocumentRow } from "@/lib/types";
@@ -149,7 +150,7 @@ export function OverviewPanel({ sales, products }: { sales: Sales; products: Mot
         {sales.loading && !sales.data ? (
           <Skeleton className="h-40" />
         ) : list.length === 0 ? (
-          <div className="flex items-center gap-3 rounded-[22px] bg-emerald-50 p-5 text-[14.5px] text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-500/30">
+          <div className="flex items-center gap-3 rounded-[22px] bg-emerald-50 p-5 text-[14.5px] text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:ring-emerald-500/30">
             <ShieldCheck className="h-5 w-5 shrink-0" /> Tudo em dia: nenhum contrato parado, entrega sem data ou garantia vencendo.
           </div>
         ) : (
@@ -161,7 +162,7 @@ export function OverviewPanel({ sales, products }: { sales: Sales; products: Mot
               return (
                 <div key={`${t.kind}-${t.doc.id}`} className={cx("flex items-center gap-3 px-4 py-3", i > 0 && "border-t border-ink-200/60 dark:border-white/[0.06]")}>
                   <span className={cx("grid h-10 w-10 shrink-0 place-items-center rounded-xl", cfg.tone)}>{cfg.icon}</span>
-                  <Link href={`/documentos/${t.doc.id}`} className="min-w-0 flex-1">
+                  <Link href={clientHref(clientKey(d))} className="min-w-0 flex-1">
                     <span className="block text-[14.5px] leading-snug font-medium">{cfg.text(d, t.doc as DocumentRow)}</span>
                     <span className="block truncate text-[12.5px] text-ink-500">{[vehicleName(d).replace(/^Scooter elétrica\s*/, ""), d.color].filter(Boolean).join(" · ")}</span>
                   </Link>
@@ -267,7 +268,7 @@ export function WarrantyPanel({ sales, actions }: { sales: Sales; actions: SaleA
     const tone = w.state === "encerrada" ? "bg-ink-300" : w.left <= 15 && w.state === "ativa" ? "bg-rose-500" : "bg-emerald-500";
     return (
       <div className="flex flex-wrap items-center gap-3 rounded-[20px] bg-white p-3 ring-1 ring-ink-200/80 sm:flex-nowrap dark:bg-[#111513] dark:ring-white/[0.07]">
-        <Link href={`/documentos/${doc.id}`} className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:flex-1">
+        <Link href={clientHref(clientKey(d))} className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:flex-1">
           <span className="grid h-14 w-16 shrink-0 place-items-center rounded-[14px] bg-[#050706]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={motoPhoto(d)} alt="" className="max-h-12 w-auto object-contain" />

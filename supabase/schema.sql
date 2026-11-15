@@ -1508,6 +1508,53 @@ create index if not exists portal_attempts_ip_idx on public.portal_attempts (ip,
 -- Sem políticas: só as funções abaixo (security definer) leem e gravam.
 alter table public.portal_attempts enable row level security;
 
+-- Ficha do cliente da Mobilidade (contatos atualizados, foto 3/4 e anotações).
+-- A chave é a mesma do CRM: 'doc:' + CPF/CNPJ só com números.
+create table if not exists public.moto_customers (
+  key text primary key,
+  name text,
+  phone text,
+  email text,
+  address text,
+  city text,
+  state text,
+  cep text,
+  photo text,
+  notes text,
+  updated_at timestamptz not null default now()
+);
+alter table public.moto_customers enable row level security;
+drop policy if exists "moto_customers_team" on public.moto_customers;
+create policy "moto_customers_team" on public.moto_customers for all to authenticated using (public.is_member()) with check (public.is_member());
+
+-- Dados que chegam depois da venda (sem mexer no contrato assinado): números da scooter e entrega.
+create table if not exists public.moto_sale_info (
+  document_id uuid primary key references public.documents (id) on delete cascade,
+  chassis text,
+  motor_no text,
+  battery_no text,
+  charger_no text,
+  delivery_date date,
+  updated_at timestamptz not null default now()
+);
+alter table public.moto_sale_info enable row level security;
+drop policy if exists "moto_sale_info_team" on public.moto_sale_info;
+create policy "moto_sale_info_team" on public.moto_sale_info for all to authenticated using (public.is_member()) with check (public.is_member());
+
+-- Venda com as atualizações da ficha aplicadas (o que o cliente vê).
+create or replace function public.moto_effective_data(p_data jsonb, p_info public.moto_sale_info, p_cust public.moto_customers)
+returns jsonb language sql immutable as $$
+  select (p_data - 'contractorSignature')
+    || jsonb_strip_nulls(jsonb_build_object(
+         'chassis', nullif(p_info.chassis, ''), 'motorNo', nullif(p_info.motor_no, ''),
+         'batteryNo', nullif(p_info.battery_no, ''), 'chargerNo', nullif(p_info.charger_no, '')))
+    || jsonb_build_object(
+         'delivery', coalesce(p_data -> 'delivery', '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object('date', p_info.delivery_date::text)),
+         'client', coalesce(p_data -> 'client', '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
+           'phone', nullif(p_cust.phone, ''), 'email', nullif(p_cust.email, ''), 'address', nullif(p_cust.address, ''),
+           'city', nullif(p_cust.city, ''), 'state', nullif(p_cust.state, ''), 'cep', nullif(p_cust.cep, ''))));
+$$;
+
 create or replace function public.get_client_portal(p_cpf text, p_check text, p_ip text default null)
 returns jsonb
 language plpgsql
@@ -1521,6 +1568,7 @@ declare
   v_ip text := left(nullif(trim(p_ip), ''), 64);
   v_ok boolean;
   v_sales jsonb;
+  v_cust public.moto_customers;
 begin
   if length(v_doc) not in (11, 14) or length(v_check) <> 4 then
     return jsonb_build_object('ok', false, 'error', 'dados');
@@ -1534,11 +1582,15 @@ begin
     return jsonb_build_object('ok', false, 'error', 'bloqueado');
   end if;
 
+  select * into v_cust from public.moto_customers where key = 'doc:' || v_doc;
+
+  -- Senha = 4 últimos dígitos do celular (o atualizado na ficha vale; o da venda também).
   select exists (
     select 1 from public.documents d
     where d.kind = 'moto' and d.status in ('enviado', 'assinado')
       and regexp_replace(coalesce(d.data -> 'client' ->> 'doc', ''), '\D', '', 'g') = v_doc
-      and right(regexp_replace(coalesce(d.data -> 'client' ->> 'phone', ''), '\D', '', 'g'), 4) = v_check
+      and (right(regexp_replace(coalesce(d.data -> 'client' ->> 'phone', ''), '\D', '', 'g'), 4) = v_check
+           or right(regexp_replace(coalesce(v_cust.phone, ''), '\D', '', 'g'), 4) = v_check)
   ) into v_ok;
 
   insert into public.portal_attempts (key, ip, ok) values (v_key, v_ip, v_ok);
@@ -1552,19 +1604,18 @@ begin
            'status', d.status,
            'created_at', d.created_at,
            'completed_at', d.completed_at,
-           -- Sem a imagem da assinatura da empresa.
-           'data', d.data - 'contractorSignature',
+           'data', public.moto_effective_data(d.data, i, v_cust),
            'signed_at', s.signed_at,
            'token', s.token,
-           -- Selfie da assinatura: vira a foto 3/4 do cartão do proprietário.
-           'selfie', s.selfie
+           -- Foto 3/4 do cartão: a salva na ficha ou, na falta, a selfie da assinatura.
+           'selfie', coalesce(v_cust.photo, s.selfie)
          ) order by d.created_at desc), '[]'::jsonb)
     into v_sales
     from public.documents d
     left join public.document_signers s on s.document_id = d.id and s.role = 'comprador'
+    left join public.moto_sale_info i on i.document_id = d.id
    where d.kind = 'moto' and d.status in ('enviado', 'assinado')
-     and regexp_replace(coalesce(d.data -> 'client' ->> 'doc', ''), '\D', '', 'g') = v_doc
-     and right(regexp_replace(coalesce(d.data -> 'client' ->> 'phone', ''), '\D', '', 'g'), 4) = v_check;
+     and regexp_replace(coalesce(d.data -> 'client' ->> 'doc', ''), '\D', '', 'g') = v_doc;
 
   return jsonb_build_object(
     'ok', true,
@@ -1579,5 +1630,31 @@ end;
 $$;
 revoke all on function public.get_client_portal(text, text, text) from public;
 grant execute on function public.get_client_portal(text, text, text) to anon, authenticated;
+
+-- O próprio cliente salva a foto 3/4 do cartão (mesma verificação do login da área do cliente).
+create or replace function public.set_client_photo(p_cpf text, p_check text, p_photo text, p_ip text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_doc text := regexp_replace(coalesce(p_cpf, ''), '\D', '', 'g');
+  r jsonb;
+begin
+  if p_photo is not null and (p_photo not like 'data:image/jpeg;base64,%' or length(p_photo) > 700000) then
+    return jsonb_build_object('ok', false, 'error', 'imagem');
+  end if;
+  r := public.get_client_portal(p_cpf, p_check, p_ip);
+  if not coalesce((r ->> 'ok')::boolean, false) then
+    return jsonb_build_object('ok', false, 'error', coalesce(r ->> 'error', 'nao_encontrado'));
+  end if;
+  insert into public.moto_customers (key, photo, updated_at) values ('doc:' || v_doc, p_photo, now())
+  on conflict (key) do update set photo = excluded.photo, updated_at = now();
+  return jsonb_build_object('ok', true);
+end;
+$$;
+revoke all on function public.set_client_photo(text, text, text, text) from public;
+grant execute on function public.set_client_photo(text, text, text, text) to anon, authenticated;
 
 notify pgrst, 'reload schema';

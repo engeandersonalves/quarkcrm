@@ -6,65 +6,57 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, type ReactNode } from "react";
 import { toast } from "sonner";
 import { GlyphTile } from "@/components/app/ios-glyphs";
-import { OverviewPanel, SalesPanel, WarrantyPanel, saleProfit } from "@/components/mobilidade/board-panels";
+import { WarrantyPanel } from "@/components/mobilidade/board-panels";
 import { CatalogPanel } from "@/components/mobilidade/catalog-panel";
-import { ClientsPanel } from "@/components/mobilidade/clients-panel";
+import { CustomersPanel, NegotiationPanel } from "@/components/mobilidade/clients-panel";
+import { DashboardPanel } from "@/components/mobilidade/dashboard-panel";
 import { ModelsPanel } from "@/components/mobilidade/models-panel";
-import { brl0, useSaleActions, useSales } from "@/components/mobilidade/sale-row";
+import { useSaleActions, useSales } from "@/components/mobilidade/sale-row";
 import { cx } from "@/components/ui";
-import { closedAt, saleStage, todos, warrantyOf } from "@/lib/moto-board";
+import { saleStage, todos, warrantyOf } from "@/lib/moto-board";
 import { groupClients } from "@/lib/moto-clients";
 import { useMotoProducts } from "@/lib/moto-products-db";
 import { contractValue, type MotoData } from "@/lib/moto-sale";
 import type { DocumentRow } from "@/lib/types";
 
-type Aba = "inicio" | "vendas" | "clientes" | "garantias" | "modelos" | "catalogo";
-const ABAS: Aba[] = ["inicio", "vendas", "clientes", "garantias", "modelos", "catalogo"];
+type Aba = "painel" | "negociacao" | "clientes" | "garantias" | "modelos" | "catalogo";
+const ABAS: Aba[] = ["painel", "negociacao", "clientes", "garantias", "modelos", "catalogo"];
+/** Endereços antigos continuam funcionando. */
+const ALIAS: Record<string, Aba> = { inicio: "painel", vendas: "negociacao", cadastro: "negociacao" };
 const sale = (d: DocumentRow) => d.data as unknown as MotoData;
 
 export default function MobilidadePage() {
   const router = useRouter();
   const params = useSearchParams();
   const raw = params.get("aba");
-  const aba: Aba = raw === "cadastro" ? "clientes" : ABAS.includes(raw as Aba) ? (raw as Aba) : "inicio";
-  const go = (a: Aba) => router.replace(a === "inicio" ? "/mobilidade" : `/mobilidade?aba=${a}`, { scroll: false });
+  const aba: Aba = (raw && ALIAS[raw]) || (ABAS.includes(raw as Aba) ? (raw as Aba) : "painel");
+  const go = (a: Aba) => router.replace(a === "painel" ? "/mobilidade" : `/mobilidade?aba=${a}`, { scroll: false });
   const sales = useSales();
   const actions = useSaleActions(sales);
   const { products } = useMotoProducts();
   const all = useMemo(() => sales.data ?? [], [sales.data]);
 
   const stats = useMemo(() => {
-    const month = new Date().toISOString().slice(0, 7);
     const sold = all.filter((d) => saleStage(d) === "vendida");
-    const soldMonth = sold.filter((d) => closedAt(d).slice(0, 7) === month);
-    const profits = soldMonth.map((d) => saleProfit(sale(d), products)).filter((v): v is number => v !== null);
     return {
-      revenue: soldMonth.reduce((t, d) => t + contractValue(sale(d)), 0),
-      soldMonth: soldMonth.length,
-      profit: profits.length ? profits.reduce((t, v) => t + v, 0) : null,
       waiting: all.filter((d) => saleStage(d) === "aguardando").length,
       quotes: all.filter((d) => saleStage(d) === "orcamento").length,
       warranty: sold.filter((d) => warrantyOf(sale(d)).state !== "encerrada").length,
-      clients: groupClients(all, (d) => contractValue(d)).length,
+      clients: groupClients(all, (d) => contractValue(d)).filter((c) => c.bought > 0).length,
       todo: todos(all).length,
     };
-  }, [all, products]);
+  }, [all]);
 
   const tabs: { id: Aba; label: string; icon: ReactNode; count?: number; alert?: boolean }[] = [
-    { id: "inicio", label: "Início", icon: <Home className="h-4 w-4" />, count: stats.todo, alert: stats.todo > 0 },
-    { id: "vendas", label: "Vendas", icon: <Wallet className="h-4 w-4" />, count: all.length },
+    { id: "painel", label: "Painel", icon: <Home className="h-4 w-4" />, count: stats.todo, alert: stats.todo > 0 },
+    { id: "negociacao", label: "Negociação", icon: <Wallet className="h-4 w-4" />, count: stats.waiting + stats.quotes },
     { id: "clientes", label: "Clientes", icon: <Users className="h-4 w-4" />, count: stats.clients },
     { id: "garantias", label: "Garantias", icon: <ShieldCheck className="h-4 w-4" />, count: stats.warranty },
     { id: "modelos", label: "Modelos", icon: <LayoutGrid className="h-4 w-4" />, count: products.length },
     { id: "catalogo", label: "Catálogo online", icon: <BookOpen className="h-4 w-4" /> },
   ];
 
-  const kpis: { k: string; v: string; s: string; to: Aba }[] = [
-    { k: "Vendido no mês", v: brl0(stats.revenue), s: `${stats.soldMonth} ${stats.soldMonth === 1 ? "scooter" : "scooters"}`, to: "vendas" },
-    { k: "Lucro do mês", v: stats.profit === null ? "—" : brl0(stats.profit), s: stats.profit === null ? "cadastre os custos" : "estimado pelos custos", to: "modelos" },
-    { k: "Para assinar", v: String(stats.waiting), s: `${stats.quotes} ${stats.quotes === 1 ? "orçamento aberto" : "orçamentos abertos"}`, to: "vendas" },
-    { k: "Em garantia", v: String(stats.warranty), s: "scooters cobertas", to: "garantias" },
-  ];
+
 
   return (
     <div className="animate-fade-up mx-auto max-w-6xl">
@@ -103,23 +95,6 @@ export default function MobilidadePage() {
           </div>
         </div>
 
-        {/* indicadores: tocar leva à aba correspondente */}
-        <div className="relative mt-5 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] sm:grid sm:grid-cols-4 sm:overflow-visible">
-          {kpis.map((x) => (
-            <button
-              key={x.k}
-              type="button"
-              onClick={() => go(x.to)}
-              className="min-w-[150px] shrink-0 rounded-[18px] p-3.5 text-left ring-1 ring-white/12 transition hover:ring-white/30 sm:min-w-0"
-              style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.11), rgba(255,255,255,0.03))" }}
-            >
-              <p className="text-[11px] font-bold tracking-[0.08em] text-white/55 uppercase">{x.k}</p>
-              <p className="mt-0.5 text-[20px] leading-tight font-bold tabular-nums">{x.v}</p>
-              <p className="mt-0.5 truncate text-[12px] text-white/45">{x.s}</p>
-            </button>
-          ))}
-        </div>
-
         {/* abas */}
         <nav className="relative mt-4 -mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" aria-label="Seções da Mobilidade">
           {tabs.map((t) => (
@@ -142,9 +117,9 @@ export default function MobilidadePage() {
         </nav>
       </section>
 
-      {aba === "inicio" && <OverviewPanel sales={sales} products={products} />}
-      {aba === "vendas" && <SalesPanel sales={sales} products={products} actions={actions} />}
-      {aba === "clientes" && <ClientsPanel sales={sales} actions={actions} startWithCadastro={raw === "cadastro"} />}
+      {aba === "painel" && <DashboardPanel sales={sales} products={products} />}
+      {aba === "negociacao" && <NegotiationPanel sales={sales} actions={actions} startWithCadastro={raw === "cadastro"} />}
+      {aba === "clientes" && <CustomersPanel sales={sales} />}
       {aba === "garantias" && <WarrantyPanel sales={sales} actions={actions} />}
       {aba === "modelos" && <ModelsPanel />}
       {aba === "catalogo" && <CatalogPanel />}

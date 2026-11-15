@@ -116,3 +116,6 @@ export function portalMessage(name: string, url: string) {
     "Para entrar, use o seu CPF e os 4 últimos dígitos deste celular.",
   ].join("\n");
 }
+
+/** Endereço da ficha do cliente no CRM. */
+export const clientHref = (key: string) => `/mobilidade/cliente/${encodeURIComponent(key)}`;

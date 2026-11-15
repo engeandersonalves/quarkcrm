@@ -49,7 +49,7 @@ export function RewardProvider({ children }: { children: ReactNode }) {
       if (/function|schema cache|does not exist/i.test(lb.error.message)) enabled.current = false;
       return;
     }
-    const me = (lb.data as { user_id: string; total_xp: number }[]).find((r) => r.user_id === user.id);
+    const me = ((lb.data ?? []) as { user_id: string; total_xp: number }[]).find((r) => r.user_id === user.id);
     const total = Number(me?.total_xp ?? 0);
     const prev = xpRef.current;
     xpRef.current = total;

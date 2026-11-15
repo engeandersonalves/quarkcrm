@@ -2,6 +2,9 @@
 
 import {
   ArrowRight,
+  Bike,
+  FolderOpen,
+  IdCard,
   BadgeCheck,
   BatteryCharging,
   BookOpen,
@@ -30,7 +33,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { dateBr, digits } from "@/lib/br";
 import { REFERRAL_BONUS, firstName, maskDocInput, maskPhoneInput, referralNotes, validDoc, warrantyStatus, type PortalCompany, type PortalResult, type PortalSale } from "@/lib/client-portal";
 import { motoPhoto, vehicleName } from "@/lib/moto-sale";
-import { WalletLocked, WalletSection } from "./wallet-card";
+import { PRINT_CSS, WalletLocked, WalletSection } from "./wallet-card";
 
 /* ------------------------------------------------------------------ visual */
 
@@ -128,7 +131,7 @@ export function ClientPortal({ company, models, wallet }: { company: Company; mo
 
   return (
     <main className="relative min-h-dvh font-[family-name:var(--font-outfit)] text-[#0B1A12] antialiased">
-      <style>{KEYFRAMES}</style>
+      <style>{KEYFRAMES + PRINT_CSS}</style>
       <Backdrop />
       {phase === "restoring" && (
         <div className="grid min-h-dvh place-items-center">
@@ -331,6 +334,14 @@ function Welcome({ sale, onDone }: { sale: PortalSale; onDone: () => void }) {
 
 /* ------------------------------------------------------------------ início */
 
+type PTab = "documento" | "scooter" | "arquivos" | "indique";
+const PTABS: { id: PTab; label: string; icon: LucideIcon }[] = [
+  { id: "documento", label: "Meu documento", icon: IdCard },
+  { id: "scooter", label: "Minha scooter", icon: Bike },
+  { id: "arquivos", label: "Arquivos", icon: FolderOpen },
+  { id: "indique", label: "Indique e ganhe", icon: Gift },
+];
+
 type DocKey = "manual" | "comprovante";
 type DocState = "idle" | "busy" | "done";
 
@@ -358,6 +369,7 @@ function Home({ session, fallback, models, wallet, onLogout }: { session: Sessio
   const [docs, setDocs] = useState<Record<string, DocState>>({});
   const [docErr, setDocErr] = useState<string | null>(null);
   const [refer, setRefer] = useState(false);
+  const [ptab, setPtab] = useState<PTab>(sales.some((x) => x.signed_at || x.status === "assinado") ? "documento" : "scooter");
   const signed = !!sale.signed_at || sale.status === "assinado";
   const w = warrantyStatus(d, new Date(), signed);
   const model = vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter";
@@ -419,9 +431,39 @@ function Home({ session, fallback, models, wallet, onLogout }: { session: Sessio
         </div>
       )}
 
-      <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start">
-        {/* coluna 1: scooter + garantia */}
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 lg:sticky lg:top-6">
+      {/* abas: o documento do proprietário fica em destaque */}
+      <nav className="qp-up sticky top-2 z-20 mt-5 -mx-1 flex gap-1 overflow-x-auto rounded-full bg-white/80 p-1 shadow-[0_10px_30px_-20px_rgba(16,52,32,0.5)] ring-1 ring-[#0B1A12]/[0.06] backdrop-blur [scrollbar-width:none] sm:mx-0 sm:inline-flex" aria-label="Seções">
+        {PTABS.map((t) => {
+          const on = ptab === t.id;
+          const star = t.id === "documento";
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={(e) => {
+                setPtab(t.id);
+                e.currentTarget.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              aria-current={on ? "page" : undefined}
+              className={cx(
+                "relative inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 text-[14px] font-semibold transition",
+                on ? (star ? "bg-[#0B1A12] text-[#E8D48A]" : "bg-[#0B1A12] text-white") : star ? "text-[#0B1A12]" : "text-[#0B1A12]/60 hover:text-[#0B1A12]",
+              )}
+              style={!on && star ? { background: "linear-gradient(95deg,#F6EFC9,#E9F6C9)" } : undefined}
+            >
+              <t.icon className="h-4 w-4" /> {t.label}
+              {star && !on && <span className="h-1.5 w-1.5 rounded-full bg-[#C9A84A]" />}
+            </button>
+          );
+        })}
+      </nav>
+
+      {ptab === "documento" && <div className="mx-auto mt-5 max-w-xl">{signed ? <WalletSection d={d} id={sale.id} signed={signed} company={{ name: d.contractor?.name || brand.legal_name || brand.company_name, cnpj: d.contractor?.doc || brand.cnpj }} creds={session.creds} wallet={wallet} selfie={sale.selfie ?? null} contact={brand.whatsapp ? brand.whatsapp.replace(/^(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3") : ""} /> : <WalletLocked token={sale.token} />}</div>}
+
+      {ptab === "scooter" && (
+        <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-start">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
           <section className="qp-up relative overflow-hidden rounded-[32px] bg-[#0B1A12] p-6 text-white [animation-delay:.05s] sm:p-7">
             <div className="absolute -top-24 -right-20 h-72 w-72 rounded-full" style={{ background: "radial-gradient(closest-side, rgba(79,195,138,0.45), rgba(79,195,138,0))" }} />
             <div className="absolute -bottom-28 -left-16 h-72 w-72 rounded-full" style={{ background: "radial-gradient(closest-side, rgba(228,240,74,0.18), rgba(228,240,74,0))" }} />
@@ -450,41 +492,8 @@ function Home({ session, fallback, models, wallet, onLogout }: { session: Sessio
           </section>
 
           <WarrantyCard w={w} days={d.warrantyDays} claim={claim} />
-          {signed ? <WalletSection d={d} id={sale.id} signed={signed} company={{ name: d.contractor?.name || brand.legal_name || brand.company_name, cnpj: d.contractor?.doc || brand.cnpj }} creds={session.creds} wallet={wallet} selfie={sale.selfie ?? null} contact={brand.whatsapp ? brand.whatsapp.replace(/^(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3") : ""} /> : <WalletLocked token={sale.token} />}
-        </div>
-
-        {/* coluna 2: documentos, indicação e cuidados */}
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
-          <section className={cx(CARD, "qp-up p-5 [animation-delay:.1s] sm:p-6")}>
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-[11px] font-bold tracking-[0.2em] text-[#1F9D55] uppercase">Documentação</p>
-                <h2 className="text-[22px] font-bold tracking-[-0.03em]">Seus documentos</h2>
-              </div>
-              <span className="text-[12px] text-[#0B1A12]/45">PDF · gerado na hora</span>
-            </div>
-            <div className="mt-4 grid gap-2.5">
-              <DocRow icon={BookOpen} title="Manual + certificado de garantia" text="Uso, bateria, cuidados e o seu certificado com os números da scooter" state={docs[`${sale.id}-manual`]} onClick={() => download("manual")} />
-              <DocRow
-                icon={BadgeCheck}
-                title="Comprovante de compra"
-                text={signed ? "Prova que a scooter é sua, com cartão de bolso para levar na carteira" : "Fica disponível assim que você assinar o contrato"}
-                state={docs[`${sale.id}-comprovante`]}
-                onClick={() => download("comprovante")}
-                locked={!signed}
-              />
-              {sale.token &&
-                (signed ? (
-                  <DocRow icon={FileSignature} title="Contrato assinado" text={`Assinado em ${dateBr((sale.signed_at ?? sale.completed_at ?? "").slice(0, 10))}, com validade jurídica`} href={`/assinar/${sale.token}`} />
-                ) : (
-                  <DocRow icon={FileSignature} title="Assinar contrato" text="Falta só a sua assinatura. Leva 1 minuto, pelo celular." href={`/assinar/${sale.token}`} highlight />
-                ))}
-            </div>
-            <div aria-live="polite">{docErr && <p className="qp-up mt-3 rounded-2xl bg-[#FDECEA] px-4 py-3 text-[13px] text-[#A12A17]">{docErr}</p>}</div>
-          </section>
-
-          <ReferralCard onOpen={() => setRefer(true)} />
-
+          </div>
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
           <section className={cx(CARD, "qp-up p-5 [animation-delay:.2s] sm:p-6")}>
             <p className="text-[11px] font-bold tracking-[0.2em] text-[#1F9D55] uppercase">Dicas rápidas</p>
             <h2 className="text-[22px] font-bold tracking-[-0.03em]">Para a sua scooter durar mais</h2>
@@ -516,8 +525,44 @@ function Home({ session, fallback, models, wallet, onLogout }: { session: Sessio
               <ChevronRight className="h-5 w-5 text-[#0B1A12]/30 transition group-hover:translate-x-0.5" />
             </a>
           )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {ptab === "arquivos" && <div className="mx-auto mt-5 grid max-w-2xl gap-5">
+          <section className={cx(CARD, "qp-up p-5 [animation-delay:.1s] sm:p-6")}>
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-[11px] font-bold tracking-[0.2em] text-[#1F9D55] uppercase">Documentação</p>
+                <h2 className="text-[22px] font-bold tracking-[-0.03em]">Seus documentos</h2>
+              </div>
+              <span className="text-[12px] text-[#0B1A12]/45">PDF · gerado na hora</span>
+            </div>
+            <div className="mt-4 grid gap-2.5">
+              <DocRow icon={BookOpen} title="Manual + certificado de garantia" text="Uso, bateria, cuidados e o seu certificado com os números da scooter" state={docs[`${sale.id}-manual`]} onClick={() => download("manual")} />
+              <DocRow
+                icon={BadgeCheck}
+                title="Comprovante de compra"
+                text={signed ? "Prova que a scooter é sua, com cartão de bolso para levar na carteira" : "Fica disponível assim que você assinar o contrato"}
+                state={docs[`${sale.id}-comprovante`]}
+                onClick={() => download("comprovante")}
+                locked={!signed}
+              />
+              {sale.token &&
+                (signed ? (
+                  <DocRow icon={FileSignature} title="Contrato assinado" text={`Assinado em ${dateBr((sale.signed_at ?? sale.completed_at ?? "").slice(0, 10))}, com validade jurídica`} href={`/assinar/${sale.token}`} />
+                ) : (
+                  <DocRow icon={FileSignature} title="Assinar contrato" text="Falta só a sua assinatura. Leva 1 minuto, pelo celular." href={`/assinar/${sale.token}`} highlight />
+                ))}
+            </div>
+            <div aria-live="polite">{docErr && <p className="qp-up mt-3 rounded-2xl bg-[#FDECEA] px-4 py-3 text-[13px] text-[#A12A17]">{docErr}</p>}</div>
+          </section>
+
+      </div>}
+
+      {ptab === "indique" && <div className="mx-auto mt-5 max-w-xl">
+          <ReferralCard onOpen={() => setRefer(true)} />
+      </div>}
 
       <footer className="mt-12 text-center text-[12px] leading-relaxed text-[#0B1A12]/40">
         {brand.legal_name || brand.company_name}

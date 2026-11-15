@@ -10,6 +10,8 @@ import { brlPlain, dateBr, digits } from "@/lib/br";
 import { relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { buyerOf, closedAt, saleStage, warrantyOf, type SaleStage } from "@/lib/moto-board";
+import { clientKey } from "@/lib/moto-clients";
+import { applyOverrides, type MotoCustomer, type SaleInfo } from "@/lib/moto-overrides";
 import { contractValue, motoPhoto, vehicleName, type MotoData } from "@/lib/moto-sale";
 import { supabase } from "@/lib/supabase/client";
 import type { DocumentRow } from "@/lib/types";
@@ -17,11 +19,24 @@ import { saleCompany } from "./sale-docs";
 
 export const brl0 = (v: number) => brlPlain(v).replace(/,00$/, "");
 
-/** Vendas de scooter (todas as abas usam a mesma lista). */
+/** Venda com a ficha do cliente e os dados pós-venda aplicados (o contrato original fica em `original`). */
+export type SaleDoc = DocumentRow & { original?: MotoData; info?: SaleInfo | null; customer?: MotoCustomer | null };
+
+/** Tabelas da ficha (podem não existir antes de rodar o schema.sql: aí a lista segue sem elas). */
+async function optional<T>(q: PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+  try {
+    const { data, error } = await q;
+    return error ? [] : (data ?? []);
+  } catch {
+    return [];
+  }
+}
+
+/** Vendas de scooter (todas as abas e a ficha do cliente usam a mesma lista). */
 export function useSales() {
   return useLive(
-    async () =>
-      must(
+    async () => {
+      const docs = must(
         await supabase()
           .from("documents")
           .select("*, signers:document_signers(id,role,name,signed_at,selfie_at,position,token), lead:leads(id,name)")
@@ -29,9 +44,23 @@ export function useSales() {
           .neq("status", "cancelado")
           .order("updated_at", { ascending: false })
           .limit(500),
-      ) as DocumentRow[],
+      ) as SaleDoc[];
+      const [infos, customers] = await Promise.all([
+        docs.length ? optional<SaleInfo>(supabase().from("moto_sale_info").select("*").in("document_id", docs.map((x) => x.id))) : Promise.resolve([]),
+        optional<MotoCustomer>(supabase().from("moto_customers").select("key,name,phone,email,address,city,state,cep,notes,updated_at").limit(2000)),
+      ]);
+      const infoBy = new Map(infos.map((i) => [i.document_id, i]));
+      const custBy = new Map(customers.map((c) => [c.key, c]));
+      return docs.map((doc) => {
+        const original = doc.data as unknown as MotoData;
+        if (!original?.client) return doc;
+        const info = infoBy.get(doc.id) ?? null;
+        const customer = custBy.get(clientKey(original)) ?? null;
+        return { ...doc, original, info, customer, data: applyOverrides(original, info, customer) as unknown as Record<string, unknown> };
+      });
+    },
     [],
-    ["documents", "document_signers"],
+    ["documents", "document_signers", "moto_sale_info", "moto_customers"],
   );
 }
 export type Sales = ReturnType<typeof useSales>;
@@ -125,7 +154,7 @@ export function useSaleActions(sales: Sales) {
 }
 export type SaleActions = ReturnType<typeof useSaleActions>;
 
-function Menu({ items }: { items: { label: string; icon: React.ReactNode; onClick?: () => void; href?: string; danger?: boolean }[] }) {
+export function Menu({ items }: { items: { label: string; icon: React.ReactNode; onClick?: () => void; href?: string; danger?: boolean }[] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
