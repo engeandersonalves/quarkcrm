@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  BadgeCheck,
   Ban,
   Check,
   CheckCircle2,
@@ -202,19 +203,23 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
   };
 
   /** Orçamento e certificado da venda de scooter, gerados aqui mesmo em PDF. */
-  const motoPdf = async (which: "orcamento" | "certificado") => {
+  const motoPdf = async (which: "orcamento" | "certificado" | "comprovante") => {
     const d = data as MotoData;
     if (!d.client.name.trim()) return toast.error("Preencha o nome do comprador");
-    if (which === "certificado" && !d.chassis.trim()) {
-      if (!confirm("O número do chassi ainda está em branco. Gerar o manual com a garantia mesmo assim?")) return;
+    if (which !== "orcamento" && !d.chassis.trim()) {
+      if (!confirm("O número do chassi ainda está em branco. Gerar o documento mesmo assim?")) return;
     }
     setPdfBusy(which);
     try {
       const id = dirty && !locked ? await save() : initial.id;
-      if (which === "orcamento") await (await import("../mobilidade/sale-pdf")).downloadMotoQuote(d, saleCompany(settings, profile), id);
+      if (which === "comprovante") {
+        const { buyerIsCompany } = await import("@/lib/moto-receipt");
+        if (buyerIsCompany(d)) toast.warning("Comprador com CNPJ: nesse caso o MEI precisa emitir nota fiscal. O comprovante sai mesmo assim.");
+        await (await import("../mobilidade/purchase-receipt")).downloadPurchaseReceipt(d, saleCompany(settings, profile), id);
+      } else if (which === "orcamento") await (await import("../mobilidade/sale-pdf")).downloadMotoQuote(d, saleCompany(settings, profile), id);
       else await (await import("../mobilidade/moto-manual")).downloadSaleManual(d, id, settings, signers.find((s) => s.role === "comprador")?.signed_at ?? null);
-      toast.success(which === "orcamento" ? "Orçamento baixado" : "Manual com certificado de garantia baixado");
-      if (leadId) supabase().from("activities").insert({ lead_id: leadId, type: "nota", content: which === "orcamento" ? `Orçamento da scooter ${d.modelName} gerado` : `Certificado de garantia da scooter ${d.modelName} emitido`, created_by: user.id }).then(() => {});
+      toast.success(which === "orcamento" ? "Orçamento baixado" : which === "comprovante" ? "Comprovante de compra baixado" : "Manual com certificado de garantia baixado");
+      if (leadId) supabase().from("activities").insert({ lead_id: leadId, type: "nota", content: which === "orcamento" ? `Orçamento da scooter ${d.modelName} gerado` : which === "comprovante" ? `Comprovante de compra da scooter ${d.modelName} emitido` : `Certificado de garantia da scooter ${d.modelName} emitido`, created_by: user.id }).then(() => {});
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível gerar o PDF");
     } finally {
@@ -251,6 +256,9 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
               </Button>
               <Button variant="secondary" onClick={() => motoPdf("certificado")} loading={pdfBusy === "certificado"} title="Manual do proprietário com o certificado de garantia preenchido">
                 <ShieldCheck className="h-4 w-4" /> Manual + garantia
+              </Button>
+              <Button variant="secondary" onClick={() => motoPdf("comprovante")} loading={pdfBusy === "comprovante"} title="Comprovante de compra e propriedade, com cartão de bolso">
+                <BadgeCheck className="h-4 w-4" /> Comprovante
               </Button>
             </>
           )}

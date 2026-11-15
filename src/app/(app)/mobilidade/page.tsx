@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Camera, ChevronRight, FileText, LayoutGrid, Plus, ShieldAlert, ShieldCheck, UserPlus, Wallet } from "lucide-react";
+import { BadgeCheck, BookOpen, Camera, ChevronRight, FileText, LayoutGrid, Plus, ShieldAlert, ShieldCheck, UserPlus, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
@@ -175,9 +175,16 @@ function Vendas({ sales, products }: { sales: ReturnType<typeof useSales>; produ
   const noSelfie = all.filter((d) => (d.signers ?? []).some((s) => s.role === "comprador" && s.signed_at && !s.selfie_at)).length;
   const active = products.filter((p) => p.active && p.price > 0);
 
-  const pdf = async (d: DocumentRow, which: "orcamento" | "manual") => {
+  const pdf = async (d: DocumentRow, which: "orcamento" | "manual" | "comprovante") => {
     setBusy(`${d.id}-${which}`);
     try {
+      if (which === "comprovante") {
+        const { buyerIsCompany } = await import("@/lib/moto-receipt");
+        if (buyerIsCompany(sale(d))) toast.warning("Comprador com CNPJ: nesse caso o MEI precisa emitir nota fiscal. O comprovante sai mesmo assim.");
+        const { downloadPurchaseReceipt } = await import("@/components/mobilidade/purchase-receipt");
+        await downloadPurchaseReceipt(sale(d), saleCompany(settings, profile), d.id);
+        return;
+      }
       if (which === "manual") {
         const { downloadSaleManual } = await import("@/components/mobilidade/moto-manual");
         await downloadSaleManual(sale(d), d.id, settings, (d.signers ?? []).find((s) => s.role === "comprador")?.signed_at ?? null);
@@ -313,13 +320,18 @@ function Vendas({ sales, products }: { sales: ReturnType<typeof useSales>; produ
                     {profit !== null && <span className={cx("block text-[11px] font-semibold tabular-nums", profit > 0 ? "text-emerald-600" : "text-rose-600")}>lucro {brl0(profit)}</span>}
                   </span>
                 </Link>
-                <div className="flex w-full gap-2 sm:w-auto">
+                <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
                   <button type="button" disabled={!!busy} onClick={() => pdf(d, "orcamento")} className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold ring-1 ring-ink-200 hover:ring-ink-300 disabled:opacity-50 sm:flex-none">
                     <FileText className="h-3.5 w-3.5" /> {busy === `${d.id}-orcamento` ? "Gerando…" : "Orçamento"}
                   </button>
                   <button type="button" disabled={!!busy} onClick={() => pdf(d, "manual")} title="Manual do proprietário com o certificado de garantia já preenchido" className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold ring-1 ring-ink-200 hover:ring-ink-300 disabled:opacity-50 sm:flex-none">
                     <ShieldCheck className="h-3.5 w-3.5" /> {busy === `${d.id}-manual` ? "Gerando…" : "Manual + garantia"}
                   </button>
+                  {d.status === "assinado" && (
+                    <button type="button" disabled={!!busy} onClick={() => pdf(d, "comprovante")} title="Comprovante de compra e propriedade com cartão de bolso" className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold ring-1 ring-ink-200 hover:ring-ink-300 disabled:opacity-50 sm:flex-none">
+                      <BadgeCheck className="h-3.5 w-3.5" /> {busy === `${d.id}-comprovante` ? "Gerando…" : "Comprovante"}
+                    </button>
+                  )}
                 </div>
               </article>
             );
