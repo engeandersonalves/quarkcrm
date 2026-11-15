@@ -1658,3 +1658,94 @@ revoke all on function public.set_client_photo(text, text, text, text) from publ
 grant execute on function public.set_client_photo(text, text, text, text) to anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- Verificação pública do cartão do proprietário (QR code).
+-- Recebe o id da venda (QR) ou o código de 10 caracteres impresso no cartão e
+-- devolve só o necessário para conferir: nada de telefone, e-mail, endereço,
+-- valores ou forma de pagamento. CPF sai mascarado.
+-- ---------------------------------------------------------------------------
+create or replace function public.verify_owner_card(p_ref text)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_ref text := lower(regexp_replace(coalesce(p_ref, ''), '[^0-9a-fA-F]', '', 'g'));
+  v_id uuid;
+  d public.documents;
+  s public.document_signers;
+  i public.moto_sale_info;
+  c public.moto_customers;
+  v_data jsonb;
+  v_doc text;
+  v_state text;
+begin
+  if length(v_ref) = 32 then
+    v_id := v_ref::uuid;
+  elsif length(v_ref) = 10 then
+    -- Código impresso no cartão: os 10 últimos caracteres do id (precisa ser único).
+    select x.id into v_id from public.documents x
+     where x.kind = 'moto' and right(replace(x.id::text, '-', ''), 10) = v_ref
+     limit 2;
+    if (select count(*) from public.documents x where x.kind = 'moto' and right(replace(x.id::text, '-', ''), 10) = v_ref) <> 1 then
+      return jsonb_build_object('found', false);
+    end if;
+  else
+    return jsonb_build_object('found', false);
+  end if;
+
+  select * into d from public.documents where id = v_id and kind = 'moto';
+  if not found then
+    return jsonb_build_object('found', false);
+  end if;
+  select * into s from public.document_signers where document_id = d.id and role = 'comprador' limit 1;
+  select * into i from public.moto_sale_info where document_id = d.id;
+  v_doc := regexp_replace(coalesce(d.data -> 'client' ->> 'doc', ''), '\D', '', 'g');
+  select * into c from public.moto_customers where key = 'doc:' || v_doc;
+  v_data := public.moto_effective_data(d.data, i, c);
+
+  v_state := case
+    when d.status = 'cancelado' then 'cancelado'
+    when d.status = 'assinado' or s.signed_at is not null then 'original'
+    else 'pendente'
+  end;
+
+  return jsonb_build_object(
+    'found', true,
+    'state', v_state,
+    'id', d.id,
+    'signed_at', coalesce(s.signed_at, d.completed_at),
+    'photo', case when v_state = 'original' then coalesce(c.photo, s.selfie) end,
+    'data', jsonb_build_object(
+      'client', jsonb_build_object(
+        'name', v_data -> 'client' ->> 'name',
+        'kind', v_data -> 'client' ->> 'kind',
+        'doc', case when length(v_doc) = 11
+                    then '***.' || substr(v_doc, 4, 3) || '.' || substr(v_doc, 7, 3) || '-**'
+                    else v_data -> 'client' ->> 'doc' end),
+      'model', v_data -> 'model',
+      'modelName', v_data -> 'modelName',
+      'color', v_data -> 'color',
+      'year', v_data -> 'year',
+      'chassis', v_data -> 'chassis',
+      'motorNo', v_data -> 'motorNo',
+      'batteryNo', v_data -> 'batteryNo',
+      'chargerNo', v_data -> 'chargerNo',
+      'specs', v_data -> 'specs',
+      'photo', v_data -> 'photo',
+      'delivery', jsonb_build_object('mode', v_data -> 'delivery' ->> 'mode', 'date', v_data -> 'delivery' ->> 'date'),
+      'warrantyDays', v_data -> 'warrantyDays',
+      'date', v_data -> 'date',
+      'contractor', jsonb_build_object('name', v_data -> 'contractor' ->> 'name', 'doc', v_data -> 'contractor' ->> 'doc')),
+    'company', (select jsonb_build_object(
+                  'company_name', data ->> 'company_name', 'legal_name', data ->> 'legal_name', 'cnpj', data ->> 'cnpj',
+                  'city', data ->> 'city', 'phone', data ->> 'phone', 'whatsapp', data ->> 'whatsapp')
+                from public.settings where id = 1)
+  );
+end;
+$$;
+revoke all on function public.verify_owner_card(text) from public;
+grant execute on function public.verify_owner_card(text) to anon, authenticated;

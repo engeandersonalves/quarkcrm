@@ -159,7 +159,7 @@ export function OwnerCardBack({ d, id, qr, contact, flat }: { d: MotoData; id: s
               <div style={{ width: "100%", aspectRatio: "1" }} />
             )}
           </div>
-          <p style={{ fontSize: "1.6cqw", lineHeight: 1.35, color: "#6B7A70", marginTop: "1.4cqw" }}>Aponte a câmera para conferir a compra</p>
+          <p style={{ fontSize: "1.6cqw", lineHeight: 1.35, color: "#6B7A70", marginTop: "1.4cqw" }}>Aponte a câmera para conferir se é original</p>
           <p className="tabular-nums" style={{ fontSize: "1.7cqw", fontWeight: 600, letterSpacing: "0.1em", marginTop: "0.8cqw" }}>
             {number}
             {code ? <span style={{ display: "block", fontWeight: 500, color: "#6B7A70", letterSpacing: "0.06em" }}>{code}</span> : null}

@@ -240,7 +240,7 @@ export function PurchaseReceiptPage({ d, c, id, qr }: { d: MotoData; c: SaleComp
         <h2 className="mt-1 text-[44px] leading-[1.02] font-extrabold tracking-[-0.04em]">
           Cartão de propriedade<span style={{ color: "#3FBF6A" }}>.</span>
         </h2>
-        <p className="mt-3 max-w-[600px] text-[18px] leading-relaxed text-[#0B1A12]/75">Ele cabe na carteira e prova que a scooter é sua. O QR code do verso mostra os dados da compra em qualquer celular, mesmo sem internet.</p>
+        <p className="mt-3 max-w-[600px] text-[18px] leading-relaxed text-[#0B1A12]/75">Ele cabe na carteira e prova que a scooter é sua. O QR code do verso abre a página oficial da Quark que confirma se o documento é original.</p>
 
         <div className="mt-8 grid grid-cols-3 gap-3">
           {[
@@ -366,7 +366,7 @@ export async function downloadPurchaseReceipt(d: MotoData, c: SaleCompany, id: s
   const company = { name: clean(d.contractor.name) || c.legalName || c.name, cnpj: d.contractor.doc || c.cnpj };
   let qr = "";
   try {
-    qr = await QR.toDataURL(receiptQrText(d, id, company), { margin: 0, width: 320, errorCorrectionLevel: "M", color: { dark: INK, light: "#FFFFFF" } });
+    qr = await QR.toDataURL(receiptQrText(d, id, company, window.location.origin), { margin: 0, width: 320, errorCorrectionLevel: "M", color: { dark: INK, light: "#FFFFFF" } });
   } catch {
     /* sem QR: o cartão sai com o espaço em branco */
   }

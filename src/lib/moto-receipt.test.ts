@@ -40,6 +40,7 @@ test("comprovante: QR com CPF mascarado e número estável", () => {
   assert.match(qr, /Proprietário: Maria Lima/);
   assert.doesNotMatch(qr, /529\.982\.247-25/);
   assert.match(qr, /CNPJ 12\.345\.678\/0001-95/);
+  assert.equal(receiptQrText(d, id, { name: "Q", cnpj: "" }, "https://crm.x/"), `https://crm.x/verificar/${id}`);
   assert.equal(buyerIsCompany(d), false);
   d.client.doc = "12345678000195";
   assert.equal(buyerIsCompany(d), true);

@@ -28,7 +28,7 @@ test("wallet: frente e verso do cartão", () => {
   assert.equal(c.auxiliary[0].value, "QK25CAP001");
   assert.ok(c.back.some((f) => f.label === "CPF" && !f.value.includes("529.982")));
   assert.ok(c.back.every((f) => f.value));
-  assert.match(c.qr, /CPV-0A1B2C/);
+  assert.equal(c.qr, "https://x.app/verificar/0a1b2c3d-1111-2222-3333-444455556666");
 });
 
 test("wallet: link do Google assinado com a conta de serviço", () => {

@@ -487,7 +487,7 @@ function DocsTab({ rows, actions, photo }: { rows: SaleDoc[]; actions: SaleActio
       const d = sale(r);
       const company = { name: d.contractor?.name || settings.legal_name || settings.company_name, cnpj: d.contractor?.doc || settings.cnpj };
       const [{ receiptQrText }, QR, cards, pdfs] = await Promise.all([import("@/lib/moto-receipt"), import("qrcode"), import("@/components/cliente/owner-card"), import("@/components/bf/download-pdf")]);
-      const qr = await QR.toDataURL(receiptQrText(d, r.id, company), { margin: 0, width: 360, errorCorrectionLevel: "M", color: { dark: "#0B1A12", light: "#FFFFFF" } });
+      const qr = await QR.toDataURL(receiptQrText(d, r.id, company, window.location.origin), { margin: 0, width: 360, errorCorrectionLevel: "M", color: { dark: "#0B1A12", light: "#FFFFFF" } });
       const contact = formatPhone(settings.whatsapp || settings.phone || "");
       const name = `Cartao-proprietario-${model(d).replace(/\W+/g, "")}-${(d.client.name.split(" ")[0] || "cliente").replace(/\W+/g, "")}`;
       if (kind === "pdf") await pdfs.downloadPagesPdf(<cards.OwnerCardPdfPage d={d} id={r.id} photo={photo} qr={qr} contact={contact} />, `${name}.pdf`, { background: "#F5F6F1" });

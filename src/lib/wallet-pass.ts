@@ -87,7 +87,7 @@ export function walletCard(d: MotoData, id: string, company: WalletCompany, port
       { key: "color", label: "COR · ANO", value: [clean(d.color), d.year].filter(Boolean).join(" · ") || "—" },
     ],
     back,
-    qr: receiptQrText(d, id, { name: company.name, cnpj: company.cnpj }),
+    qr: receiptQrText(d, id, { name: company.name, cnpj: company.cnpj }, new URL(portalUrl).origin),
     links: [
       { id: "portal", uri: portalUrl, description: "Área do cliente · manual, garantia e comprovante" },
       ...(company.whatsapp.replace(/\D/g, "").length >= 10 ? [{ id: "help", uri: `https://wa.me/55${company.whatsapp.replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "")}`, description: "Assistência Quark pelo WhatsApp" }] : []),

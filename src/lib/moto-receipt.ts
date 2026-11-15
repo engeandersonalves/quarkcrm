@@ -79,7 +79,15 @@ export function receiptNumber(id: string | null) {
  * Texto do QR code: legível por qualquer câmera, sem internet. Confere com o papel na hora
  * (CPF mascarado: o QR não expõe o documento inteiro do cliente).
  */
-export function receiptQrText(d: MotoData, id: string | null, company: { name: string; cnpj: string }) {
+/** Endereço da página pública que confere se o cartão/comprovante é original. */
+export const verifyUrl = (origin: string, id: string) => `${origin.replace(/\/+$/, "")}/verificar/${id}`;
+
+/**
+ * Conteúdo do QR: com o endereço do sistema, abre a página oficial de conferência
+ * (original, cancelado ou não encontrado). Sem ele, cai no texto legível offline.
+ */
+export function receiptQrText(d: MotoData, id: string | null, company: { name: string; cnpj: string }, origin?: string) {
+  if (origin && id) return verifyUrl(origin, id);
   const { number, code } = receiptNumber(id);
   return [
     `QUARK MOBILIDADE · ${number}`,

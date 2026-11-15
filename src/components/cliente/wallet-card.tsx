@@ -13,7 +13,7 @@ import { BOTH_SIZE, OwnerCardBack, OwnerCardBoth, OwnerCardFront, OwnerCardPdfPa
 
 export function useCardQr(d: MotoData, id: string, company: { name: string; cnpj: string }) {
   const [qr, setQr] = useState("");
-  const text = receiptQrText(d, id, company);
+  const text = receiptQrText(d, id, company, typeof window !== "undefined" ? window.location.origin : undefined);
   useEffect(() => {
     let alive = true;
     import("qrcode")
