@@ -2170,3 +2170,9 @@ update public.moto_products a2
        ) || jsonb_build_object('highlight', 'Para-brisa, encosto e 3 marchas'),
        updated_at = now()
  where a2.slug = 'a2' and coalesce(a2.specs ->> 'power', '') = '';
+
+-- A2: R$ 6.400 à vista ou 21x de R$ 385 (taxa de 2,23% ao mês) e ativa no catálogo.
+-- Só aplica enquanto a A2 ainda estiver sem preço: depois, vale o que for editado no CRM.
+update public.moto_products
+   set price = 6400, installments = 21, rate = 2.23, active = true, updated_at = now()
+ where slug = 'a2' and coalesce(price, 0) = 0;
