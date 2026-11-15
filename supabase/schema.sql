@@ -1492,4 +1492,90 @@ $$;
 revoke all on function public.get_public_motos() from public;
 grant execute on function public.get_public_motos() to anon, authenticated;
 
+-- -----------------------------------------------------------------------------
+-- Portal do cliente (/cliente): o comprador entra com CPF + 4 últimos dígitos do
+-- celular da venda e vê o manual, a garantia, o comprovante e o contrato.
+-- -----------------------------------------------------------------------------
+create table if not exists public.portal_attempts (
+  id bigint generated always as identity primary key,
+  key text not null,
+  ip text,
+  ok boolean not null default false,
+  at timestamptz not null default now()
+);
+create index if not exists portal_attempts_key_idx on public.portal_attempts (key, at);
+create index if not exists portal_attempts_ip_idx on public.portal_attempts (ip, at);
+-- Sem políticas: só as funções abaixo (security definer) leem e gravam.
+alter table public.portal_attempts enable row level security;
+
+create or replace function public.get_client_portal(p_cpf text, p_check text, p_ip text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_doc text := regexp_replace(coalesce(p_cpf, ''), '\D', '', 'g');
+  v_check text := regexp_replace(coalesce(p_check, ''), '\D', '', 'g');
+  v_key text;
+  v_ip text := left(nullif(trim(p_ip), ''), 64);
+  v_ok boolean;
+  v_sales jsonb;
+begin
+  if length(v_doc) not in (11, 14) or length(v_check) <> 4 then
+    return jsonb_build_object('ok', false, 'error', 'dados');
+  end if;
+  v_key := encode(sha256(convert_to('portal:' || v_doc, 'UTF8')), 'hex');
+
+  -- Limite contra tentativas: 5 erros por CPF ou 20 por IP em 15 minutos.
+  delete from public.portal_attempts where at < now() - interval '1 day';
+  if (select count(*) from public.portal_attempts where key = v_key and not ok and at > now() - interval '15 minutes') >= 5
+     or (v_ip is not null and (select count(*) from public.portal_attempts where ip = v_ip and not ok and at > now() - interval '15 minutes') >= 20) then
+    return jsonb_build_object('ok', false, 'error', 'bloqueado');
+  end if;
+
+  select exists (
+    select 1 from public.documents d
+    where d.kind = 'moto' and d.status in ('enviado', 'assinado')
+      and regexp_replace(coalesce(d.data -> 'client' ->> 'doc', ''), '\D', '', 'g') = v_doc
+      and right(regexp_replace(coalesce(d.data -> 'client' ->> 'phone', ''), '\D', '', 'g'), 4) = v_check
+  ) into v_ok;
+
+  insert into public.portal_attempts (key, ip, ok) values (v_key, v_ip, v_ok);
+  if not v_ok then
+    -- Mesmo erro para CPF inexistente e dígitos errados: não revela quem é cliente.
+    return jsonb_build_object('ok', false, 'error', 'nao_encontrado');
+  end if;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'id', d.id,
+           'status', d.status,
+           'created_at', d.created_at,
+           'completed_at', d.completed_at,
+           -- Sem a imagem da assinatura da empresa.
+           'data', d.data - 'contractorSignature',
+           'signed_at', s.signed_at,
+           'token', s.token
+         ) order by d.created_at desc), '[]'::jsonb)
+    into v_sales
+    from public.documents d
+    left join public.document_signers s on s.document_id = d.id and s.role = 'comprador'
+   where d.kind = 'moto' and d.status in ('enviado', 'assinado')
+     and regexp_replace(coalesce(d.data -> 'client' ->> 'doc', ''), '\D', '', 'g') = v_doc
+     and right(regexp_replace(coalesce(d.data -> 'client' ->> 'phone', ''), '\D', '', 'g'), 4) = v_check;
+
+  return jsonb_build_object(
+    'ok', true,
+    'sales', v_sales,
+    'company', (select jsonb_build_object(
+                  'company_name', data ->> 'company_name', 'legal_name', data ->> 'legal_name', 'cnpj', data ->> 'cnpj',
+                  'address', data ->> 'address', 'city', data ->> 'city', 'phone', data ->> 'phone', 'whatsapp', data ->> 'whatsapp',
+                  'email', data ->> 'email', 'instagram', data ->> 'instagram', 'logo_url', data ->> 'logo_url')
+                from public.settings where id = 1)
+  );
+end;
+$$;
+revoke all on function public.get_client_portal(text, text, text) from public;
+grant execute on function public.get_client_portal(text, text, text) to anon, authenticated;
+
 notify pgrst, 'reload schema';

@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, BookOpen, Camera, ChevronRight, FileText, LayoutGrid, Plus, ShieldAlert, ShieldCheck, UserPlus, Wallet } from "lucide-react";
+import { BadgeCheck, BookOpen, Camera, ChevronRight, FileText, LayoutGrid, Plus, ShieldAlert, ShieldCheck, UserPlus, UserRound, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
@@ -99,7 +99,21 @@ export default function MobilidadePage() {
               <h1 className="font-display text-[28px] leading-tight font-semibold tracking-tight sm:text-[34px]">Mobilidade elétrica</h1>
             </div>
           </div>
-          <div className="relative z-10 flex gap-2">
+          <div className="relative z-10 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const url = `${window.location.origin}/cliente`;
+                navigator.clipboard?.writeText(url).then(
+                  () => toast.success("Link da área do cliente copiado. O cliente entra com o CPF e os 4 últimos dígitos do celular da venda."),
+                  () => toast.message(url),
+                );
+              }}
+              title="Copiar o link da área do cliente para enviar ao comprador"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-white/[0.08] px-4 text-sm font-semibold ring-1 ring-white/15 backdrop-blur hover:bg-white/[0.14]"
+            >
+              <UserRound className="h-4 w-4" /> Área do cliente
+            </button>
             <Link href="/mobilidade/modelo/novo" className="inline-flex h-11 items-center gap-2 rounded-full bg-white/[0.08] px-4 text-sm font-semibold ring-1 ring-white/15 backdrop-blur hover:bg-white/[0.14]">
               <Plus className="h-4 w-4" /> Modelo
             </Link>
