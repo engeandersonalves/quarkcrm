@@ -2160,3 +2160,13 @@ select 'a2', 'A2', 'A charmosa retrô',
        0, 21, 2.1, false,
        coalesce((select max(position) + 1 from public.moto_products), 0)
 where not exists (select 1 from public.moto_products where slug = 'a2');
+
+-- A2 com a mesma ficha técnica da Cappuccino. Só preenche enquanto a ficha da A2 estiver
+-- vazia: depois de editada em Mobilidade → Modelos, este bloco não mexe mais nela.
+update public.moto_products a2
+   set specs = coalesce(
+         (select c.specs from public.moto_products c where c.slug = 'cappuccino' and coalesce(c.specs ->> 'power', '') <> ''),
+         '{"power":"1.000W","battery":"Lítio 60V 20Ah","range":"60 a 80 km","speed":"32 km/h","recharge":"~6 h (bivolt)","load":"180 kg","brakes":"Disco dianteiro","weight":"66 kg","security":"NFC + alarme","highlight":"3 marchas"}'::jsonb
+       ) || jsonb_build_object('highlight', 'Para-brisa, encosto e 3 marchas'),
+       updated_at = now()
+ where a2.slug = 'a2' and coalesce(a2.specs ->> 'power', '') = '';
