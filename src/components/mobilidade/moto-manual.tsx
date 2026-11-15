@@ -113,7 +113,6 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 const INK = "#0B1A12";
 const GREEN = "#1F9D55";
 const GRAD = "linear-gradient(95deg,#1FA06A 0%,#4FC38A 40%,#9FDB7C 70%,#D8E83C 100%)";
-const TOTAL = 7;
 const clean = (v: string | undefined | null) => (v ?? "").replace(/\s+/g, " ").trim();
 
 const CARD: CSSProperties = {
@@ -144,7 +143,7 @@ function Tile({ icon: I, size = 40, dark }: { icon: LucideIcon; size?: number; d
   );
 }
 
-function Page({ n, model, children, plain }: { n: number; model: string; children: ReactNode; plain?: boolean }) {
+function Page({ n, total, model, children, plain }: { n: number; total: number; model: string; children: ReactNode; plain?: boolean }) {
   return (
     <div data-pdf-page className="relative overflow-hidden font-[family-name:var(--font-outfit)] antialiased" style={{ width: PDF_PAGE_W, height: PDF_PAGE_H, color: INK }}>
       <div className="absolute inset-0 bg-[#F7F9F4]" />
@@ -153,17 +152,17 @@ function Page({ n, model, children, plain }: { n: number; model: string; childre
       <div className="absolute inset-x-0 top-0 h-[6px]" style={{ background: GRAD }} />
       <div className="relative flex h-full flex-col px-[54px] pt-[34px] pb-[24px] [&>*]:shrink-0">
         {!plain && (
-          <div className="flex h-[40px] items-center justify-between">
+          <div className="flex h-[44px] items-center justify-between">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/mob/ic/logo.png" alt="" className="h-[36px] w-auto" />
-            <span className="text-[10.5px] font-bold tracking-[0.18em] text-[#0B1A12]/50 uppercase">Manual do proprietário · {model}</span>
+            <img src="/mob/ic/logo.png" alt="" className="h-[40px] w-auto" />
+            <span className="text-[13px] font-bold tracking-[0.14em] text-[#0B1A12]/55 uppercase">Manual · {model}</span>
           </div>
         )}
         {children}
-        <div className="mt-auto flex h-[28px] items-end justify-between border-t border-[#0B1A12]/10 text-[10px] font-semibold text-[#0B1A12]/45">
+        <div className="mt-auto flex h-[32px] items-end justify-between border-t border-[#0B1A12]/10 text-[13px] font-semibold text-[#0B1A12]/50">
           <span>Quark Mobilidade · leia antes do primeiro uso</span>
           <span className="tabular-nums">
-            {String(n).padStart(2, "0")} / {String(TOTAL).padStart(2, "0")}
+            {String(n).padStart(2, "0")} / {String(total).padStart(2, "0")}
           </span>
         </div>
       </div>
@@ -174,14 +173,14 @@ function Page({ n, model, children, plain }: { n: number; model: string; childre
 function Section({ no, kicker, title, className }: { no: string; kicker: string; title: string; className?: string }) {
   return (
     <div className={cx("flex items-end gap-4", className)}>
-      <span className="text-[56px] leading-[0.8] font-extrabold tracking-[-0.06em] bg-clip-text text-transparent" style={{ backgroundImage: "linear-gradient(180deg,#36B26A,#B6D93A)" }}>
+      <span className="text-[64px] leading-[0.8] font-extrabold tracking-[-0.06em] bg-clip-text text-transparent" style={{ backgroundImage: "linear-gradient(180deg,#36B26A,#B6D93A)" }}>
         {no}
       </span>
       <div className="min-w-0 pb-0.5">
-        <p className="text-[11.5px] font-bold tracking-[0.2em] uppercase" style={{ color: GREEN }}>
+        <p className="text-[15px] font-bold tracking-[0.18em] uppercase" style={{ color: GREEN }}>
           {kicker}
         </p>
-        <h2 className="text-[30px] leading-[1.02] font-extrabold tracking-[-0.035em]">
+        <h2 className="text-[36px] leading-[1.02] font-extrabold tracking-[-0.035em]">
           {title}
           <span style={{ color: "#3FBF6A" }}>.</span>
         </h2>
@@ -191,19 +190,19 @@ function Section({ no, kicker, title, className }: { no: string; kicker: string;
 }
 
 function Sub({ children, className }: { children: ReactNode; className?: string }) {
-  return <p className={cx("text-[12px] font-bold tracking-[0.16em] text-[#0B1A12]/50 uppercase", className)}>{children}</p>;
+  return <p className={cx("text-[14px] font-bold tracking-[0.14em] text-[#0B1A12]/55 uppercase", className)}>{children}</p>;
 }
 
 /** Valor da ficha ou linha para preencher à mão. */
 function Fill({ v, w = 120, mono }: { v: string; w?: number; mono?: boolean }) {
-  return v ? <span className={cx(mono && "tracking-[0.06em] tabular-nums uppercase")}>{v}</span> : <span className="inline-block border-b border-[#0B1A12]/30" style={{ width: w, height: 14 }} />;
+  return v ? <span className={cx(mono && "tracking-[0.06em] tabular-nums uppercase")}>{v}</span> : <span className="inline-block border-b border-[#0B1A12]/30" style={{ width: w, height: 18 }} />;
 }
 
 /** Linha "rótulo ........ valor" (ou linha em branco para preencher). */
 function Row({ k, v, w = 140, mono, wide, h = 34 }: { k: string; v: string; w?: number; mono?: boolean; wide?: boolean; h?: number }) {
   return (
-    <div style={{ height: h }} className={cx("flex items-center justify-between gap-3 border-b border-dashed border-[#0B1A12]/12 text-[12px]", wide && "col-span-2")}>
-      <span className="shrink-0 text-[#0B1A12]/55">{k}</span>
+    <div style={{ height: h }} className={cx("flex items-center justify-between gap-3 border-b border-dashed border-[#0B1A12]/12 text-[16px]", wide && "col-span-2")}>
+      <span className="shrink-0 text-[#0B1A12]/60">{k}</span>
       <span className="min-w-0 truncate text-right font-semibold">
         <Fill v={clean(v)} w={w} mono={mono} />
       </span>
@@ -235,238 +234,213 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
   const end = owner.deliveryDate ? warrantyEnd({ delivery: { date: owner.deliveryDate, mode: "entrega", address: "" }, warrantyDays: days, date: owner.purchaseDate }) : "";
   const contact = [brand.whatsapp && formatPhone(brand.whatsapp), brand.instagram && `@${brand.instagram.replace(/^@/, "")}`].filter(Boolean).join(" · ");
 
-  return (
-    <div className="flex flex-col gap-6">
-      {/* ================================================================ 1 · capa */}
-      <Page n={1} model={name} plain>
+  /* As páginas são uma lista: a numeração e o sumário saem dela, mesmo quando uma página some. */
+  const pages: { id: string; toc?: string; plain?: boolean; body: ReactNode }[] = [];
+
+  pages.push({
+    id: "capa",
+    plain: true,
+    body: (
+      <>
         <div className="flex h-[54px] items-center justify-between">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/mob/ic/logo.png" alt="" className="h-[50px] w-auto" />
-          <span className="flex items-center gap-2 rounded-full bg-[#0B1A12] px-5 py-2.5 text-[12px] font-bold tracking-[0.14em] text-white uppercase">
-            <span className="h-2 w-2 rounded-full bg-[#E4F04A]" /> Manual do proprietário
+          <img src="/mob/ic/logo.png" alt="" className="h-[52px] w-auto" />
+          <span className="flex items-center gap-2 rounded-full bg-[#0B1A12] px-5 py-2.5 text-[14px] font-bold tracking-[0.12em] text-white uppercase">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#E4F04A]" /> Manual do proprietário
           </span>
         </div>
-
-        <div className="mt-14 text-center">
-          <p className="text-[13px] font-bold tracking-[0.3em] uppercase" style={{ color: GREEN }}>
+        <div className="mt-12 text-center">
+          <p className="text-[16px] font-bold tracking-[0.26em] uppercase" style={{ color: GREEN }}>
             {clean(p.kicker) || "Scooter elétrica"}
           </p>
-          <h1 className="mx-auto mt-2 max-w-[680px] text-[96px] leading-[0.88] font-extrabold tracking-[-0.055em] break-words">
+          <h1 className="mx-auto mt-2 max-w-[680px] text-[100px] leading-[0.88] font-extrabold tracking-[-0.055em] break-words">
             {name}
             <span style={{ color: "#3FBF6A" }}>.</span>
           </h1>
-          <p className="mx-auto mt-4 max-w-[500px] text-[17px] leading-snug text-[#0B1A12]/65">Uso seguro, cuidados com a bateria, manutenção e o seu certificado de garantia, tudo em um só lugar.</p>
+          <p className="mx-auto mt-5 max-w-[560px] text-[21px] leading-snug text-[#0B1A12]/70">Uso seguro, cuidados com a bateria, manutenção e o seu certificado de garantia, tudo em um só lugar.</p>
         </div>
-
-        <div className="relative mt-10 h-[470px]">
+        <div className="relative mt-8 h-[440px]">
           <div className="absolute top-[18px] left-1/2 h-[380px] w-[380px] -translate-x-1/2 rounded-full" style={{ background: "radial-gradient(closest-side, rgba(126,214,150,0.35), rgba(126,214,150,0))" }} />
           <div className="absolute top-[14px] left-1/2 h-[388px] w-[388px] -translate-x-1/2 rounded-full border border-dashed border-[#1F9D55]/25" />
           <div className="absolute bottom-[10px] left-1/2 h-[26px] w-[420px] -translate-x-1/2 rounded-[50%] bg-[#0B1A12]/20 blur-[14px]" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={p.photo || "/mob/cmp-scooter.webp"} data-fallback="/mob/cmp-scooter.webp" alt="" className="absolute top-0 left-1/2 h-[470px] w-[660px] -translate-x-1/2 object-contain drop-shadow-[0_26px_26px_rgba(16,52,32,0.25)]" />
+          <img src={p.photo || "/mob/cmp-scooter.webp"} data-fallback="/mob/cmp-scooter.webp" alt="" className="absolute top-0 left-1/2 h-[440px] w-[640px] -translate-x-1/2 object-contain drop-shadow-[0_26px_26px_rgba(16,52,32,0.25)]" />
         </div>
-
         <div className="grow" />
-        <div className="grid grid-cols-3 divide-x divide-[#0B1A12]/10 rounded-[22px] bg-white py-4" style={{ boxShadow: CARD.boxShadow, border: CARD.border }}>
+        <div className="grid grid-cols-3 divide-x divide-[#0B1A12]/10 rounded-[24px] bg-white py-5" style={{ boxShadow: CARD.boxShadow, border: CARD.border }}>
           {main.slice(0, 3).map((m) => ({ ...m, v: m.v.replace(/\s*\([^)]*\)\s*$/, "") })).map((x) => (
             <div key={x.k} className="flex items-center justify-center gap-3 px-3">
-              <Ic n={x.i} size={34} />
+              <Ic n={x.i} size={40} />
               <span className="min-w-0">
-                <span className={cx("line-clamp-2 block leading-tight font-extrabold", x.v.length > 14 ? "text-[14px]" : "text-[17px]")}>{x.v}</span>
-                <span className="block text-[11px] text-[#0B1A12]/55">{x.k}</span>
+                <span className={cx("line-clamp-2 block leading-tight font-extrabold", x.v.length > 14 ? "text-[17px]" : "text-[21px]")}>{x.v}</span>
+                <span className="block text-[14px] text-[#0B1A12]/60">{x.k}</span>
               </span>
             </div>
           ))}
         </div>
         {owner.name ? (
-          <p className="mt-4 mb-3 h-[18px] truncate text-center text-[13px] text-[#0B1A12]/60">
+          <p className="mt-4 mb-3 h-[22px] truncate text-center text-[16px] text-[#0B1A12]/65">
             Exemplar de <b className="text-[#0B1A12]">{clean(owner.name)}</b>
             {owner.chassis ? ` · chassi ${clean(owner.chassis).toUpperCase()}` : ""}
           </p>
         ) : (
-          <div className="mt-4 mb-3 h-[18px]" />
+          <div className="mt-4 mb-3 h-[22px]" />
         )}
-      </Page>
+      </>
+    ),
+  });
 
-      {/* =================================================== 2 · boas-vindas */}
-      <Page n={2} model={name}>
-        <div className="mt-8 grid grid-cols-[1.15fr_1fr] gap-8">
-          <div>
-            <p className="text-[12px] font-bold tracking-[0.2em] uppercase" style={{ color: GREEN }}>
-              Bem-vindo(a)
-            </p>
-            <h2 className="mt-1 text-[34px] leading-[1.02] font-extrabold tracking-[-0.04em]">
-              {owner.name ? `${clean(owner.name).split(" ")[0]}, a sua ${name} chegou` : `A sua ${name} chegou`}
-              <span style={{ color: "#3FBF6A" }}>.</span>
-            </h2>
-            <div className="mt-4 grid gap-3 text-[13.5px] leading-relaxed text-[#0B1A12]/75">
-              <p>Obrigado pela confiança. A sua scooter foi montada, testada e revisada pela nossa equipe antes da entrega.</p>
-              <p>Reserve alguns minutos para ler este manual: ele mostra como rodar com segurança, como cuidar da bateria para ela durar muitos anos e o que fazer se precisar de ajuda.</p>
-              <p>Guarde junto com a nota fiscal: a última página é o seu certificado de garantia.</p>
-            </div>
-            <p className="mt-5 text-[13px] font-bold">Equipe {clean(brand.company) || "Quark"}</p>
-          </div>
-          <Card className="self-start rounded-[22px] px-5 py-4">
-            <Sub>Neste manual</Sub>
-            <ol className="mt-3 grid gap-2.5">
-              {[
-                ["01", "Ficha técnica", "03"],
-                ["02", "Antes de rodar e segurança", "04"],
-                ["03", "Bateria e recarga", "05"],
-                ["04", "Manutenção e problemas", "06"],
-                ["05", "Certificado de garantia", "07"],
-              ].map(([no, t, pg]) => (
-                <li key={no} className="flex items-baseline gap-3 text-[13.5px]">
-                  <span className="w-6 font-extrabold" style={{ color: GREEN }}>
-                    {no}
-                  </span>
-                  <span className="flex-1 font-semibold">{t}</span>
-                  <span className="text-[#0B1A12]/40 tabular-nums">{pg}</span>
-                </li>
-              ))}
-            </ol>
-          </Card>
-        </div>
+  // Sumário: preenchido depois que todas as páginas existem.
+  const tocAt = pages.length;
+  pages.push({ id: "boas-vindas", body: null });
 
-        <Card className="mt-8 rounded-[24px] px-6 py-5">
+  pages.push({
+    id: "identificacao",
+    body: (
+      <>
+        <Section no="✓" kicker="Seus dados" title="Identificação do veículo" className="mt-7" />
+        <Card className="mt-6 rounded-[26px] px-7 py-5">
           <div className="flex items-center justify-between">
-            <Sub>Identificação do veículo</Sub>
-            <span className="text-[11px] text-[#0B1A12]/45">{owner.name ? "preenchido pela Quark" : "preencha na entrega"}</span>
+            <Sub>Ficha do veículo</Sub>
+            <span className="text-[14px] text-[#0B1A12]/50">{owner.name ? "preenchido pela Quark" : "preencha na entrega"}</span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-x-8">
-            <Row k="Proprietário" v={owner.name} w={360} wide />
+          <div className="mt-2 grid grid-cols-1">
             {[
-              ["CPF / CNPJ", owner.doc ? maskDoc(owner.doc) : "", 150],
-              ["Telefone", owner.phone ? formatPhone(owner.phone) : "", 140],
-              ["Modelo", name, 0],
-              ["Cor", owner.color, 120],
-              ["Ano", owner.year, 80],
-              ["Data de entrega", owner.deliveryDate ? dateBr(owner.deliveryDate) : "", 110],
-              ["Nº do chassi", owner.chassis, 170],
-              ["Nº do motor", owner.motorNo, 150],
-              ["Nº da bateria", owner.batteryNo, 150],
-              ["Nº do carregador", owner.chargerNo, 150],
-            ].map(([k, v, w]) => (
-              <Row key={k as string} k={k as string} v={v as string} w={w as number} mono={(k as string).startsWith("Nº")} />
+              ["Proprietário", owner.name, 380, false],
+              ["CPF / CNPJ", owner.doc ? maskDoc(owner.doc) : "", 200, false],
+              ["Telefone", owner.phone ? formatPhone(owner.phone) : "", 200, false],
+              ["Modelo", [name, clean(owner.color), clean(owner.year)].filter(Boolean).join(" · "), 0, false],
+              ["Data de entrega", owner.deliveryDate ? dateBr(owner.deliveryDate) : "", 160, false],
+              ["Nº do chassi", owner.chassis, 260, true],
+              ["Nº do motor", owner.motorNo, 260, true],
+              ["Nº da bateria", owner.batteryNo, 260, true],
+              ["Nº do carregador", owner.chargerNo, 260, true],
+            ].map(([k, v, w, mono]) => (
+              <Row key={k as string} k={k as string} v={v as string} w={w as number} mono={mono as boolean} h={50} />
             ))}
           </div>
         </Card>
-
         <div className="mt-6 grid grid-cols-3 gap-3">
           {[
-            [ShieldCheck, `${days} dias de garantia`, "defeitos de fabricação"],
-            [Package, "Entregue montada", "testada e revisada"],
-            [Phone, "Assistência local", contact || clean(brand.city) || "fale com a Quark"],
+            [ShieldCheck, `${days} dias`, "de garantia contra defeitos de fabricação"],
+            [Package, "Entregue montada", "testada e revisada pela nossa equipe"],
+            [Phone, "Assistência", contact || clean(brand.city) || "fale com a Quark"],
           ].map(([I, t, d]) => (
-            <Card key={t as string} className="flex items-center gap-3 rounded-[18px] px-4 py-3.5">
-              <Tile icon={I as LucideIcon} />
+            <Card key={t as string} className="rounded-[22px] px-5 py-5">
+              <Tile icon={I as LucideIcon} size={48} />
+              <p className="mt-3 text-[19px] leading-tight font-extrabold">{t as string}</p>
+              <p className="mt-1 line-clamp-2 text-[15px] leading-snug text-[#0B1A12]/60">{d as string}</p>
+            </Card>
+          ))}
+        </div>
+        <div className="grow" />
+        <p className="mb-2 text-center text-[15px] text-[#0B1A12]/55">Guarde este manual junto com o comprovante de compra.</p>
+      </>
+    ),
+  });
+
+  pages.push({
+    id: "ficha",
+    toc: "Ficha técnica",
+    body: (
+      <>
+        <Section no="01" kicker="Conheça a sua scooter" title="Ficha técnica" className="mt-7" />
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          {main.map((x) => (
+            <Card key={x.k} className="flex items-center gap-4 rounded-[22px] px-5 py-4">
+              <Ic n={x.i} size={46} />
               <span className="min-w-0">
-                <span className="block text-[14px] leading-tight font-extrabold">{t as string}</span>
-                <span className="line-clamp-2 block text-[11.5px] leading-snug text-[#0B1A12]/55">{d as string}</span>
+                <span className="line-clamp-2 block text-[20px] leading-tight font-extrabold">{x.v}</span>
+                <span className="mt-0.5 block text-[15px] text-[#0B1A12]/60">{x.k}</span>
               </span>
             </Card>
           ))}
         </div>
-
         <div className="grow" />
-        <div className="rounded-[24px] bg-[#0B1A12] px-7 py-6 text-white">
-          <p className="text-[12px] font-bold tracking-[0.2em] text-[#E4F04A] uppercase">Seus primeiros dias</p>
-          <div className="mt-4 grid grid-cols-3 gap-5">
+        <div className="mt-5 rounded-[22px] bg-[#0B1A12] px-7 py-6 text-[16px] leading-relaxed text-white/85">
+          <p className="mb-1 text-[17px] font-extrabold text-[#E4F04A]">Sobre a autonomia</p>O alcance informado é medido em condições ideais. Na prática, varia com o peso transportado, subidas, temperatura, calibragem dos pneus, paradas e o modo de condução.
+        </div>
+        <p className="mt-4 mb-2 text-[14px] leading-snug text-[#0B1A12]/55">Veículo autopropelido conforme a Resolução CONTRAN nº 996/2023 (até 1.000 W e 32 km/h). Especificações sujeitas a alteração pelo fabricante.</p>
+      </>
+    ),
+  });
+
+  if (extra.length)
+    pages.push({
+      id: "fabricante",
+      body: (
+        <>
+          <Section no="01" kicker="Ficha técnica" title="Especificações do fabricante" className="mt-7" />
+          <Card className="mt-6 rounded-[26px] px-7 py-3">
+            {extra.map((x, i) => (
+              <div key={x.k} className={cx("grid grid-cols-[200px_1fr] gap-5 py-3.5 text-[16px]", i > 0 && "border-t border-[#0B1A12]/[0.07]")}>
+                <span className="text-[#0B1A12]/60">{x.k}</span>
+                <span className="line-clamp-2 font-semibold">{x.v}</span>
+              </div>
+            ))}
+          </Card>
+        </>
+      ),
+    });
+
+  pages.push({
+    id: "antes",
+    toc: "Antes de rodar",
+    body: (
+      <>
+        <Section no="02" kicker="Antes de rodar" title="O que você recebe e o checklist" className="mt-7" />
+        <Card className="mt-6 rounded-[26px] px-7 py-6">
+          <div className="flex items-center gap-4">
+            <Tile icon={Package} size={48} />
+            <p className="text-[21px] font-extrabold">O que você recebe</p>
+          </div>
+          <ul className="mt-4 grid gap-2.5 text-[17px] text-[#0B1A12]/80">
+            {["Scooter montada, com guidão e retrovisores", "Bateria instalada e carregada", "Carregador original bivolt", "Chaves, controle do alarme e cartão NFC", "Este manual com o certificado de garantia"].map((t) => (
+              <li key={t} className="flex items-center gap-3">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#2FB061]" />
+                {t}
+              </li>
+            ))}
+          </ul>
+        </Card>
+        <Card className="mt-4 rounded-[26px] px-7 py-6">
+          <div className="flex items-center gap-4">
+            <Tile icon={ClipboardCheck} size={48} dark />
+            <div>
+              <p className="text-[21px] font-extrabold">Checklist de 1 minuto</p>
+              <p className="text-[15px] text-[#0B1A12]/60">Antes de cada saída</p>
+            </div>
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4">
             {[
-              ["1", "Carga completa", "Antes do primeiro passeio, carregue a bateria até 100%."],
-              ["2", "Comece devagar", "Nos primeiros 50 km, use o modo mais lento para se acostumar."],
-              ["3", "Reaperto aos 300 km", "Recomendamos um reaperto geral na oficina de sua preferência."],
-            ].map(([n, t, d]) => (
-              <div key={n}>
-                <span className="grid h-8 w-8 place-items-center rounded-full text-[13px] font-extrabold text-[#0B1A12]" style={{ background: GRAD }}>
-                  {n}
+              [BatteryCharging, "Carga da bateria", "confira no painel"],
+              [CircleDot, "Freios", "aperte os dois manetes"],
+              [Gauge, "Pneus", "calibragem e desgaste"],
+              [Lightbulb, "Luzes e buzina", "farol, setas e lanterna"],
+              [Wrench, "Parafusos", "guidão, rodas e banco"],
+              [MoveHorizontal, "Alinhamento", "guidão e rodas retos"],
+            ].map(([I, t, d]) => (
+              <div key={t as string} className="flex items-center gap-3.5">
+                <Tile icon={I as LucideIcon} size={46} />
+                <span>
+                  <span className="block text-[17px] leading-tight font-bold">{t as string}</span>
+                  <span className="block text-[15px] text-[#0B1A12]/60">{d as string}</span>
                 </span>
-                <p className="mt-2.5 text-[14px] font-extrabold">{t}</p>
-                <p className="mt-1 text-[11.5px] leading-relaxed text-white/65">{d}</p>
               </div>
             ))}
           </div>
-        </div>
-      </Page>
+        </Card>
+      </>
+    ),
+  });
 
-      {/* ===================================================== 3 · ficha técnica */}
-      <Page n={3} model={name}>
-        <Section no="01" kicker="Conheça a sua scooter" title="Ficha técnica" className="mt-6" />
-        <div className="mt-5 grid grid-cols-4 gap-2.5">
-          {main.map((x) => (
-            <Card key={x.k} className="rounded-[18px] px-3.5 py-3">
-              <Ic n={x.i} size={32} />
-              <p className="mt-2 line-clamp-2 text-[14.5px] leading-tight font-extrabold">{x.v}</p>
-              <p className="mt-0.5 text-[10.5px] text-[#0B1A12]/55">{x.k}</p>
-            </Card>
-          ))}
-        </div>
-        {extra.length > 0 && (
-          <Card className="mt-4 rounded-[22px] px-6 py-3">
-            <Sub className="mb-1">Especificações do fabricante</Sub>
-            <div className="grid grid-cols-2 gap-x-8">
-              {extra.map((x) => (
-                <div key={x.k} className="grid grid-cols-[110px_1fr] gap-3 border-b border-[#0B1A12]/[0.06] py-2 text-[12px]">
-                  <span className="text-[#0B1A12]/55">{x.k}</span>
-                  <span className="line-clamp-2 font-semibold">{x.v}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-        <div className="grow" />
-        <div className="mt-4 rounded-[18px] bg-[#0B1A12] px-6 py-4 text-[12px] leading-relaxed text-white/80">
-          <b className="text-[#E4F04A]">Sobre a autonomia:</b> o alcance informado é medido em condições ideais. Na prática, varia com o peso transportado, subidas, temperatura, calibragem dos pneus, paradas e o modo de condução.
-        </div>
-        <p className="mt-3 mb-2 text-[11px] text-[#0B1A12]/45">Veículo autopropelido conforme a Resolução CONTRAN nº 996/2023 (até 1.000 W e 32 km/h). Especificações sujeitas a alteração pelo fabricante.</p>
-      </Page>
-
-      {/* ====================================================== 4 · antes de rodar */}
-      <Page n={4} model={name}>
-        <Section no="02" kicker="Antes de rodar" title="Checklist e segurança" className="mt-6" />
-        <div className="mt-5 grid grid-cols-[1fr_1.15fr] gap-3">
-          <Card className="rounded-[22px] px-5 py-4">
-            <div className="flex items-center gap-3">
-              <Tile icon={Package} />
-              <p className="text-[15px] font-extrabold">O que você recebe</p>
-            </div>
-            <ul className="mt-3 grid gap-1.5 text-[12.5px] text-[#0B1A12]/75">
-              {["Scooter montada, com guidão e retrovisores", "Bateria instalada e carregada", "Carregador original bivolt", "Chaves, controle do alarme e cartão NFC", "Este manual com o certificado de garantia"].map((t) => (
-                <li key={t} className="flex gap-2">
-                  <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#2FB061]" />
-                  {t}
-                </li>
-              ))}
-            </ul>
-          </Card>
-          <Card className="rounded-[22px] px-5 py-4">
-            <div className="flex items-center gap-3">
-              <Tile icon={ClipboardCheck} dark />
-              <p className="text-[15px] font-extrabold">Checklist de 1 minuto, antes de sair</p>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
-              {[
-                [BatteryCharging, "Carga da bateria", "confira no painel"],
-                [CircleDot, "Freios", "aperte os dois manetes"],
-                [Gauge, "Pneus", "calibragem e desgaste"],
-                [Lightbulb, "Luzes e buzina", "farol, setas e lanterna"],
-                [Wrench, "Parafusos", "guidão, rodas e banco"],
-                [MoveHorizontal, "Alinhamento", "guidão e rodas retos"],
-              ].map(([I, t, d]) => (
-                <div key={t as string} className="flex items-center gap-2.5">
-                  <Tile icon={I as LucideIcon} size={32} />
-                  <span>
-                    <span className="block text-[12.5px] leading-tight font-bold">{t as string}</span>
-                    <span className="block text-[10.5px] text-[#0B1A12]/55">{d as string}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        <Sub className="mt-7">Regras de segurança</Sub>
-        <div className="mt-3 grid grid-cols-3 gap-2.5">
+  pages.push({
+    id: "seguranca",
+    toc: "Segurança",
+    body: (
+      <>
+        <Section no="03" kicker="Segurança" title="Regras para rodar tranquilo" className="mt-7" />
+        <div className="mt-6 grid grid-cols-2 gap-3">
           {[
             [HardHat, "Use sempre capacete", "e acenda o farol à noite e na chuva"],
             [Weight, "Respeite a carga máxima", s.load ? `até ${clean(s.load).replace(/^at[ée]\s*/i, "")}, incluindo o garupa` : "indicada na ficha técnica"],
@@ -475,65 +449,67 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
             [Droplets, "Proteja da água", "sem jato de alta pressão e sem alagamentos"],
             [Baby, "Longe de crianças", "chaves, carregador e bateria"],
           ].map(([I, t, d]) => (
-            <Card key={t as string} className="flex items-center gap-3 rounded-[18px] px-4 py-3.5">
-              <Tile icon={I as LucideIcon} />
+            <Card key={t as string} className="flex items-center gap-4 rounded-[22px] px-5 py-4">
+              <Tile icon={I as LucideIcon} size={48} />
               <span className="min-w-0">
-                <span className="block text-[13px] leading-tight font-extrabold">{t as string}</span>
-                <span className="block text-[10.5px] leading-snug text-[#0B1A12]/55">{d as string}</span>
+                <span className="block text-[18px] leading-tight font-extrabold">{t as string}</span>
+                <span className="mt-0.5 block text-[15px] leading-snug text-[#0B1A12]/60">{d as string}</span>
               </span>
             </Card>
           ))}
         </div>
-
-        <Card className="mt-6 rounded-[22px] px-6 py-4">
-          <div className="flex items-center gap-3">
-            <Tile icon={Route} dark />
-            <p className="text-[15px] font-extrabold">Onde e como rodar</p>
+        <Card className="mt-4 rounded-[26px] px-7 py-6">
+          <div className="flex items-center gap-4">
+            <Tile icon={Route} size={48} dark />
+            <p className="text-[21px] font-extrabold">Onde e como rodar</p>
           </div>
-          <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1.5 text-[12px] text-[#0B1A12]/75">
-            {["Siga as regras de trânsito e as normas da sua cidade.", "Comece no modo mais lento até se acostumar.", "Freie com os dois manetes, com antecedência.", "Em piso molhado, reduza a velocidade.", "Não transporte objetos que tirem o equilíbrio.", "Desligue e retire a chave ao estacionar."].map((t) => (
-              <li key={t} className="flex gap-2">
-                <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#2FB061]" />
+          <ul className="mt-4 grid gap-2.5 text-[16.5px] text-[#0B1A12]/80">
+            {["Siga as regras de trânsito e as normas da sua cidade.", "Comece no modo mais lento até se acostumar.", "Freie com os dois manetes, com antecedência.", "Em piso molhado, reduza a velocidade.", "Não leve objetos que tirem o equilíbrio.", "Desligue e retire a chave ao estacionar."].map((t) => (
+              <li key={t} className="flex items-center gap-3">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#2FB061]" />
                 {t}
               </li>
             ))}
           </ul>
         </Card>
-
         <div className="grow" />
-        <div className="mb-2 flex items-center gap-5 rounded-[24px] bg-[#0B1A12] px-7 py-5 text-white">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-white/10 text-[#E4F04A]">
-            <Phone className="h-6 w-6" strokeWidth={2.2} />
+        <div className="mt-4 mb-2 flex items-center gap-5 rounded-[24px] bg-[#0B1A12] px-7 py-5 text-white">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[16px] bg-white/10 text-[#E4F04A]">
+            <Phone className="h-7 w-7" strokeWidth={2.2} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-bold tracking-[0.2em] text-[#E4F04A] uppercase">Precisa de ajuda?</p>
-            <p className="mt-1 text-[17px] font-extrabold">Fale com a assistência {clean(brand.company) || "Quark"}</p>
-            <p className="mt-0.5 truncate text-[12px] text-white/65">{[contact, clean(brand.city)].filter(Boolean).join(" · ") || "Use os contatos da sua nota fiscal"}</p>
+            <p className="text-[14px] font-bold tracking-[0.18em] text-[#E4F04A] uppercase">Precisa de ajuda?</p>
+            <p className="mt-0.5 text-[20px] font-extrabold">Fale com a {clean(brand.company) || "Quark"}</p>
+            <p className="mt-0.5 truncate text-[15px] text-white/70">{[contact, clean(brand.city)].filter(Boolean).join(" · ") || "Use os contatos do seu comprovante"}</p>
           </div>
-          <Ic n="scooter" size={64} />
         </div>
-      </Page>
+      </>
+    ),
+  });
 
-      {/* ========================================================== 5 · bateria */}
-      <Page n={5} model={name}>
-        <Section no="03" kicker="Bateria e recarga" title="Cuide bem e ela dura anos" className="mt-6" />
-        <Card className="mt-5 rounded-[24px] px-6 py-5">
-          <div className="flex items-center gap-3">
-            <Ic n="plug" size={36} />
-            <p className="text-[16px] font-extrabold">Como carregar, passo a passo</p>
-            <span className="ml-auto rounded-full bg-[#EAF6EC] px-3 py-1 text-[11.5px] font-bold whitespace-nowrap" style={{ color: GREEN }}>
+  pages.push({
+    id: "bateria",
+    toc: "Bateria e recarga",
+    body: (
+      <>
+        <Section no="04" kicker="Bateria e recarga" title="Cuide bem e ela dura anos" className="mt-7" />
+        <Card className="mt-6 rounded-[26px] px-7 py-6">
+          <div className="flex items-center gap-4">
+            <Ic n="plug" size={44} />
+            <p className="text-[21px] font-extrabold">Como carregar</p>
+            <span className="ml-auto rounded-full bg-[#EAF6EC] px-4 py-1.5 text-[15px] font-bold whitespace-nowrap" style={{ color: GREEN }}>
               Recarga completa: {clean(s.recharge) || "cerca de 6 h"}
             </span>
           </div>
-          <ol className="mt-4 grid gap-3">
+          <ol className="mt-5 grid gap-3.5">
             {[
               "Desligue a scooter e retire a chave.",
               "Conecte primeiro o carregador na scooter (ou na bateria).",
               "Depois, ligue o carregador numa tomada de 3 pinos, de 100 a 240 V.",
-              "Quando a luz indicar carga completa, tire da tomada e depois desconecte da scooter.",
+              "Com a carga completa, tire da tomada e depois desconecte da scooter.",
             ].map((t, i) => (
-              <li key={t} className="flex items-center gap-3 text-[13px]">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[12px] font-extrabold" style={{ background: GRAD }}>
+              <li key={t} className="flex items-center gap-4 text-[17px]">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[16px] font-extrabold" style={{ background: GRAD }}>
                   {i + 1}
                 </span>
                 {t}
@@ -541,153 +517,175 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
             ))}
           </ol>
         </Card>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-3">
           {[
-            [BatteryCharging, "No dia a dia", "Recarregue ao chegar perto de 20%. Não espere zerar e não deixe descarregada por vários dias."],
-            [Thermometer, "Temperatura ideal", "Guarde e carregue em local fresco e ventilado, por volta de 25 °C, longe do sol forte e da chuva."],
-            [Archive, "Se for guardar", "Desconectada, pode ficar armazenada de 5 a 6 meses. Ligada ao carregador, recarregue de 2 a 3 vezes por mês."],
-            [Recycle, "Descarte correto", "Nunca no lixo comum: leve a um ponto de coleta autorizado ou à Quark. Não desmonte nem abra a bateria."],
+            [BatteryCharging, "No dia a dia", "Recarregue perto de 20%. Não espere zerar nem deixe descarregada por dias."],
+            [Thermometer, "Temperatura", "Guarde e carregue em local fresco e ventilado, perto de 25 °C, longe do sol forte."],
+            [Archive, "Se for guardar", "Desconectada, aguenta de 5 a 6 meses. Ligada ao carregador, recarregue 2 a 3 vezes por mês."],
+            [Recycle, "Descarte correto", "Nunca no lixo comum: leve a um ponto de coleta ou à Quark. Não abra a bateria."],
           ].map(([I, t, d]) => (
-            <Card key={t as string} className="rounded-[20px] px-5 py-4">
-              <div className="flex items-center gap-3">
-                <Tile icon={I as LucideIcon} size={36} />
-                <p className="text-[14px] font-extrabold">{t as string}</p>
+            <Card key={t as string} className="rounded-[22px] px-6 py-5">
+              <div className="flex items-center gap-3.5">
+                <Tile icon={I as LucideIcon} size={44} />
+                <p className="text-[19px] font-extrabold">{t as string}</p>
               </div>
-              <p className="mt-2 text-[12px] leading-relaxed text-[#0B1A12]/70">{d as string}</p>
+              <p className="mt-2.5 text-[15.5px] leading-relaxed text-[#0B1A12]/75">{d as string}</p>
             </Card>
           ))}
         </div>
         <div className="grow" />
-        <div className="mt-4 mb-2 rounded-[20px] bg-[#0B1A12] px-6 py-5 text-[12.5px] leading-relaxed text-white/80">
-          <p className="mb-1 text-[13px] font-extrabold text-[#E4F04A]">Para carregar com segurança</p>
-          Carregue em local ventilado e à vista, de preferência durante o dia ou no início da noite. Não use extensões nem adaptadores: ligue direto na tomada de 3 pinos. Se notar cheiro de queimado, calor excessivo ou inchaço na bateria, desligue e fale com a assistência.
+        <div className="mt-4 mb-2 rounded-[22px] bg-[#0B1A12] px-7 py-5 text-[15.5px] leading-relaxed text-white/85">
+          <p className="mb-1 text-[17px] font-extrabold text-[#E4F04A]">Para carregar com segurança</p>
+          Carregue em local ventilado e à vista. Ligue direto na tomada, sem extensões. Se notar cheiro de queimado, calor excessivo ou a bateria estufada, desligue e fale com a assistência.
         </div>
-      </Page>
+      </>
+    ),
+  });
 
-      {/* ===================================================== 6 · manutenção */}
-      <Page n={6} model={name}>
-        <Section no="04" kicker="Manutenção" title="Plano de cuidados e problemas" className="mt-6" />
-        <Card className="mt-5 overflow-hidden rounded-[20px]">
-          <div className="grid grid-cols-[150px_1fr] bg-[#0B1A12] px-5 py-2.5 text-[10.5px] font-bold tracking-[0.12em] text-white uppercase">
+  pages.push({
+    id: "manutencao",
+    toc: "Manutenção",
+    body: (
+      <>
+        <Section no="05" kicker="Manutenção" title="Plano de cuidados" className="mt-7" />
+        <Card className="mt-6 overflow-hidden rounded-[24px]">
+          <div className="grid grid-cols-[200px_1fr] bg-[#0B1A12] px-7 py-3.5 text-[14px] font-bold tracking-[0.12em] text-white uppercase">
             <span>Quando</span>
             <span>O que fazer</span>
           </div>
           {[
             ["Toda semana", "Calibrar os pneus e conferir o desgaste."],
-            ["Todo mês", "Conferir freios (pastilhas e lonas), conectores elétricos e parafusos."],
+            ["Todo mês", "Conferir freios, conectores elétricos e parafusos."],
             ...revisionPlan().map((r) => [r.when, `Revisão recomendada: ${r.what.charAt(0).toLowerCase()}${r.what.slice(1)}.`]),
           ].map(([w, t], i) => (
-            <div key={w} className={cx("grid grid-cols-[150px_1fr] px-5 py-2 text-[12px]", i > 0 && "border-t border-[#0B1A12]/[0.07]")}>
+            <div key={w} className={cx("grid grid-cols-[200px_1fr] px-7 py-4 text-[16.5px]", i > 0 && "border-t border-[#0B1A12]/[0.07]")}>
               <span className="font-extrabold">{w}</span>
-              <span className="text-[#0B1A12]/75">{t}</span>
+              <span className="text-[#0B1A12]/80">{t}</span>
             </div>
           ))}
         </Card>
-        <p className="mt-2 text-[10.5px] text-[#0B1A12]/45">A Quark não oferece serviço de revisão: recomendamos que você revise a scooter onde preferir, quando achar necessário. Revisões e peças de desgaste natural não fazem parte da garantia.</p>
+        <p className="mt-3 text-[15px] leading-relaxed text-[#0B1A12]/60">A Quark não oferece serviço de revisão: recomendamos que você revise a scooter onde preferir, quando achar necessário. Revisões e peças de desgaste natural não fazem parte da garantia.</p>
+        <Card className="mt-6 rounded-[24px] px-7 py-6">
+          <div className="flex items-center gap-3">
+            <TriangleAlert className="h-6 w-6 text-[#E8432A]" />
+            <p className="text-[20px] font-extrabold">Advertências</p>
+          </div>
+          <ul className="mt-3 grid gap-2.5 text-[16px] leading-snug text-[#0B1A12]/80">
+            {["Alterar a parte elétrica, aumentar a potência ou violar lacres pode causar acidentes e anula a garantia.", "Use apenas peças originais.", "Não use a scooter com componentes danificados.", "Faça a manutenção descrita neste manual."].map((t) => (
+              <li key={t} className="flex gap-3">
+                <span className="mt-[8px] h-2 w-2 shrink-0 rounded-full bg-[#E8432A]" />
+                {t}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </>
+    ),
+  });
 
-        <Sub className="mt-5">Se algo não funcionar</Sub>
-        <div className="mt-2.5 grid gap-2">
+  pages.push({
+    id: "problemas",
+    toc: "Se algo não funcionar",
+    body: (
+      <>
+        <Section no="06" kicker="Ajuda rápida" title="Se algo não funcionar" className="mt-7" />
+        <div className="mt-6 grid gap-3">
           {[
             [Power, "A scooter não liga", "Conector da bateria solto, chave da bateria desligada, fusível queimado ou bateria descarregada."],
-            [PlugZap, "A bateria não carrega", "Carregador com defeito, mau contato na porta de carga ou célula interna da bateria danificada."],
+            [PlugZap, "A bateria não carrega", "Carregador com defeito, mau contato na porta de carga ou célula da bateria danificada."],
             [Cog, "O motor não funciona", "Acelerador com defeito, fiação rompida, controlador danificado ou corte dos freios acionado."],
             [Route, "A autonomia diminuiu", "Pneus murchos, bateria envelhecida, excesso de peso, frio ou freio arrastando."],
-            [TriangleAlert, "Código de erro no painel", "Fiação solta, sensor Hall do motor danificado ou falha de contato no controlador."],
+            [TriangleAlert, "Erro no painel", "Fiação solta, sensor do motor danificado ou falha de contato no controlador."],
           ].map(([I, t, d]) => (
-            <Card key={t as string} className="grid grid-cols-[34px_170px_1fr] items-center gap-3 rounded-[16px] px-4 py-2.5">
-              <Tile icon={I as LucideIcon} size={32} />
-              <span className="text-[12.5px] font-extrabold">{t as string}</span>
-              <span className="text-[11.5px] leading-snug text-[#0B1A12]/65">{d as string}</span>
+            <Card key={t as string} className="flex items-start gap-4 rounded-[22px] px-6 py-4">
+              <Tile icon={I as LucideIcon} size={46} />
+              <span className="min-w-0">
+                <span className="block text-[18px] font-extrabold">{t as string}</span>
+                <span className="mt-0.5 block text-[15.5px] leading-snug text-[#0B1A12]/70">{d as string}</span>
+              </span>
             </Card>
           ))}
         </div>
-        <p className="mt-2 text-[10.5px] text-[#0B1A12]/45">Não abra a bateria nem o controlador: o diagnóstico e o reparo são feitos pela assistência técnica, caso a caso.</p>
-
         <div className="grow" />
-        <Card className="mt-4 mb-2 rounded-[18px] px-5 py-3.5">
-          <div className="flex items-center gap-2.5">
-            <TriangleAlert className="h-4 w-4 text-[#E8432A]" />
-            <p className="text-[13px] font-extrabold">Advertências</p>
-          </div>
-          <p className="mt-1 text-[11px] leading-relaxed text-[#0B1A12]/65">
-            Alterações na parte elétrica, aumento de potência ou violação de lacres podem causar danos ou lesões e anulam a garantia · Use apenas peças originais · Não use a scooter com componentes danificados · Faça a manutenção periódica descrita
-            neste manual.
-          </p>
-        </Card>
-      </Page>
+        <p className="mt-4 mb-2 rounded-[20px] bg-[#EAF6EC] px-6 py-4 text-[15.5px] leading-relaxed text-[#0B1A12]/80">
+          <b>Não abra a bateria nem o controlador.</b> O diagnóstico e o reparo são feitos pela assistência técnica, caso a caso{contact ? ` (${contact})` : ""}.
+        </p>
+      </>
+    ),
+  });
 
-      {/* ============================================= 7 · certificado de garantia */}
-      <Page n={7} model={name}>
+  pages.push({
+    id: "certificado",
+    toc: "Certificado de garantia",
+    body: (
+      <>
         <div className="relative mt-3 rounded-[28px] p-[2px]" style={{ background: "linear-gradient(135deg,#C9A84A,#E4F04A 30%,#4FC38A 65%,#C9A84A)" }}>
-          <div className="rounded-[26px] bg-[#FDFDF9] px-8 pt-5 pb-5">
+          <div className="rounded-[26px] bg-[#FDFDF9] px-8 pt-6 pb-6">
             <div className="flex items-start justify-between gap-6">
               <div>
-                <p className="text-[11px] font-bold tracking-[0.3em] uppercase" style={{ color: GREEN }}>
+                <p className="text-[14px] font-bold tracking-[0.26em] uppercase" style={{ color: GREEN }}>
                   Quark Mobilidade
                 </p>
-                <h2 className="mt-1 text-[38px] leading-none font-extrabold tracking-[-0.04em]">Certificado de garantia</h2>
-                <p className="mt-2 max-w-[440px] text-[12.5px] leading-relaxed text-[#0B1A12]/65">
-                  Garantia de <b className="text-[#0B1A12]">{days} dias</b> contra defeitos de fabricação, contados da entrega, para o veículo e o proprietário abaixo.
+                <h2 className="mt-1 text-[42px] leading-none font-extrabold tracking-[-0.04em]">Certificado de garantia</h2>
+                <p className="mt-2.5 max-w-[470px] text-[16px] leading-snug text-[#0B1A12]/70">
+                  <b className="text-[#0B1A12]">{days} dias</b> contra defeitos de fabricação, contados da entrega, para o veículo e o proprietário abaixo.
                 </p>
               </div>
-              <div className="relative grid h-[104px] w-[104px] shrink-0 place-items-center">
+              <div className="relative grid h-[112px] w-[112px] shrink-0 place-items-center">
                 <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#C9A84A,#E4F04A,#9FDB7C,#4FC38A,#C9A84A)]" />
                 <div className="absolute inset-[4px] rounded-full bg-[#0B1A12]" />
                 <div className="absolute inset-[9px] rounded-full border border-dashed border-[#E4F04A]/50" />
                 <div className="relative text-center text-white">
-                  <p className="text-[8px] font-bold tracking-[0.26em] text-[#E4F04A] uppercase">Garantia</p>
-                  <p className="text-[34px] leading-[0.9] font-extrabold tracking-[-0.05em]">{days}</p>
-                  <p className="text-[9px] font-bold tracking-[0.22em] uppercase">dias</p>
+                  <p className="text-[10px] font-bold tracking-[0.2em] text-[#E4F04A] uppercase">Garantia</p>
+                  <p className="text-[38px] leading-[0.9] font-extrabold tracking-[-0.05em]">{days}</p>
+                  <p className="text-[11px] font-bold tracking-[0.2em] uppercase">dias</p>
                 </div>
               </div>
             </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-x-8">
-              <Row k="Proprietário" v={owner.name} w={380} wide h={31} />
+            <div className="mt-4 grid grid-cols-2 gap-x-8">
+              <Row k="Proprietário" v={owner.name} w={420} wide h={40} />
               {[
                 ["CPF / CNPJ", owner.doc ? (owner.doc.replace(/\D/g, "").length > 11 ? formatDoc(owner.doc) : maskDoc(owner.doc)) : "", 150, false],
-                ["Telefone", owner.phone ? formatPhone(owner.phone) : "", 140, false],
-                ["Cidade", owner.city, 140, false],
+                ["Telefone", owner.phone ? formatPhone(owner.phone) : "", 150, false],
                 ["Modelo", [name, clean(owner.color), clean(owner.year)].filter(Boolean).join(" · "), 0, false],
-                ["Nº do chassi", owner.chassis, 170, true],
-                ["Nº do motor", owner.motorNo, 150, true],
-                ["Nº da bateria", owner.batteryNo, 150, true],
-                ["Nº do carregador", owner.chargerNo, 150, true],
+                ["Cidade", owner.city, 150, false],
+                ["Chassi", owner.chassis, 180, true],
+                ["Motor", owner.motorNo, 170, true],
+                ["Bateria", owner.batteryNo, 170, true],
+                ["Carregador", owner.chargerNo, 170, true],
               ].map(([k, v, w, mono]) => (
-                <Row key={k as string} k={k as string} v={v as string} w={w as number} mono={mono as boolean} h={31} />
+                <Row key={k as string} k={k as string} v={v as string} w={w as number} mono={mono as boolean} h={40} />
               ))}
             </div>
-
-            <div className="mt-3.5 grid grid-cols-3 gap-2.5">
+            <div className="mt-4 grid grid-cols-3 gap-3">
               {[
                 ["Compra", owner.purchaseDate ? dateBr(owner.purchaseDate) : ""],
                 ["Entrega · início", owner.deliveryDate ? dateBr(owner.deliveryDate) : ""],
                 ["Válida até", end ? dateBr(end) : ""],
               ].map(([k, v], i) => (
-                <div key={k} className={cx("rounded-[16px] px-4 py-2.5", i === 2 ? "bg-[#0B1A12] text-white" : "bg-[#F1F6EE]")}>
-                  <p className={cx("text-[10px] font-bold tracking-[0.16em] uppercase", i === 2 ? "text-[#E4F04A]" : "text-[#0B1A12]/50")}>{k}</p>
-                  <p className="mt-1 text-[17px] font-extrabold">{v || <span className={cx("inline-block w-[110px] border-b", i === 2 ? "border-white/40" : "border-[#0B1A12]/30")} style={{ height: 16 }} />}</p>
+                <div key={k} className={cx("rounded-[18px] px-5 py-3", i === 2 ? "bg-[#0B1A12] text-white" : "bg-[#F1F6EE]")}>
+                  <p className={cx("text-[13px] font-bold tracking-[0.12em] uppercase", i === 2 ? "text-[#E4F04A]" : "text-[#0B1A12]/55")}>{k}</p>
+                  <p className="mt-1 text-[21px] font-extrabold">{v || <span className={cx("inline-block w-[120px] border-b", i === 2 ? "border-white/40" : "border-[#0B1A12]/30")} style={{ height: 20 }} />}</p>
                 </div>
               ))}
             </div>
           </div>
         </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-3">
           {[
             [ShieldCheck, "Está coberto", COVERS_SHORT, "#1F9D55"],
             [TriangleAlert, "Não está coberto", EXCLUDES_SHORT, "#E8432A"],
           ].map(([I, t, list, color]) => {
             const Icon = I as LucideIcon;
             return (
-              <Card key={t as string} className="rounded-[18px] px-5 py-3.5">
-                <p className="flex items-center gap-2 text-[12.5px] font-extrabold">
-                  <Icon className="h-4 w-4" style={{ color: color as string }} /> {t as string}
+              <Card key={t as string} className="rounded-[22px] px-6 py-4">
+                <p className="flex items-center gap-2 text-[17px] font-extrabold">
+                  <Icon className="h-5 w-5" style={{ color: color as string }} /> {t as string}
                 </p>
-                <ul className="mt-1.5 grid gap-0.5 text-[11px] text-[#0B1A12]/70">
+                <ul className="mt-2 grid gap-1 text-[14.5px] leading-snug text-[#0B1A12]/75">
                   {(list as string[]).map((x) => (
-                    <li key={x} className="flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: color as string }} />
+                    <li key={x} className="flex items-center gap-2.5">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color as string }} />
                       {x}
                     </li>
                   ))}
@@ -696,39 +694,96 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
             );
           })}
         </div>
-        <p className="mt-2 text-[10px] text-[#0B1A12]/45">Constatado o defeito de fabricação, o reparo ou a troca da peça é feito sem custo em até 30 dias (CDC, art. 18, § 1º). Revisões não fazem parte da garantia.</p>
-
-        <Card className="mt-2.5 flex items-center gap-4 rounded-[18px] px-5 py-3">
-          <Tile icon={Award} dark />
-          <p className="min-w-0 flex-1 text-[11.5px] leading-relaxed text-[#0B1A12]/70">
-            <b className="text-[#0B1A12]">Como acionar:</b> fale com a assistência {contact ? `(${contact})` : "Quark"}, apresente este certificado e a nota fiscal e leve a scooter à assistência
-            {brand.city ? ` em ${clean(brand.city)}` : ""}. Esta garantia compreende a garantia legal de 90 dias para bens duráveis (CDC, art. 26, II).
+        <Card className="mt-3 flex items-center gap-4 rounded-[22px] px-6 py-4">
+          <Tile icon={Award} size={46} dark />
+          <p className="min-w-0 flex-1 text-[14.5px] leading-snug text-[#0B1A12]/75">
+            <b className="text-[#0B1A12]">Como acionar:</b> fale com a assistência{contact ? ` (${contact})` : ""} e apresente este certificado. O reparo ou a troca da peça com defeito é feito sem custo em até 30 dias (CDC, art. 18).
           </p>
         </Card>
-
-        <div className="mt-3 grid grid-cols-2 gap-10">
+        <div className="grow" />
+        <div className="mt-4 grid grid-cols-2 gap-10">
           <div className="min-w-0 text-center">
-            <div className="h-[50px]" />
-            <div className="border-t border-[#0B1A12]/40 pt-1.5">
-              <p className="truncate text-[11.5px] font-bold">{clean(brand.legalName) || clean(brand.company)}</p>
-              <p className="h-[15px] truncate text-[10px] text-[#0B1A12]/55">{brand.cnpj ? `CNPJ ${formatDoc(brand.cnpj)}` : "Vendedora"}</p>
+            <div className="h-[40px]" />
+            <div className="border-t border-[#0B1A12]/40 pt-2">
+              <p className="truncate text-[15px] font-bold">{clean(brand.legalName) || clean(brand.company)}</p>
+              <p className="h-[18px] truncate text-[13px] text-[#0B1A12]/60">{brand.cnpj ? `CNPJ ${formatDoc(brand.cnpj)}` : "Vendedora"}</p>
             </div>
           </div>
           <div className="min-w-0 text-center">
-            <div className="flex h-[50px] items-end justify-center pb-1 text-[10px] text-[#0B1A12]/50">{owner.signedAt ? `Contrato assinado eletronicamente em ${dateBr(owner.signedAt.slice(0, 10))}` : ""}</div>
-            <div className="border-t border-[#0B1A12]/40 pt-1.5">
-              <p className="h-[17px] truncate text-[11.5px] font-bold">{clean(owner.name)}</p>
-              <p className="truncate text-[10px] text-[#0B1A12]/55">Proprietário(a)</p>
+            <div className="flex h-[40px] items-end justify-center pb-1 text-[13px] text-[#0B1A12]/55">{owner.signedAt ? `Contrato assinado em ${dateBr(owner.signedAt.slice(0, 10))}` : ""}</div>
+            <div className="border-t border-[#0B1A12]/40 pt-2">
+              <p className="h-[21px] truncate text-[15px] font-bold">{clean(owner.name)}</p>
+              <p className="truncate text-[13px] text-[#0B1A12]/60">Proprietário(a)</p>
             </div>
           </div>
         </div>
-        {(owner.number || owner.code) && (
-          <p className="mt-2 text-center text-[10px] tracking-[0.1em] text-[#0B1A12]/40 uppercase">
-            {[owner.number && `Certificado ${owner.number}`, owner.code && `código ${owner.code}`].filter(Boolean).join(" · ")}
-          </p>
-        )}
+        <p className="mt-3 mb-1 h-[16px] text-center text-[12.5px] tracking-[0.08em] text-[#0B1A12]/45 uppercase">
+          {[owner.number && `Certificado ${owner.number}`, owner.code && `código ${owner.code}`].filter(Boolean).join(" · ")}
+        </p>
+      </>
+    ),
+  });
 
-      </Page>
+  const toc = pages.map((pg, i) => ({ t: pg.toc, n: i + 1 })).filter((x): x is { t: string; n: number } => !!x.t);
+  pages[tocAt].body = (
+    <>
+      <div className="mt-9">
+        <p className="text-[15px] font-bold tracking-[0.2em] uppercase" style={{ color: GREEN }}>
+          Bem-vindo(a)
+        </p>
+        <h2 className="mt-1 text-[44px] leading-[1.02] font-extrabold tracking-[-0.04em]">
+          {owner.name ? `${clean(owner.name).split(" ")[0]}, a sua ${name} chegou` : `A sua ${name} chegou`}
+          <span style={{ color: "#3FBF6A" }}>.</span>
+        </h2>
+        <div className="mt-5 grid gap-3.5 text-[18px] leading-relaxed text-[#0B1A12]/80">
+          <p>Obrigado pela confiança. A sua scooter foi montada, testada e revisada pela nossa equipe antes da entrega.</p>
+          <p>Reserve alguns minutos para ler este manual: ele mostra como rodar com segurança, como cuidar da bateria e o que fazer se precisar de ajuda.</p>
+        </div>
+        <p className="mt-4 text-[17px] font-bold">Equipe {clean(brand.company) || "Quark"}</p>
+      </div>
+      <Card className="mt-7 rounded-[26px] px-7 py-5">
+        <Sub>Neste manual</Sub>
+        <ol className="mt-2">
+          {toc.map((x, i) => (
+            <li key={x.t} className={cx("flex items-baseline gap-4 py-2.5 text-[18px]", i > 0 && "border-t border-[#0B1A12]/[0.06]")}>
+              <span className="w-8 font-extrabold" style={{ color: GREEN }}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="flex-1 font-semibold">{x.t}</span>
+              <span className="text-[#0B1A12]/45 tabular-nums">pág. {x.n}</span>
+            </li>
+          ))}
+        </ol>
+      </Card>
+      <div className="grow" />
+      <div className="mt-5 mb-2 rounded-[26px] bg-[#0B1A12] px-7 py-6 text-white">
+        <p className="text-[14px] font-bold tracking-[0.2em] text-[#E4F04A] uppercase">Seus primeiros dias</p>
+        <div className="mt-4 grid grid-cols-3 gap-5">
+          {[
+            ["1", "Carga completa", "Carregue até 100% antes do primeiro passeio."],
+            ["2", "Comece devagar", "Use o modo mais lento nos primeiros 50 km."],
+            ["3", "Reaperto aos 300 km", "Na oficina de sua preferência."],
+          ].map(([n, t, d]) => (
+            <div key={n}>
+              <span className="grid h-10 w-10 place-items-center rounded-full text-[17px] font-extrabold text-[#0B1A12]" style={{ background: GRAD }}>
+                {n}
+              </span>
+              <p className="mt-3 text-[18px] font-extrabold">{t}</p>
+              <p className="mt-1 text-[15px] leading-snug text-white/70">{d}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="flex flex-col gap-6">
+      {pages.map((pg, i) => (
+        <Page key={pg.id} n={i + 1} total={pages.length} model={name} plain={pg.plain}>
+          {pg.body}
+        </Page>
+      ))}
     </div>
   );
 }

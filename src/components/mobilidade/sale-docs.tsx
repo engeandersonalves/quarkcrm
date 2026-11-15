@@ -165,12 +165,12 @@ function QuotePage({ c, n, total, children, no }: { c: SaleCompany; n: number; t
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/bf/logo.png" alt="" className="h-9 w-auto" />
         <div className="text-right">
-          <p className="text-[11px] font-bold tracking-[0.22em] text-[#A9DE86] uppercase">Orçamento · Quark Mobilidade</p>
+          <p className="text-[12.5px] font-bold tracking-[0.22em] text-[#A9DE86] uppercase">Orçamento · Quark Mobilidade</p>
           <p className="text-[13px] font-semibold text-white/70">nº {no}</p>
         </div>
       </header>
       <div className="relative flex-1 px-12 pt-6">{children}</div>
-      <footer className="relative flex items-center justify-between border-t border-white/[0.07] px-12 py-4 text-[10px] text-white/40">
+      <footer className="relative flex items-center justify-between border-t border-white/[0.07] px-12 py-4 text-[12px] text-white/40">
         <span>
           {c.legalName || c.name}
           {c.cnpj ? ` · CNPJ ${maskDoc(c.cnpj)}` : ""}
@@ -214,14 +214,14 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
       <QuotePage c={c} n={1} total={2} no={no}>
         <div className="grid grid-cols-[1fr_1.1fr] items-center gap-4">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3 py-1.5 text-[11px] font-semibold text-white/80 ring-1 ring-white/10">
+            <p className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3 py-1.5 text-[12.5px] font-semibold text-white/80 ring-1 ring-white/10">
               <span className={cx("h-2 w-2 rounded-full", GRAD)} /> Preparado para {d.client.name.trim() || "você"}
             </p>
-            <p className="mt-5 text-[12px] font-bold tracking-[0.2em] text-white/50 uppercase">{scooter?.kicker ?? "Scooter elétrica"}</p>
+            <p className="mt-5 text-[13.5px] font-bold tracking-[0.2em] text-white/50 uppercase">{scooter?.kicker ?? "Scooter elétrica"}</p>
             <h1 className={cx("mt-1 text-[84px] leading-[0.85] font-bold tracking-[-0.06em]", GT)}>{d.modelName || "Scooter"}</h1>
             <p className="mt-4 text-[16px] leading-snug text-white/70">{scooter?.pitch ?? "Mobilidade elétrica com economia, silêncio e praticidade no seu dia a dia."}</p>
-            <div className="mt-5 flex flex-wrap gap-2 text-[12px] font-semibold">
-              {[d.color && `Cor ${d.color}`, `Ano ${d.year}`, qty > 1 && `${qty} unidades`, "Nova, com nota fiscal"].filter(Boolean).map((t) => (
+            <div className="mt-5 flex flex-wrap gap-2 text-[13.5px] font-semibold">
+              {[d.color && `Cor ${d.color}`, `Ano ${d.year}`, qty > 1 && `${qty} unidades`, "Nova, com garantia"].filter(Boolean).map((t) => (
                 <span key={String(t)} className="rounded-full bg-white/[0.06] px-3 py-1 ring-1 ring-white/10">
                   {t}
                 </span>
@@ -235,7 +235,7 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
           </div>
         </div>
 
-        <p className="mt-6 text-[12px] font-bold tracking-[0.2em] text-[#8FD9A8] uppercase">Ficha técnica</p>
+        <p className="mt-6 text-[13.5px] font-bold tracking-[0.2em] text-[#8FD9A8] uppercase">Ficha técnica</p>
         <div className="mt-3 grid grid-cols-4 gap-2.5">
           {specTiles(d).map((t) => (
             <div key={t.k} className="flex items-center gap-3 rounded-[18px] bg-[#111513] p-3.5 ring-1 ring-white/[0.07]">
@@ -244,7 +244,7 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
               </span>
               <div className="min-w-0">
                 <p className="text-[15px] leading-tight font-bold">{t.v}</p>
-                <p className="text-[11px] text-white/50">{t.k}</p>
+                <p className="text-[12.5px] text-white/50">{t.k}</p>
               </div>
             </div>
           ))}
@@ -255,21 +255,21 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
             <div key={p.t} className="rounded-[18px] bg-[#0d1a13] p-4 ring-1 ring-[#6FBF8E]/25">
               <Ico n={p.n} className="h-6 w-6 text-[#A9DE86]" />
               <p className="mt-2.5 text-[14px] leading-tight font-bold">{p.t}</p>
-              <p className="mt-0.5 text-[11px] text-white/55">{p.s}</p>
+              <p className="mt-0.5 text-[12.5px] text-white/55">{p.s}</p>
             </div>
           ))}
         </div>
 
         <div className="mt-5 grid grid-cols-[1.2fr_1fr] gap-3">
           <div className="rounded-[22px] bg-[#111513] p-5 ring-1 ring-white/[0.07]">
-            <p className="text-[12px] font-bold tracking-[0.14em] text-white/50 uppercase">Quanto você gasta por mês (30 km/dia)</p>
+            <p className="text-[13.5px] font-bold tracking-[0.14em] text-white/50 uppercase">Quanto você gasta por mês (30 km/dia)</p>
             <div className="mt-3 grid gap-2">
               {[
                 ["Moto a gasolina", moto, false],
                 ["Ônibus", bus, false],
                 [`Scooter ${d.modelName || ""}`.trim(), mine, true],
               ].map(([l, v, me]) => (
-                <div key={String(l)} className="grid grid-cols-[130px_1fr_70px] items-center gap-3 text-[12px]">
+                <div key={String(l)} className="grid grid-cols-[130px_1fr_70px] items-center gap-3 text-[13.5px]">
                   <span className={cx("font-semibold", me ? "text-[#A9DE86]" : "text-white/70")}>{l}</span>
                   <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.06]">
                     <div className={cx("h-full rounded-full", me ? "bg-[linear-gradient(90deg,#1FA06A,#9FDB7C,#F3E93B)]" : "bg-white/35")} style={{ width: `${Math.max(4, (Number(v) / Math.max(moto, bus)) * 100)}%` }} />
@@ -280,12 +280,12 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
             </div>
           </div>
           <div className="rounded-[22px] bg-[linear-gradient(135deg,#6FBF8E,#A9DE86)] p-5 text-[#0A0D0B]">
-            <p className="text-[12px] font-bold tracking-[0.14em] uppercase opacity-70">Fica no seu bolso</p>
+            <p className="text-[13.5px] font-bold tracking-[0.14em] uppercase opacity-70">Fica no seu bolso</p>
             <p className="mt-1 text-[42px] leading-none font-bold tracking-[-0.05em]">{brl0(Math.max(0, moto - mine))}</p>
             <p className="mt-1 text-[13px] font-semibold opacity-75">por mês trocando a moto a gasolina · {brl0(Math.max(0, moto - mine) * 12)} por ano</p>
           </div>
         </div>
-        <p className="mt-3 text-[10px] text-white/35">
+        <p className="mt-3 text-[12px] text-white/35">
           *Autopropelido conforme a Resolução CONTRAN nº 996/2023 (até 1.000 W e 32 km/h). Custos estimados: gasolina a R$ 6,30 (35 km/l), passagem de R$ 4,00 e energia a R$ 1,10/kWh. Imagem ilustrativa.
         </p>
       </QuotePage>
@@ -294,12 +294,12 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
       <QuotePage c={c} n={2} total={2} no={no}>
         <div className="flex items-start justify-between gap-6">
           <div>
-            <p className="text-[12px] font-bold tracking-[0.2em] text-[#8FD9A8] uppercase">Seu pedido</p>
+            <p className="text-[13.5px] font-bold tracking-[0.2em] text-[#8FD9A8] uppercase">Seu pedido</p>
             <h2 className="mt-1 text-[36px] leading-none font-bold tracking-[-0.045em]">
               {d.client.name.trim().split(" ")[0] || "Cliente"}, <span className={GT}>esta é a sua {d.modelName || "scooter"}.</span>
             </h2>
           </div>
-          <div className="shrink-0 rounded-[16px] bg-white/[0.05] px-4 py-3 text-right text-[11px] leading-snug text-white/60 ring-1 ring-white/10">
+          <div className="shrink-0 rounded-[16px] bg-white/[0.05] px-4 py-3 text-right text-[12.5px] leading-snug text-white/60 ring-1 ring-white/10">
             <p>
               Emitido em <b className="text-white">{dateBr(d.date)}</b>
             </p>
@@ -310,7 +310,7 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
         </div>
 
         <div className="mt-6 overflow-hidden rounded-[22px] ring-1 ring-white/[0.08]">
-          <div className="grid grid-cols-[1fr_60px_120px_120px] bg-white/[0.05] px-5 py-3 text-[11px] font-bold tracking-[0.1em] text-white/50 uppercase">
+          <div className="grid grid-cols-[1fr_60px_120px_120px] bg-white/[0.05] px-5 py-3 text-[12.5px] font-bold tracking-[0.1em] text-white/50 uppercase">
             <span>Item</span>
             <span className="text-center">Qtd</span>
             <span className="text-right">Unitário</span>
@@ -323,7 +323,7 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
             <div key={i} className="grid grid-cols-[1fr_60px_120px_120px] items-center border-t border-white/[0.06] px-5 py-3.5 text-[14px]">
               <div>
                 <p className="font-semibold">{it.name}</p>
-                <p className="text-[11px] text-white/45">{it.sub}</p>
+                <p className="text-[12.5px] text-white/45">{it.sub}</p>
               </div>
               <span className="text-center tabular-nums">{it.qty}</span>
               <span className="text-right tabular-nums text-white/70">{it.price > 0 ? brlPlain(it.price) : "—"}</span>
@@ -354,30 +354,30 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
           </div>
         </div>
 
-        <p className="mt-6 text-[12px] font-bold tracking-[0.2em] text-[#8FD9A8] uppercase">Formas de pagamento</p>
+        <p className="mt-6 text-[13.5px] font-bold tracking-[0.2em] text-[#8FD9A8] uppercase">Formas de pagamento</p>
         <div className="mt-3 grid grid-cols-3 gap-2.5">
           <div className={cx("rounded-[20px] p-5", d.payment.method === "pix" ? "bg-[linear-gradient(135deg,#6FBF8E,#A9DE86)] text-[#0A0D0B]" : "bg-[#111513] ring-1 ring-white/[0.07]")}>
-            <p className="text-[12px] font-bold opacity-70">À vista no PIX</p>
+            <p className="text-[13.5px] font-bold opacity-70">À vista no PIX</p>
             <p className="mt-1 text-[26px] leading-none font-bold tracking-[-0.03em]">{brl0(total)}</p>
-            <p className="mt-1 text-[11px] opacity-70">pagamento na confirmação do pedido</p>
+            <p className="mt-1 text-[12.5px] opacity-70">pagamento na confirmação do pedido</p>
           </div>
           <div className={cx("rounded-[20px] p-5", d.payment.method === "cartao" ? "bg-[linear-gradient(135deg,#6FBF8E,#A9DE86)] text-[#0A0D0B]" : "bg-[#111513] ring-1 ring-white/[0.07]")}>
-            <p className="text-[12px] font-bold opacity-70">No cartão de crédito</p>
+            <p className="text-[13.5px] font-bold opacity-70">No cartão de crédito</p>
             <p className="mt-1 text-[26px] leading-none font-bold tracking-[-0.03em]">
               {d.payment.installmentValue > 0 ? `${d.payment.installments}x de ${brl0(d.payment.installmentValue)}` : "Consulte"}
             </p>
-            <p className="mt-1 text-[11px] opacity-70">{card > 0 ? `total ${brlPlain(card)} · aceita mais de um cartão` : "parcelamento com os encargos da operadora"}</p>
+            <p className="mt-1 text-[12.5px] opacity-70">{card > 0 ? `total ${brlPlain(card)} · aceita mais de um cartão` : "parcelamento com os encargos da operadora"}</p>
           </div>
           <div className={cx("rounded-[20px] p-5", d.payment.method === "entrada" || d.payment.method === "personalizado" ? "bg-[linear-gradient(135deg,#6FBF8E,#A9DE86)] text-[#0A0D0B]" : "bg-[#111513] ring-1 ring-white/[0.07]")}>
-            <p className="text-[12px] font-bold opacity-70">{d.payment.method === "personalizado" ? "Condição combinada" : "Entrada + saldo"}</p>
+            <p className="text-[13.5px] font-bold opacity-70">{d.payment.method === "personalizado" ? "Condição combinada" : "Entrada + saldo"}</p>
             <p className="mt-1 text-[20px] leading-tight font-bold tracking-[-0.02em]">
               {d.payment.method === "personalizado" ? d.payment.custom.trim().slice(0, 60) || "A combinar" : d.payment.entry > 0 ? `${brl0(d.payment.entry)} + ${brl0(Math.max(0, total - d.payment.entry))}` : "Entrada a combinar"}
             </p>
-            <p className="mt-1 text-[11px] opacity-70">{d.payment.method === "entrada" ? `saldo ${d.payment.balanceWhen}` : "fale com o consultor"}</p>
+            <p className="mt-1 text-[12.5px] opacity-70">{d.payment.method === "entrada" ? `saldo ${d.payment.balanceWhen}` : "fale com o consultor"}</p>
           </div>
         </div>
 
-        <p className="mt-6 text-[12px] font-bold tracking-[0.2em] text-[#8FD9A8] uppercase">Do sim até a sua scooter</p>
+        <p className="mt-6 text-[13.5px] font-bold tracking-[0.2em] text-[#8FD9A8] uppercase">Do sim até a sua scooter</p>
         <ol className="mt-3 grid grid-cols-5 gap-2">
           {[
             ["check", "Aprovar", "este orçamento"],
@@ -389,15 +389,15 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
             <li key={t} className="rounded-[16px] bg-[#111513] p-3.5 ring-1 ring-white/[0.07]">
               <div className="flex items-center justify-between">
                 <Ico n={n as keyof typeof PATHS} className="h-5 w-5 text-[#A9DE86]" />
-                <span className="text-[11px] font-bold text-white/35">{i + 1}</span>
+                <span className="text-[12.5px] font-bold text-white/35">{i + 1}</span>
               </div>
               <p className="mt-2 text-[14px] font-bold">{t}</p>
-              <p className="text-[11px] leading-tight text-white/50">{s}</p>
+              <p className="text-[12.5px] leading-tight text-white/50">{s}</p>
             </li>
           ))}
         </ol>
 
-        {d.quoteNotes.trim() && <p className="mt-4 rounded-[16px] bg-white/[0.05] px-5 py-3.5 text-[12px] whitespace-pre-line text-white/75 ring-1 ring-white/10">{d.quoteNotes.trim()}</p>}
+        {d.quoteNotes.trim() && <p className="mt-4 rounded-[16px] bg-white/[0.05] px-5 py-3.5 text-[13.5px] whitespace-pre-line text-white/75 ring-1 ring-white/10">{d.quoteNotes.trim()}</p>}
 
         <div className="mt-5 flex items-center gap-4 rounded-[22px] bg-[#111513] p-5 ring-1 ring-white/[0.07]">
           <span className={cx("grid h-14 w-14 shrink-0 place-items-center rounded-[18px] text-[20px] font-bold text-[#0A0D0B]", GRAD)}>
@@ -409,13 +409,13 @@ export function MotoQuotePages({ d, c, id }: { d: MotoData; c: SaleCompany; id: 
               .toUpperCase()}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold tracking-[0.14em] text-[#8FD9A8] uppercase">Seu consultor</p>
+            <p className="text-[12.5px] font-bold tracking-[0.14em] text-[#8FD9A8] uppercase">Seu consultor</p>
             <p className="text-[20px] leading-tight font-bold">{c.seller || c.name}</p>
-            <p className="text-[12px] text-white/55">Respondo rápido no WhatsApp e agendo um test ride sem compromisso.</p>
+            <p className="text-[13.5px] text-white/55">Respondo rápido no WhatsApp e agendo um test ride sem compromisso.</p>
           </div>
           {(c.sellerPhone || c.phone) && (
             <div className="text-right">
-              <p className="flex items-center justify-end gap-1.5 text-[11px] text-white/45">
+              <p className="flex items-center justify-end gap-1.5 text-[12.5px] text-white/45">
                 <Ico n="chat" className="h-3.5 w-3.5" /> WhatsApp
               </p>
               <p className="text-[17px] font-bold">{formatPhone(c.sellerPhone || c.phone)}</p>

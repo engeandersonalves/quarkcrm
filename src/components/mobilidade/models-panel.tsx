@@ -127,7 +127,7 @@ export function ModelsPanel() {
   if (loading) return <Skeleton className="h-[60vh]" />;
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
       {/* resumo */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
@@ -160,7 +160,7 @@ export function ModelsPanel() {
       {fromSeed && (
         <div className="flex flex-wrap items-center gap-3 rounded-[22px] bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
           <Sparkles className="h-5 w-5 shrink-0" />
-          <p className="min-w-0 flex-1">
+          <p className="min-w-0 flex-1 basis-[220px]">
             {tableMissing ? (
               <>
                 <b>Rode o supabase/schema.sql atualizado</b> no SQL Editor do Supabase para salvar modelos. Abaixo, os 3 modelos do catálogo de lançamento.
@@ -172,7 +172,7 @@ export function ModelsPanel() {
             )}
           </p>
           {!tableMissing && (
-            <Button size="sm" onClick={seed} loading={seeding}>
+            <Button size="sm" onClick={seed} loading={seeding} className="w-full sm:w-auto">
               Salvar os 3 no cadastro
             </Button>
           )}
@@ -180,7 +180,7 @@ export function ModelsPanel() {
       )}
 
       {/* modelos */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {products.map((p) => {
           const each = installmentValue(p.price, p.installments, p.rate);
           const t = marginTone(p);

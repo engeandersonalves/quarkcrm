@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, ChevronRight, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, Search, Sun, Trophy, Users, Calculator, Receipt, ScrollText, Moon, Activity } from "lucide-react";
+import { BarChart3, CheckSquare, LayoutGrid, ChevronRight, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, Search, Sun, Trophy, Users, Calculator, Receipt, ScrollText, Moon, Activity } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -73,6 +73,19 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
   },
 ];
 
+/** Menu completo do celular: tudo que não cabe na barra de baixo. */
+const MENU_SECTIONS = SECTIONS.map((sec) => ({ ...sec, items: sec.items.filter((i) => !["/", "/leads", "/propostas", "/tarefas"].includes(i.href)) })).filter((sec) => sec.items.length);
+const MENU_HINTS: Record<string, string> = {
+  "/orcamento-rapido": "Imagem pronta para o WhatsApp",
+  "/mobilidade": "Vendas, clientes e modelos de scooter",
+  "/documentos": "Procurações, aluguéis e assinaturas",
+  "/contratos": "Contratos solares",
+  "/recibos": "Recibos com a assinatura da Quark",
+  "/marketing": "Artes para Instagram e status",
+  "/monitoramento": "Usinas e alarmes",
+  "/relatorios": "Vendas, funil e equipe",
+};
+
 const MOBILE_TABS: NavItem[] = [
   { href: "/", label: "Início", icon: LayoutDashboard, glyph: "painel" },
   { href: "/leads", label: "Leads", icon: Users, glyph: "leads", badge: "leads" },
@@ -110,6 +123,7 @@ function ShellInner({ children }: { children: ReactNode }) {
   const [leadModal, setLeadModal] = useState<{ open: boolean; lead?: Lead | null; onCreated?: (id: string) => void }>({ open: false });
   const [taskModal, setTaskModal] = useState<{ open: boolean; task?: Task | null; leadId?: string | null }>({ open: false });
   const [fab, setFab] = useState(false);
+  const [menu, setMenu] = useState(false);
   const [palette, setPalette] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
 
@@ -147,6 +161,7 @@ function ShellInner({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setFab(false);
+    setMenu(false);
   }, [pathname]);
 
   const search = useSearchParams();
@@ -229,10 +244,35 @@ function ShellInner({ children }: { children: ReactNode }) {
           <div className="pointer-events-auto mx-auto flex max-w-md items-center gap-2.5">
             <div className="liquid-glass flex h-[62px] flex-1 items-center gap-0.5 rounded-full px-1">
               {MOBILE_TABS.map((item) => (
-                <TabLink key={item.href} {...item} active={isActive(item.href)} count={item.badge ? badges[item.badge] : 0} alert={item.badge === "tasks" && badges.late > 0} />
+                <TabLink key={item.href} {...item} active={!menu && isActive(item.href)} count={item.badge ? badges[item.badge] : 0} alert={item.badge === "tasks" && badges.late > 0} />
               ))}
+              {(() => {
+                const inMenu = !MOBILE_TABS.some((t) => isActive(t.href));
+                const pending = MENU_SECTIONS.flatMap((x) => x.items).reduce((t, i) => t + (i.badge ? badges[i.badge] || 0 : 0), 0);
+                const on = menu || inMenu;
+                return (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFab(false);
+                      setMenu((v) => !v);
+                    }}
+                    aria-expanded={menu}
+                    className={cx(
+                      "relative flex h-[54px] flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-semibold transition-all duration-300 active:scale-95",
+                      on ? "bg-black/[0.06] text-ink-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:bg-white/[0.13] dark:text-white" : "text-ink-500 dark:text-[#8E8E93]",
+                    )}
+                  >
+                    <span className="relative">
+                      <LayoutGrid className="h-[24px] w-[24px]" strokeWidth={on ? 2.4 : 2} />
+                      {pending > 0 && <Badge count={pending} className="absolute -top-1.5 -right-3" />}
+                    </span>
+                    Menu
+                  </button>
+                );
+              })()}
             </div>
-            <button onClick={() => setFab((v) => !v)} aria-label="Criar" className="liquid-glass grid h-[62px] w-[62px] shrink-0 place-items-center rounded-full transition active:scale-95">
+            <button onClick={() => { setMenu(false); setFab((v) => !v); }} aria-label="Criar" className="liquid-glass grid h-[62px] w-[62px] shrink-0 place-items-center rounded-full transition active:scale-95">
               <span className={cx("grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-[#F3EA3B] to-[#9BD373] text-[#111] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_6px_18px_-6px_rgba(155,211,115,0.9)] transition-transform duration-300", fab && "rotate-45")}>
                 <Plus className="h-6 w-6" strokeWidth={2.6} />
               </span>
@@ -256,6 +296,34 @@ function ShellInner({ children }: { children: ReactNode }) {
               <FabItem glyph="recibos" title="Recibo" text="PDF com a assinatura da Quark" onClick={() => router.push("/recibos")} />
               <FabItem glyph="documentos" title="Procuração ou aluguel" text="Documentos com assinatura digital" onClick={() => router.push("/documentos")} />
               <FabItem glyph="engrenagem" title="Configurações" text="Empresa, padrões e alertas" onClick={() => router.push("/configuracoes")} last />
+            </div>
+          </div>
+        )}
+
+        {menu && (
+          <div className="fixed inset-0 z-30 lg:hidden" onClick={() => setMenu(false)}>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[3px]" />
+            <div className="liquid-glass animate-fade-up absolute inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-[28px] py-2" onClick={(e) => e.stopPropagation()}>
+              {MENU_SECTIONS.map((sec) => (
+                <div key={sec.title} className="pb-1">
+                  <p className="px-4 pt-2.5 pb-1 text-[12px] font-semibold tracking-[0.06em] text-ink-500 uppercase dark:text-[#8E8E93]">{sec.title}</p>
+                  {sec.items.map((item, i) => (
+                    <FabItem
+                      key={item.href}
+                      glyph={item.glyph}
+                      title={item.label}
+                      text={MENU_HINTS[item.href] ?? ""}
+                      count={item.badge ? badges[item.badge] : 0}
+                      active={isActive(item.href)}
+                      onClick={() => router.push(item.href)}
+                      last={i === sec.items.length - 1}
+                    />
+                  ))}
+                </div>
+              ))}
+              <p className="px-4 pt-2.5 pb-1 text-[12px] font-semibold tracking-[0.06em] text-ink-500 uppercase dark:text-[#8E8E93]">Conta</p>
+              <FabItem glyph="pessoa" title="Meu perfil" text="Nível, conquistas e foto" onClick={() => router.push(`/perfil/${user.id}`)} />
+              <FabItem glyph="engrenagem" title="Configurações" text="Empresa, padrões e alertas" active={pathname.startsWith("/configuracoes")} onClick={() => router.push("/configuracoes")} last />
             </div>
           </div>
         )}
@@ -538,14 +606,15 @@ function Sidebar({
   );
 }
 
-function FabItem({ glyph, title, text, onClick, last }: { glyph: GlyphId; title: string; text: string; onClick: () => void; last?: boolean }) {
+function FabItem({ glyph, title, text, onClick, last, count = 0, active }: { glyph: GlyphId; title: string; text: string; onClick: () => void; last?: boolean; count?: number; active?: boolean }) {
   return (
-    <button onClick={onClick} className="relative flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition active:bg-black/[0.05] dark:active:bg-white/[0.08]">
+    <button onClick={onClick} aria-current={active ? "page" : undefined} className={cx("relative flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition active:bg-black/[0.05] dark:active:bg-white/[0.08]", active && "bg-black/[0.04] dark:bg-white/[0.07]")}>
       <GlyphTile id={glyph} size="md" />
       <div className="min-w-0 flex-1">
         <p className="text-[15px] font-semibold text-ink-900">{title}</p>
-        <p className="truncate text-[13px] text-ink-500">{text}</p>
+        {text && <p className="truncate text-[13px] text-ink-500">{text}</p>}
       </div>
+      {count > 0 && <Badge count={count} />}
       <ChevronRight className="h-4 w-4 shrink-0 text-ink-300 dark:text-[#5A5A5F]" strokeWidth={2.6} />
       {!last && <span className="pointer-events-none absolute right-0 bottom-0 left-[64px] h-px bg-black/[0.07] dark:bg-white/[0.08]" />}
     </button>

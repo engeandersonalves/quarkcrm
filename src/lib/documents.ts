@@ -852,7 +852,7 @@ export function motoBlocks(d: MotoData): Block[] {
   blocks.push(
     {
       t: "p",
-      text: `${cl()} A scooter é entregue montada, testada e com carregador original, manual de uso e certificado de garantia, acompanhada da nota fiscal emitida em nome do COMPRADOR.`,
+      text: `${cl()} A scooter é entregue montada, testada e com carregador original, manual de uso e certificado de garantia, acompanhada do comprovante de compra e propriedade emitido em nome do COMPRADOR.`,
     },
 
     { t: "h", text: "Do enquadramento e do uso" },
@@ -914,7 +914,7 @@ export function motoBlocks(d: MotoData): Block[] {
     },
     {
       t: "p",
-      text: `${cl()} Os dados pessoais e a imagem do COMPRADOR são tratados exclusivamente para a execução deste contrato, a emissão da nota fiscal, a garantia e a confirmação de identidade, nos termos da Lei nº 13.709/2018 (LGPD), arts. 7º, V, e 11, II, "g", e não serão compartilhados com terceiros, salvo por obrigação legal.`,
+      text: `${cl()} Os dados pessoais e a imagem do COMPRADOR são tratados exclusivamente para a execução deste contrato, a emissão do comprovante de compra, a garantia e a confirmação de identidade, nos termos da Lei nº 13.709/2018 (LGPD), arts. 7º, V, e 11, II, "g", e não serão compartilhados com terceiros, salvo por obrigação legal.`,
     },
   );
 

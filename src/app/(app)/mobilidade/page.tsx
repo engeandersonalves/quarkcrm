@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, BookOpen, Camera, ChevronRight, FileText, LayoutGrid, Plus, ShieldAlert, ShieldCheck, UserPlus, UserRound, Wallet } from "lucide-react";
+import { BadgeCheck, BookOpen, Camera, ChevronRight, FileText, LayoutGrid, Plus, ShieldAlert, ShieldCheck, UserRound, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
 import { GlyphTile } from "@/components/app/ios-glyphs";
 import { Battery3D, Coin3D, Shield3D } from "@/components/icons3d";
-import { CadastroPanel } from "@/components/mobilidade/cadastro-panel";
+import { ClientsPanel } from "@/components/mobilidade/clients-panel";
 import { CatalogPanel } from "@/components/mobilidade/catalog-panel";
 import { ModelsPanel } from "@/components/mobilidade/models-panel";
 import { saleCompany } from "@/components/mobilidade/sale-docs";
@@ -19,6 +19,7 @@ import { relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { installmentValue, profitOf, unitCost, type MotoProduct } from "@/lib/moto-products";
 import { useMotoProducts } from "@/lib/moto-products-db";
+import { clientKey } from "@/lib/moto-clients";
 import { contractValue, motoPhoto, motoTotal, vehicleName, warrantyActive, warrantyEnd, type MotoData } from "@/lib/moto-sale";
 import { supabase } from "@/lib/supabase/client";
 import type { DocumentRow } from "@/lib/types";
@@ -75,10 +76,11 @@ export default function MobilidadePage() {
   const waiting = all.filter((d) => d.status === "enviado").length;
   const active = signed.filter((d) => warrantyActive(sale(d))).length;
 
+  const clientCount = new Set(all.map((d) => clientKey(sale(d))).filter((k) => !k.endsWith(":"))).size;
   const tabs: { id: Aba; label: string; icon: ReactNode; count?: number }[] = [
     { id: "vendas", label: "Vendas", icon: <Wallet className="h-4 w-4" />, count: all.length },
+    { id: "clientes", label: "Clientes", icon: <Users className="h-4 w-4" />, count: clientCount },
     { id: "modelos", label: "Modelos", icon: <LayoutGrid className="h-4 w-4" />, count: products.length },
-    { id: "clientes", label: "Cadastro de clientes", icon: <UserPlus className="h-4 w-4" /> },
     { id: "catalogo", label: "Catálogo online", icon: <BookOpen className="h-4 w-4" /> },
   ];
 
@@ -99,7 +101,7 @@ export default function MobilidadePage() {
               <h1 className="font-display text-[28px] leading-tight font-semibold tracking-tight sm:text-[34px]">Mobilidade elétrica</h1>
             </div>
           </div>
-          <div className="relative z-10 flex flex-wrap gap-2">
+          <div className="relative z-10 grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
             <button
               type="button"
               onClick={() => {
@@ -110,16 +112,16 @@ export default function MobilidadePage() {
                 );
               }}
               title="Copiar o link da área do cliente para enviar ao comprador"
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-white/[0.08] px-4 text-sm font-semibold ring-1 ring-white/15 backdrop-blur hover:bg-white/[0.14]"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/[0.08] px-4 text-sm font-semibold whitespace-nowrap ring-1 ring-white/15 backdrop-blur hover:bg-white/[0.14]"
             >
               <UserRound className="h-4 w-4" /> Área do cliente
             </button>
-            <Link href="/mobilidade/modelo/novo" className="inline-flex h-11 items-center gap-2 rounded-full bg-white/[0.08] px-4 text-sm font-semibold ring-1 ring-white/15 backdrop-blur hover:bg-white/[0.14]">
+            <Link href="/mobilidade/modelo/novo" className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white/[0.08] px-4 text-sm font-semibold whitespace-nowrap ring-1 ring-white/15 backdrop-blur hover:bg-white/[0.14]">
               <Plus className="h-4 w-4" /> Modelo
             </Link>
             <Link
               href="/documentos/novo?tipo=moto"
-              className="inline-flex h-11 items-center gap-2 rounded-full bg-[linear-gradient(95deg,#F3E93B_0%,#9FDB7C_45%,#4FC38A_100%)] px-5 text-sm font-bold text-[#0A0D0B] shadow-[0_14px_40px_-12px_rgba(111,191,142,0.9)]"
+              className="order-first col-span-2 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[linear-gradient(95deg,#F3E93B_0%,#9FDB7C_45%,#4FC38A_100%)] px-5 text-[15px] font-bold text-[#0A0D0B] shadow-[0_14px_40px_-12px_rgba(111,191,142,0.9)] sm:order-none sm:col-span-1 sm:h-11 sm:text-sm"
             >
               <Plus className="h-4 w-4" /> Nova venda
             </Link>
@@ -137,8 +139,8 @@ export default function MobilidadePage() {
               <div className="flex items-center gap-2.5">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-white/[0.07] ring-1 ring-white/10">{x.icon}</span>
                 <div className="min-w-0">
-                  <p className="truncate text-[10px] font-bold tracking-[0.12em] text-white/50 uppercase">{x.k}</p>
-                  <p className="truncate text-[19px] leading-tight font-bold tabular-nums">{x.v}</p>
+                  <p className="text-[10.5px] leading-tight font-bold tracking-[0.08em] text-white/55 uppercase">{x.k}</p>
+                  <p className="text-[17px] leading-tight font-bold tabular-nums sm:text-[19px]">{x.v}</p>
                 </div>
               </div>
               <p className="mt-1.5 truncate text-[11px] text-white/45">{x.s}</p>
@@ -165,7 +167,7 @@ export default function MobilidadePage() {
         </nav>
       </section>
 
-      {aba === "modelos" ? <ModelsPanel /> : aba === "clientes" ? <CadastroPanel /> : aba === "catalogo" ? <CatalogPanel /> : <Vendas sales={sales} products={products} />}
+      {aba === "modelos" ? <ModelsPanel /> : aba === "clientes" ? <ClientsPanel sales={all} loading={sales.loading} startWithCadastro={raw === "cadastro"} /> : aba === "catalogo" ? <CatalogPanel /> : <Vendas sales={sales} products={products} />}
     </div>
   );
 }
@@ -214,7 +216,7 @@ function Vendas({ sales, products }: { sales: ReturnType<typeof useSales>; produ
   };
 
   return (
-    <div className="grid gap-5">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
       {/* começar pela scooter */}
       {active.length > 0 && (
         <div>
@@ -284,7 +286,7 @@ function Vendas({ sales, products }: { sales: ReturnType<typeof useSales>; produ
           />
         </div>
       ) : (
-        <div className="grid gap-2.5">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
           {rows.map((d) => {
             const s = sale(d);
             const buyer = (d.signers ?? []).find((x) => x.role === "comprador");
@@ -297,7 +299,7 @@ function Vendas({ sales, products }: { sales: ReturnType<typeof useSales>; produ
             const profit = saleProfit(s, products);
             return (
               <article key={d.id} className="flex flex-wrap items-center gap-3 rounded-[24px] bg-white p-3 ring-1 ring-ink-200/80 transition hover:ring-ink-300 sm:flex-nowrap sm:p-4 dark:bg-[#111513] dark:ring-white/[0.07]">
-                <Link href={`/documentos/${d.id}`} className="flex min-w-0 flex-1 items-center gap-3.5">
+                <Link href={`/documentos/${d.id}`} className="flex w-full min-w-0 items-center gap-3.5 sm:w-auto sm:flex-1">
                   <span className="grid h-16 w-20 shrink-0 place-items-center rounded-[18px] bg-[#050706] ring-1 ring-white/10">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={motoPhoto(s)} alt="" className="max-h-14 w-auto object-contain" />
