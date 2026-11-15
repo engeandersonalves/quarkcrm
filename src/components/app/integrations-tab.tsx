@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarPlus, Check, FileSpreadsheet, Loader2, MessageCircle, Send, Webhook } from "lucide-react";
+import { CalendarPlus, Check, FileSpreadsheet, Loader2, MessageCircle, Send, ShieldCheck, TriangleAlert, Wallet, Webhook } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { CompanySettings, IntegrationPrefs } from "@/lib/defaults";
@@ -89,6 +89,8 @@ export function IntegrationsTab({ form, onChange }: { form: CompanySettings; onC
         </div>
       </Card>
 
+      <GoogleWalletCard />
+
       <Card>
         <CardHeader title="Já integrado" subtitle="Funciona sem configurar nada" />
         <div className="grid gap-3 px-5 pb-5 sm:grid-cols-3">
@@ -111,5 +113,52 @@ export function IntegrationsTab({ form, onChange }: { form: CompanySettings; onC
         </div>
       </Card>
     </>
+  );
+}
+
+type WalletCheck = { ok: true; issuerName: string; serviceEmail: string; issuerId: string } | { ok: false; step: string; message: string; serviceEmail?: string; issuerId?: string };
+
+/** Verifica as credenciais do Google Wallet que estão na Vercel (cartão digital da área do cliente). */
+function GoogleWalletCard() {
+  const [busy, setBusy] = useState(false);
+  const [r, setR] = useState<WalletCheck | null>(null);
+  const check = async () => {
+    setBusy(true);
+    const res = await fetch("/api/integrations/wallet", { cache: "no-store" }).catch(() => null);
+    setR(res ? ((await res.json().catch(() => null)) as WalletCheck | null) : { ok: false, step: "rede", message: "Sem conexão com o servidor." });
+    setBusy(false);
+  };
+  return (
+    <Card>
+      <CardHeader
+        icon={<Wallet className="h-[18px] w-[18px]" />}
+        title="Google Wallet · cartão da scooter"
+        subtitle="Na área do cliente, o comprador salva o cartão da scooter no Google Wallet. As chaves ficam só na Vercel."
+        action={r ? r.ok ? <Badge className="bg-emerald-50 text-emerald-700 ring-emerald-600/15">Ativo</Badge> : <Badge className="bg-amber-50 text-amber-800 ring-amber-600/20">Pendente</Badge> : null}
+      />
+      <div className="grid gap-3 px-5 pb-5">
+        <Button variant="secondary" onClick={check} disabled={busy} className="w-full sm:w-auto sm:justify-self-start">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Verificar configuração
+        </Button>
+        {r &&
+          (r.ok ? (
+            <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-900 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-100 dark:ring-emerald-500/30">
+              <p className="flex items-center gap-2 font-semibold">
+                <Check className="h-4 w-4" /> Tudo certo: o Google reconheceu a conta de serviço{r.issuerName ? ` no emissor “${r.issuerName}”` : ""}.
+              </p>
+              <p className="mt-1 text-[13px] opacity-80">
+                Issuer {r.issuerId} · {r.serviceEmail}. O botão “Salvar no Google Wallet” já aparece na área do cliente, nas vendas assinadas. Enquanto o Google não aprovar a publicação, só os e-mails de teste conseguem salvar.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-100 dark:ring-amber-500/30">
+              <p className="flex items-start gap-2 font-semibold">
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /> {r.message}
+              </p>
+              {(r.issuerId || r.serviceEmail) && <p className="mt-1 text-[13px] opacity-80">{[r.issuerId && `Issuer ${r.issuerId}`, r.serviceEmail].filter(Boolean).join(" · ")}</p>}
+            </div>
+          ))}
+      </div>
+    </Card>
   );
 }

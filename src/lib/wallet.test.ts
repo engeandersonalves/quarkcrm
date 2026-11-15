@@ -48,3 +48,24 @@ test("wallet: link do Google assinado com a conta de serviço", () => {
   assert.ok(obj.textModulesData.length <= 20);
   assert.equal(googleWalletConfig({}), null);
 });
+
+test("wallet: verificação das credenciais do Google", async () => {
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const sa = JSON.stringify({ client_email: "wallet@x.iam.gserviceaccount.com", private_key: privateKey.export({ type: "pkcs8", format: "pem" }).toString() });
+  const env = { GOOGLE_WALLET_ISSUER_ID: "3388000000012345678", GOOGLE_WALLET_SERVICE_ACCOUNT: sa };
+  const { checkGoogleWallet } = await import("./wallet-google.ts");
+  const fake = (issuerStatus: number) =>
+    (async (url: string | URL | Request) => {
+      if (String(url).includes("oauth2")) return new Response(JSON.stringify({ access_token: "t" }), { status: 200 });
+      return new Response(issuerStatus === 200 ? JSON.stringify({ name: "Quark" }) : "{}", { status: issuerStatus });
+    }) as typeof fetch;
+  const ok = await checkGoogleWallet(env, fake(200));
+  assert.equal(ok.ok, true);
+  const denied = await checkGoogleWallet(env, fake(403));
+  assert.equal(denied.ok, false);
+  assert.match(!denied.ok ? denied.message : "", /convide wallet@x/);
+  const missing = await checkGoogleWallet({}, fake(200));
+  assert.match(!missing.ok ? missing.message : "", /não estão na Vercel/);
+  const quoted = await checkGoogleWallet({ ...env, GOOGLE_WALLET_SERVICE_ACCOUNT: `'${sa}'` }, fake(200));
+  assert.equal(quoted.ok, true);
+});
