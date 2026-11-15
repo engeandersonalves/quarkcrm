@@ -1,15 +1,14 @@
 "use client";
 
-import { Download, Loader2, Smartphone } from "lucide-react";
-import { useEffect, useState } from "react";
-import { dateBr } from "@/lib/br";
-import { receiptNumber, receiptQrText } from "@/lib/moto-receipt";
-import { motoPhoto, vehicleName, warrantyEnd, type MotoData } from "@/lib/moto-sale";
+import { Camera, FileDown, ImageDown, Loader2, Smartphone } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { receiptQrText } from "@/lib/moto-receipt";
+import { vehicleName, type MotoData } from "@/lib/moto-sale";
+import { OwnerCardBack, OwnerCardFront, OwnerCardPdfPage } from "./owner-card";
 
 /**
- * Cartão digital da scooter: o mesmo visual do cartão do Google Wallet.
- * Todas as medidas em cqw (relativas à largura), para o cartão ficar igual em
- * qualquer tamanho: na tela e na imagem salva (1012 px).
+ * Cartão do proprietário na área do cliente: frente e verso, foto 3/4, PDF,
+ * imagem e Google Wallet.
  */
 
 export function useCardQr(d: MotoData, id: string, company: { name: string; cnpj: string }) {
@@ -28,84 +27,32 @@ export function useCardQr(d: MotoData, id: string, company: { name: string; cnpj
   return qr;
 }
 
-const INTER = "var(--font-inter), 'Inter', system-ui, sans-serif";
+type Busy = "google" | "image" | "pdf" | null;
 
-export function WalletCardView({ d, id, qr, art }: { d: MotoData; id: string; qr: string; art?: boolean }) {
-  const model = vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter";
-  const end = d.delivery.date || d.date ? warrantyEnd(d) : "";
-  const owner = d.client.name.trim().split(/\s+/).slice(0, 2).join(" ");
-  const { number } = receiptNumber(id);
-  const photo = d.photo || motoPhoto(d);
-  const label = { fontSize: "2.05cqw", letterSpacing: "0.22em", color: "#D9E86A", opacity: 0.8, fontWeight: 600 } as const;
-  return (
-    <div className="w-full [container-type:inline-size]" {...(art ? { "data-art": true } : {})}>
-      <div
-        className="relative w-full overflow-hidden text-white antialiased"
-        style={{
-          aspectRatio: "1.586",
-          borderRadius: "4.6cqw",
-          fontFamily: INTER,
-          background: "linear-gradient(135deg, #06100A 0%, #0B1E14 55%, #133525 100%)",
-          boxShadow: art ? "none" : "0 40px 70px -34px rgba(6,16,10,0.85), inset 0 0 0 1px rgba(255,255,255,0.07)",
-        }}
-      >
-        {/* luz sobre a scooter, reflexo diagonal e sombra no chão */}
-        <div className="absolute" style={{ right: "-12%", top: "-6%", width: "74%", height: "112%", background: "radial-gradient(closest-side, rgba(63,191,127,0.42), rgba(63,191,127,0))" }} />
-        <div className="absolute inset-y-0" style={{ left: "34%", width: "22%", transform: "skewX(-24deg)", background: "linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.05), rgba(255,255,255,0))" }} />
-        <div className="absolute rounded-[50%]" style={{ right: "6%", top: "54%", width: "46%", height: "6%", background: "radial-gradient(closest-side, rgba(0,0,0,0.55), rgba(0,0,0,0))" }} />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photo} data-fallback="/mob/cmp-scooter.webp" alt="" className="absolute object-contain" style={{ right: "5%", top: "9%", width: "50%", height: "50%", filter: "drop-shadow(0 1.6cqw 2cqw rgba(0,0,0,0.5))" }} />
-        <div className="absolute inset-x-0 bottom-0" style={{ height: "0.4cqw", background: "linear-gradient(90deg, rgba(201,168,74,0), #E8D48A 30%, #9FDB7C 70%, rgba(159,219,124,0))" }} />
-
-        <div className="relative flex h-full flex-col" style={{ padding: "6cqw 6.4cqw 5.4cqw" }}>
-          <div className="flex items-start justify-between">
-            <div>
-              <p style={{ fontSize: "2.3cqw", letterSpacing: "0.34em", color: "#D9E86A", fontWeight: 600 }}>QUARK MOBILIDADE</p>
-              <div style={{ width: "8cqw", height: "0.18cqw", background: "rgba(217,232,106,0.6)", margin: "1.6cqw 0 1.2cqw" }} />
-              <p className="truncate" style={{ fontSize: model.length > 8 ? "7.4cqw" : "9.4cqw", lineHeight: 1, letterSpacing: "-0.035em", fontWeight: 300, maxWidth: "48cqw" }}>
-                {model}
-              </p>
-              <p style={{ marginTop: "1.4cqw", fontSize: "1.9cqw", letterSpacing: "0.26em", opacity: 0.55, fontWeight: 500 }}>SCOOTER ELÉTRICA{d.color ? ` · ${d.color.toUpperCase()}` : ""}</p>
-            </div>
-            <span className="tabular-nums" style={{ fontSize: "2cqw", letterSpacing: "0.14em", opacity: 0.5, fontWeight: 500 }}>
-              {number}
-            </span>
-          </div>
-
-          <div className="mt-auto flex items-end justify-between" style={{ gap: "4cqw" }}>
-            <div className="grid min-w-0 flex-1" style={{ gridTemplateColumns: "1.35fr 0.75fr", columnGap: "3.4cqw", rowGap: "2.6cqw" }}>
-              {[
-                ["PROPRIETÁRIO", owner || "—"],
-                ["GARANTIA ATÉ", end ? dateBr(end) : "na entrega"],
-                ["CHASSI", d.chassis.trim().toUpperCase() || "—"],
-                ["ANO", d.year ? String(d.year) : "—"],
-              ].map(([k, v]) => (
-                <div key={k} className="min-w-0">
-                  <p style={label}>{k}</p>
-                  <p className="truncate" style={{ marginTop: "0.6cqw", fontSize: k === "CHASSI" ? "3cqw" : "3.3cqw", lineHeight: 1.15, fontWeight: 500, letterSpacing: k === "CHASSI" ? "0.03em" : "-0.01em" }}>
-                    {v}
-                  </p>
-                </div>
-              ))}
-            </div>
-            <div className="shrink-0 bg-white" style={{ padding: "1.3cqw", borderRadius: "2.2cqw", boxShadow: "0 1cqw 3cqw rgba(0,0,0,0.35)" }}>
-              {qr ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={qr} alt="QR code com os dados da compra" style={{ width: "17cqw", height: "17cqw", display: "block" }} />
-              ) : (
-                <div style={{ width: "17cqw", height: "17cqw" }} />
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+/** Recorta a foto em 3:4 (centralizada no rosto) e reduz para caber leve no cartão. */
+async function toPortrait(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((ok, fail) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = fail;
+      i.src = url;
+    });
+    const W = 600, H = 800;
+    const scale = Math.max(W / img.width, H / img.height);
+    const w = img.width * scale, h = img.height * scale;
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    c.getContext("2d")!.drawImage(img, (W - w) / 2, Math.min(0, (H - h) * 0.35), w, h);
+    return c.toDataURL("image/jpeg", 0.88);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
-type Busy = "google" | "image" | null;
-
-/** Seção "Cartão digital" da área do cliente. */
+/** Seção "Cartão do proprietário" da área do cliente. */
 export function WalletSection({
   d,
   id,
@@ -113,6 +60,8 @@ export function WalletSection({
   company,
   creds,
   wallet,
+  selfie,
+  contact,
 }: {
   d: MotoData;
   id: string;
@@ -120,10 +69,17 @@ export function WalletSection({
   company: { name: string; cnpj: string };
   creds: { cpf: string; check: string } | null;
   wallet: { google: boolean };
+  selfie: string | null;
+  contact: string;
 }) {
   const qr = useCardQr(d, id, company);
   const [busy, setBusy] = useState<Busy>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<string | null>(selfie);
+  const [side, setSide] = useState<"frente" | "verso">("frente");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const model = (vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter").replace(/\W+/g, "");
+
   const google = async () => {
     if (!creds) return;
     setBusy("google");
@@ -145,7 +101,7 @@ export function WalletSection({
     setErr(null);
     try {
       const { downloadArtPng } = await import("@/components/bf/download-pdf");
-      await downloadArtPng(<WalletCardView d={d} id={id} qr={qr} art />, `Cartao-Quark-${(vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter").replace(/\W+/g, "")}.png`, { width: 1012, height: 638 });
+      await downloadArtPng(<OwnerCardFront d={d} id={id} photo={photo} art />, `Cartao-proprietario-${model}.png`, { width: 1012, height: 638 });
     } catch {
       setErr("Não foi possível salvar a imagem agora.");
     } finally {
@@ -153,26 +109,75 @@ export function WalletSection({
     }
   };
 
+  const pdf = async () => {
+    setBusy("pdf");
+    setErr(null);
+    try {
+      const { downloadPagesPdf } = await import("@/components/bf/download-pdf");
+      await downloadPagesPdf(<OwnerCardPdfPage d={d} id={id} photo={photo} qr={qr} contact={contact} />, `Cartao-proprietario-${model}.pdf`, { background: "#F5F6F1" });
+    } catch {
+      setErr("Não foi possível gerar o PDF agora.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const pick = async (f: File | undefined) => {
+    if (!f) return;
+    try {
+      setPhoto(await toPortrait(f));
+    } catch {
+      setErr("Não consegui abrir essa foto. Tente outra.");
+    }
+  };
+
   const btn = "flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-bold transition active:scale-[0.99] disabled:opacity-60";
-  const googleBtn = wallet.google && signed && (
-    <button key="g" type="button" onClick={google} disabled={!!busy} className={`${btn} bg-[#1F1F1F] text-white hover:bg-black`}>
-      {busy === "google" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Smartphone className="h-5 w-5" />} Adicionar ao Google Wallet
-    </button>
-  );
+  const spin = (k: Busy, icon: ReactNode) => (busy === k ? <Loader2 className="h-5 w-5 animate-spin" /> : icon);
 
   return (
     <section className="qp-up rounded-[26px] bg-white p-5 shadow-[0_18px_40px_-28px_rgba(16,52,32,0.45),0_1px_2px_rgba(16,52,32,0.05)] ring-1 ring-[#0B1A12]/[0.06] [animation-delay:.12s] sm:p-6">
-      <p className="text-[11px] font-bold tracking-[0.2em] text-[#1F9D55] uppercase">Cartão digital</p>
-      <h2 className="text-[22px] font-bold tracking-[-0.03em]">Sua scooter na carteira do celular</h2>
-      <p className="mt-1 text-[13.5px] leading-snug text-[#0B1A12]/60">Modelo, chassi, garantia e um QR code que confirma a compra. Sempre à mão, mesmo sem internet.</p>
-      <div className="mx-auto mt-5 max-w-[420px] transition-transform duration-500 hover:-rotate-1">
-        <WalletCardView d={d} id={id} qr={qr} />
+      <p className="text-[11px] font-bold tracking-[0.2em] text-[#1F9D55] uppercase">Cartão do proprietário</p>
+      <h2 className="text-[22px] font-bold tracking-[-0.03em]">Sua identificação da scooter</h2>
+      <p className="mt-1 text-[13.5px] leading-snug text-[#0B1A12]/60">Com a sua foto, os dados da scooter e um QR code que confirma a compra. Salve em PDF ou imagem e tenha sempre à mão.</p>
+
+      <div className="mt-5 flex justify-center gap-1 rounded-full bg-[#F4F7F1] p-1 text-[13px] font-semibold">
+        {(["frente", "verso"] as const).map((s) => (
+          <button key={s} type="button" onClick={() => setSide(s)} aria-pressed={side === s} className={`h-9 flex-1 rounded-full capitalize transition ${side === s ? "bg-white text-[#0B1A12] shadow-sm" : "text-[#0B1A12]/55"}`}>
+            {s}
+          </button>
+        ))}
       </div>
-      <div className="mt-5 grid gap-2.5">
-        {googleBtn}
-        <button type="button" onClick={image} disabled={!!busy} className={`${btn} bg-[#F4F7F1] text-[#0B1A12] ring-1 ring-[#0B1A12]/[0.08] hover:bg-[#EAF6EC]`}>
-          {busy === "image" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5 text-[#1F9D55]" />} Salvar o cartão como imagem
+      <div className="mx-auto mt-4 max-w-[440px]">
+        {side === "frente" ? <OwnerCardFront d={d} id={id} photo={photo} /> : <OwnerCardBack d={d} id={id} qr={qr} contact={contact} />}
+      </div>
+
+      <div className="mt-3 flex items-center justify-center gap-2 text-[13px]">
+        <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+        <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 font-semibold text-[#1F9D55] hover:bg-[#EAF6EC]">
+          <Camera className="h-4 w-4" /> {photo ? "Trocar a foto" : "Adicionar foto"}
         </button>
+        {photo && photo !== selfie && (
+          <button type="button" onClick={() => setPhoto(selfie)} className="rounded-full px-3 py-2 font-semibold text-[#0B1A12]/50 hover:bg-[#0B1A12]/[0.04]">
+            Desfazer
+          </button>
+        )}
+      </div>
+      <p className="text-center text-[11.5px] text-[#0B1A12]/45">{selfie ? "Usamos a selfie da assinatura do contrato." : "Tire uma foto de rosto, de frente, com fundo claro."} A foto nova fica só no seu celular.</p>
+
+      <div className="mt-4 grid gap-2.5">
+        {wallet.google && signed && (
+          <button type="button" onClick={google} disabled={!!busy} className={`${btn} bg-[#1F1F1F] text-white hover:bg-black`}>
+            {spin("google", <Smartphone className="h-5 w-5" />)} Adicionar ao Google Wallet
+          </button>
+        )}
+        <div className="grid grid-cols-2 gap-2.5">
+          <button type="button" onClick={pdf} disabled={!!busy} className={`${btn} bg-[#0B1A12] text-white hover:bg-[#13291c]`}>
+            {spin("pdf", <FileDown className="h-5 w-5" />)} Salvar PDF
+          </button>
+          <button type="button" onClick={image} disabled={!!busy} className={`${btn} bg-[#F4F7F1] text-[#0B1A12] ring-1 ring-[#0B1A12]/[0.08] hover:bg-[#EAF6EC]`}>
+            {spin("image", <ImageDown className="h-5 w-5 text-[#1F9D55]" />)} Salvar imagem
+          </button>
+        </div>
       </div>
       <div aria-live="polite">{err && <p className="mt-3 rounded-2xl bg-[#FDECEA] px-4 py-3 text-[13px] text-[#A12A17]">{err}</p>}</div>
     </section>

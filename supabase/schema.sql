@@ -1555,7 +1555,9 @@ begin
            -- Sem a imagem da assinatura da empresa.
            'data', d.data - 'contractorSignature',
            'signed_at', s.signed_at,
-           'token', s.token
+           'token', s.token,
+           -- Selfie da assinatura: vira a foto 3/4 do cartão do proprietário.
+           'selfie', s.selfie
          ) order by d.created_at desc), '[]'::jsonb)
     into v_sales
     from public.documents d

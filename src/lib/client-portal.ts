@@ -13,6 +13,8 @@ export interface PortalSale {
   data: MotoData;
   signed_at: string | null;
   token: string | null;
+  /** Selfie da assinatura do contrato (foto 3/4 do cartão do proprietário). */
+  selfie?: string | null;
 }
 
 export interface PortalCompany {

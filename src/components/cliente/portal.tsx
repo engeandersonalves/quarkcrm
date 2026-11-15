@@ -450,7 +450,7 @@ function Home({ session, fallback, models, wallet, onLogout }: { session: Sessio
           </section>
 
           <WarrantyCard w={w} days={d.warrantyDays} claim={claim} />
-          {signed ? <WalletSection d={d} id={sale.id} signed={signed} company={{ name: d.contractor?.name || brand.legal_name || brand.company_name, cnpj: d.contractor?.doc || brand.cnpj }} creds={session.creds} wallet={wallet} /> : <WalletLocked token={sale.token} />}
+          {signed ? <WalletSection d={d} id={sale.id} signed={signed} company={{ name: d.contractor?.name || brand.legal_name || brand.company_name, cnpj: d.contractor?.doc || brand.cnpj }} creds={session.creds} wallet={wallet} selfie={sale.selfie ?? null} contact={brand.whatsapp ? brand.whatsapp.replace(/^(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3") : ""} /> : <WalletLocked token={sale.token} />}
         </div>
 
         {/* coluna 2: documentos, indicação e cuidados */}
