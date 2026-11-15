@@ -177,3 +177,23 @@ export function WalletSection({
     </section>
   );
 }
+
+/** Antes da assinatura: mostra que o cartão existe e o que falta para liberar. */
+export function WalletLocked({ token }: { token: string | null }) {
+  return (
+    <section className="qp-up flex items-center gap-4 rounded-[26px] bg-white p-5 shadow-[0_18px_40px_-28px_rgba(16,52,32,0.45),0_1px_2px_rgba(16,52,32,0.05)] ring-1 ring-[#0B1A12]/[0.06] [animation-delay:.12s]">
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#0B1A12] text-[#E4F04A]">
+        <Smartphone className="h-6 w-6" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[16px] font-bold">Cartão digital da scooter</p>
+        <p className="text-[13.5px] leading-snug text-[#0B1A12]/60">Para o Google Wallet. Libera assim que você assinar o contrato.</p>
+      </div>
+      {token && (
+        <a href={`/assinar/${token}`} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-full bg-[#0B1A12] px-4 py-2.5 text-[13.5px] font-bold text-white">
+          Assinar
+        </a>
+      )}
+    </section>
+  );
+}

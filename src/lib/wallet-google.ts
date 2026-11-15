@@ -14,19 +14,56 @@ export interface GoogleWalletConfig {
 const b64url = (v: string | Buffer) => Buffer.from(v).toString("base64url");
 const safeId = (v: string) => v.replace(/[^A-Za-z0-9._-]/g, "_");
 
-/** Lê a configuração das variáveis de ambiente (JSON da conta de serviço puro ou em base64). */
-export function googleWalletConfig(env: Record<string, string | undefined> = process.env): GoogleWalletConfig | null {
-  const issuerId = env.GOOGLE_WALLET_ISSUER_ID?.trim();
-  // Aceita o JSON puro, em base64 ou colado entre aspas.
-  const raw = env.GOOGLE_WALLET_SERVICE_ACCOUNT?.trim().replace(/^'([\s\S]*)'$/, "$1");
-  if (!issuerId || !raw) return null;
-  try {
-    const json = JSON.parse(raw.startsWith("{") ? raw : Buffer.from(raw, "base64").toString("utf8")) as { client_email?: string; private_key?: string };
-    if (!json.client_email || !json.private_key) return null;
-    return { issuerId, clientEmail: json.client_email, privateKey: json.private_key };
-  } catch {
-    return null;
+type Env = Record<string, string | undefined>;
+
+/** Nomes aceitos (o oficial primeiro); variações comuns de quem cadastra na mão também valem. */
+const ISSUER_KEYS = /^(GOOGLE_)?(WALLET_)?ISS?U(E|I)R?D?_?ID$|ISSUER/i;
+const ACCOUNT_KEYS = /(WALLET|GOOGLE).*(SERVICE|ACCOUNT|CREDENTIAL|JSON|KEY)/i;
+
+const unquote = (v: string) => v.trim().replace(/^'([\s\S]*)'$/, "$1").replace(/^"(\{[\s\S]*\})"$/, "$1");
+
+/** Lê o JSON da conta de serviço: puro, em base64, entre aspas ou com quebras de linha coladas. */
+export function parseServiceAccount(value: string | undefined): { clientEmail: string; privateKey: string } | null {
+  if (!value?.trim()) return null;
+  let raw = unquote(value);
+  if (!raw.startsWith("{")) {
+    try {
+      raw = Buffer.from(raw, "base64").toString("utf8").trim();
+    } catch {
+      return null;
+    }
   }
+  try {
+    const j = JSON.parse(raw) as { client_email?: string; private_key?: string };
+    if (j.client_email && j.private_key) return { clientEmail: j.client_email, privateKey: j.private_key };
+  } catch {
+    /* JSON com quebras de linha reais dentro da chave: lê os campos direto */
+  }
+  const email = raw.match(/"client_email"\s*:\s*"([^"]+)"/)?.[1];
+  const key = raw.match(/"private_key"\s*:\s*"(-----BEGIN[\s\S]*?-----END PRIVATE KEY-----(?:\\n|\n)?)"/)?.[1];
+  return email && key ? { clientEmail: email, privateKey: key.replace(/\\n/g, "\n") } : null;
+}
+
+const issuerOf = (v: string | undefined) => v?.match(/\d{10,25}/)?.[0] ?? "";
+
+/** Variáveis de ambiente relacionadas ao Wallet (só os nomes, para o diagnóstico). */
+export function walletEnvNames(env: Env = process.env) {
+  return Object.keys(env).filter((k) => /WALLET|ISSUER/i.test(k) && env[k]?.trim()).sort();
+}
+
+/** Lê a configuração das variáveis de ambiente. */
+export function googleWalletConfig(env: Env = process.env): GoogleWalletConfig | null {
+  const names = walletEnvNames(env);
+  const issuerKey = env.GOOGLE_WALLET_ISSUER_ID?.trim() ? "GOOGLE_WALLET_ISSUER_ID" : names.find((k) => ISSUER_KEYS.test(k) && issuerOf(env[k]));
+  const issuerId = issuerKey ? issuerOf(env[issuerKey]) : "";
+  const accountKeys = ["GOOGLE_WALLET_SERVICE_ACCOUNT", ...Object.keys(env).filter((k) => k !== "GOOGLE_WALLET_SERVICE_ACCOUNT" && ACCOUNT_KEYS.test(k))];
+  let sa: ReturnType<typeof parseServiceAccount> = null;
+  for (const k of accountKeys) {
+    sa = parseServiceAccount(env[k]);
+    if (sa) break;
+  }
+  if (!issuerId || !sa) return null;
+  return { issuerId, clientEmail: sa.clientEmail, privateKey: sa.privateKey };
 }
 
 export function googleWalletObjects(card: WalletCard, cfg: Pick<GoogleWalletConfig, "issuerId">, origin: string) {
@@ -76,11 +113,20 @@ export type WalletCheck =
  * emissor (Issuer ID). Nunca devolve a chave, só o e-mail da conta e o resultado.
  */
 export async function checkGoogleWallet(env: Record<string, string | undefined> = process.env, fetcher: typeof fetch = fetch): Promise<WalletCheck> {
-  const hasId = !!env.GOOGLE_WALLET_ISSUER_ID?.trim();
-  const hasSa = !!env.GOOGLE_WALLET_SERVICE_ACCOUNT?.trim();
   const cfg = googleWalletConfig(env);
   if (!cfg) {
-    const message = !hasId && !hasSa ? "As variáveis GOOGLE_WALLET_ISSUER_ID e GOOGLE_WALLET_SERVICE_ACCOUNT não estão na Vercel (ou falta o Redeploy)." : !hasId ? "Falta a variável GOOGLE_WALLET_ISSUER_ID na Vercel." : !hasSa ? "Falta a variável GOOGLE_WALLET_SERVICE_ACCOUNT na Vercel." : "O conteúdo de GOOGLE_WALLET_SERVICE_ACCOUNT não é o arquivo JSON da conta de serviço. Cole o arquivo inteiro, do { ao }.";
+    const names = walletEnvNames(env);
+    const found = names.length ? ` Variáveis encontradas: ${names.join(", ")}.` : " Nenhuma variável com WALLET ou ISSUER foi encontrada neste deploy.";
+    const issuer = names.some((k) => issuerOf(env[k]));
+    const account = Object.keys(env).some((k) => ACCOUNT_KEYS.test(k) && parseServiceAccount(env[k]));
+    const where = env.VERCEL_ENV ? ` (ambiente: ${env.VERCEL_ENV})` : "";
+    const message = !names.length
+      ? `O app não encontrou as variáveis do Google Wallet${where}. Confira se foram salvas marcando "Production" e se você fez o Redeploy depois.${found}`
+      : !issuer
+        ? `Não achei o Issuer ID (um número com 19 dígitos). Crie GOOGLE_WALLET_ISSUER_ID com esse número.${found}`
+        : !account
+          ? `Não consegui ler o JSON da conta de serviço. Crie GOOGLE_WALLET_SERVICE_ACCOUNT e cole o arquivo .json inteiro, do { ao }.${found}`
+          : `Configuração incompleta.${found}`;
     return { ok: false, step: "config", message };
   }
   if (!/^\d{10,25}$/.test(cfg.issuerId)) return { ok: false, step: "config", message: "O Issuer ID deve ter só números (ex.: 3388000000022…). Confira GOOGLE_WALLET_ISSUER_ID.", serviceEmail: cfg.clientEmail };

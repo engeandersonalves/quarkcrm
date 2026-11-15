@@ -65,7 +65,22 @@ test("wallet: verificação das credenciais do Google", async () => {
   assert.equal(denied.ok, false);
   assert.match(!denied.ok ? denied.message : "", /convide wallet@x/);
   const missing = await checkGoogleWallet({}, fake(200));
-  assert.match(!missing.ok ? missing.message : "", /não estão na Vercel/);
+  assert.match(!missing.ok ? missing.message : "", /não encontrou as variáveis/);
   const quoted = await checkGoogleWallet({ ...env, GOOGLE_WALLET_SERVICE_ACCOUNT: `'${sa}'` }, fake(200));
   assert.equal(quoted.ok, true);
+});
+
+test("wallet: aceita nomes e formatos diferentes das variáveis", async () => {
+  const { googleWalletConfig, parseServiceAccount, walletEnvNames } = await import("./wallet-google.ts");
+  const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const pem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+  const json = JSON.stringify({ type: "service_account", client_email: "w@x.iam.gserviceaccount.com", private_key: pem }, null, 2);
+  // Chave com quebras de linha reais (JSON inválido) ainda é lida.
+  const broken = json.replace(/\\n/g, "\n");
+  assert.equal(parseServiceAccount(broken)?.clientEmail, "w@x.iam.gserviceaccount.com");
+  assert.match(parseServiceAccount(broken)?.privateKey ?? "", /-----END PRIVATE KEY-----/);
+  const cfg = googleWalletConfig({ GOOGLE_WALLET_ISSUID_ID: "Issuer ID: 3388000000022123456", GOOGLE_WALLET_SERVICE: json });
+  assert.equal(cfg?.issuerId, "3388000000022123456");
+  assert.equal(cfg?.clientEmail, "w@x.iam.gserviceaccount.com");
+  assert.deepEqual(walletEnvNames({ GOOGLE_WALLET_SERVICE: "x", OTHER: "y", GOOGLE_WALLET_ISSUER_ID: "" }), ["GOOGLE_WALLET_SERVICE"]);
 });
