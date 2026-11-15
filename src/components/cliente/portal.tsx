@@ -78,7 +78,7 @@ function Backdrop() {
 
 type Company = { company_name: string | null; whatsapp: string | null; instagram: string | null };
 type Session = { sales: PortalSale[]; company: PortalCompany | null; creds: { cpf: string; check: string } };
-type WalletFlags = { apple: boolean; google: boolean };
+type WalletFlags = { google: boolean };
 
 export function ClientPortal({ company, models, wallet }: { company: Company; models: string[]; wallet: WalletFlags }) {
   const [phase, setPhase] = useState<"restoring" | "login" | "welcome" | "home">("restoring");

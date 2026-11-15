@@ -1,6 +1,6 @@
 /**
- * Cartão da scooter para Apple Wallet e Google Wallet: as mesmas informações para
- * os dois (e para a imagem do cartão na área do cliente).
+ * Cartão da scooter para o Google Wallet: as mesmas informações para
+ * o Wallet e para a imagem do cartão na área do cliente.
  */
 import { dateBr, formatDoc, maskDoc } from "./br.ts";
 import { receiptNumber, receiptQrText } from "./moto-receipt.ts";
@@ -26,13 +26,13 @@ export interface WalletCard {
   model: string;
   color: string;
   owner: string;
-  /** Imagem da faixa/hero: um dos modelos do catálogo ou a genérica. */
+  /** Imagem de destaque: um dos modelos do catálogo ou a genérica. */
   art: "t1" | "cappuccino" | "mz" | "scooter";
   /** Frente do cartão. */
   primary: WalletField;
   secondary: WalletField[];
   auxiliary: WalletField[];
-  /** Verso (Apple) / módulos de texto (Google). */
+  /** Módulos de texto do Google Wallet. */
   back: WalletField[];
   qr: string;
   warrantyEnd: string;

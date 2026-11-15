@@ -15,7 +15,7 @@ const sale = (id: string, status: "rascunho" | "enviado" | "assinado", over: (d:
   return { id, status, data: d, created_at: "2026-11-10T10:00:00Z", updated_at: "2026-11-10T10:00:00Z", completed_at: status === "assinado" ? "2026-11-10T12:00:00Z" : null };
 };
 
-test("clientes: agrupa por CPF e prioriza garantia ativa", () => {
+test("clientes: agrupa por CPF e ordena por prioridade", () => {
   const list = groupClients(
     [
       sale("a", "assinado", () => {}),
@@ -30,13 +30,15 @@ test("clientes: agrupa por CPF e prioriza garantia ativa", () => {
     new Date("2026-11-20T12:00:00Z"),
   );
   assert.equal(list.length, 2);
-  assert.equal(list[0].name, "Maria Lima");
-  assert.equal(list[0].sales.length, 2);
-  assert.equal(list[0].stage, "garantia");
-  assert.equal(list[0].warrantyLeft, 82);
-  assert.equal(list[1].stage, "assinatura");
-  assert.equal(matchClient(list[0], "cappuccino"), true);
-  assert.equal(matchClient(list[0], "982.247"), true);
-  assert.equal(matchClient(list[1], "maria"), false);
+  // Quem está para assinar vem primeiro (é o que pede ação).
+  assert.equal(list[0].stage, "assinatura");
+  const maria = list[1];
+  assert.equal(maria.name, "Maria Lima");
+  assert.equal(maria.sales.length, 2);
+  assert.equal(maria.stage, "garantia");
+  assert.equal(maria.warrantyLeft, 82);
+  assert.equal(matchClient(maria, "cappuccino"), true);
+  assert.equal(matchClient(maria, "982.247"), true);
+  assert.equal(matchClient(list[0], "maria"), false);
   assert.match(portalMessage("Maria Lima", "https://x/cliente"), /4 últimos dígitos/);
 });

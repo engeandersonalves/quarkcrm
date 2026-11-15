@@ -1,13 +1,13 @@
 "use client";
 
-import { Download, Loader2, Smartphone, Wallet } from "lucide-react";
+import { Download, Loader2, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { dateBr } from "@/lib/br";
 import { receiptNumber, receiptQrText } from "@/lib/moto-receipt";
 import { motoPhoto, vehicleName, warrantyEnd, type MotoData } from "@/lib/moto-sale";
 
 /**
- * Cartão digital da scooter: o mesmo visual do cartão da Apple/Google Wallet.
+ * Cartão digital da scooter: o mesmo visual do cartão do Google Wallet.
  * Todas as medidas em cqw (relativas à largura), para o cartão ficar igual em
  * qualquer tamanho: na tela e na imagem salva (1012 px).
  */
@@ -102,7 +102,7 @@ export function WalletCardView({ d, id, qr, art }: { d: MotoData; id: string; qr
   );
 }
 
-type Busy = "apple" | "google" | "image" | null;
+type Busy = "google" | "image" | null;
 
 /** Seção "Cartão digital" da área do cliente. */
 export function WalletSection({
@@ -118,34 +118,11 @@ export function WalletSection({
   signed: boolean;
   company: { name: string; cnpj: string };
   creds: { cpf: string; check: string } | null;
-  wallet: { apple: boolean; google: boolean };
+  wallet: { google: boolean };
 }) {
   const qr = useCardQr(d, id, company);
   const [busy, setBusy] = useState<Busy>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [ios, setIos] = useState(false);
-  useEffect(() => setIos(/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)), []);
-
-  const apple = () => {
-    if (!creds) return;
-    setBusy("apple");
-    // Formulário de verdade: o Safari abre o .pkpass direto na tela "Adicionar à Wallet".
-    const f = document.createElement("form");
-    f.method = "POST";
-    f.action = "/api/public/cliente/wallet";
-    for (const [k, v] of Object.entries({ cpf: creds.cpf, check: creds.check, sale: id, kind: "apple" })) {
-      const i = document.createElement("input");
-      i.type = "hidden";
-      i.name = k;
-      i.value = v;
-      f.appendChild(i);
-    }
-    document.body.appendChild(f);
-    f.submit();
-    f.remove();
-    setTimeout(() => setBusy(null), 4000);
-  };
-
   const google = async () => {
     if (!creds) return;
     setBusy("google");
@@ -176,11 +153,6 @@ export function WalletSection({
   };
 
   const btn = "flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-bold transition active:scale-[0.99] disabled:opacity-60";
-  const appleBtn = wallet.apple && signed && (
-    <button key="a" type="button" onClick={apple} disabled={!!busy} className={`${btn} bg-black text-white hover:bg-[#1a1a1a]`}>
-      {busy === "apple" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wallet className="h-5 w-5" />} Adicionar à Apple Wallet
-    </button>
-  );
   const googleBtn = wallet.google && signed && (
     <button key="g" type="button" onClick={google} disabled={!!busy} className={`${btn} bg-[#1F1F1F] text-white hover:bg-black`}>
       {busy === "google" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Smartphone className="h-5 w-5" />} Salvar no Google Wallet
@@ -196,7 +168,7 @@ export function WalletSection({
         <WalletCardView d={d} id={id} qr={qr} />
       </div>
       <div className="mt-5 grid gap-2.5">
-        {ios ? [appleBtn, googleBtn] : [googleBtn, appleBtn]}
+        {googleBtn}
         <button type="button" onClick={image} disabled={!!busy} className={`${btn} bg-[#F4F7F1] text-[#0B1A12] ring-1 ring-[#0B1A12]/[0.08] hover:bg-[#EAF6EC]`}>
           {busy === "image" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5 text-[#1F9D55]" />} Salvar o cartão como imagem
         </button>
