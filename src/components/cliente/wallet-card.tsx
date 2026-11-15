@@ -28,71 +28,72 @@ export function useCardQr(d: MotoData, id: string, company: { name: string; cnpj
   return qr;
 }
 
+const INTER = "var(--font-inter), 'Inter', system-ui, sans-serif";
+
 export function WalletCardView({ d, id, qr, art }: { d: MotoData; id: string; qr: string; art?: boolean }) {
   const model = vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter";
   const end = d.delivery.date || d.date ? warrantyEnd(d) : "";
   const owner = d.client.name.trim().split(/\s+/).slice(0, 2).join(" ");
   const { number } = receiptNumber(id);
   const photo = d.photo || motoPhoto(d);
+  const label = { fontSize: "2.05cqw", letterSpacing: "0.22em", color: "#D9E86A", opacity: 0.8, fontWeight: 600 } as const;
   return (
     <div className="w-full [container-type:inline-size]" {...(art ? { "data-art": true } : {})}>
       <div
-        className="relative w-full overflow-hidden font-[family-name:var(--font-outfit)] text-white antialiased"
-        style={{ aspectRatio: "1.586", borderRadius: "5.5cqw", background: "#0B1A12", boxShadow: art ? "none" : "0 30px 60px -30px rgba(11,26,18,0.75)" }}
+        className="relative w-full overflow-hidden text-white antialiased"
+        style={{
+          aspectRatio: "1.586",
+          borderRadius: "4.6cqw",
+          fontFamily: INTER,
+          background: "linear-gradient(135deg, #06100A 0%, #0B1E14 55%, #133525 100%)",
+          boxShadow: art ? "none" : "0 40px 70px -34px rgba(6,16,10,0.85), inset 0 0 0 1px rgba(255,255,255,0.07)",
+        }}
       >
-        {/* brilho + scooter */}
-        <div className="absolute rounded-full" style={{ right: "-14%", top: "-8%", width: "78%", height: "120%", background: "radial-gradient(closest-side, rgba(79,195,138,0.45), rgba(79,195,138,0))" }} />
+        {/* luz sobre a scooter, reflexo diagonal e sombra no chão */}
+        <div className="absolute" style={{ right: "-12%", top: "-6%", width: "74%", height: "112%", background: "radial-gradient(closest-side, rgba(63,191,127,0.42), rgba(63,191,127,0))" }} />
+        <div className="absolute inset-y-0" style={{ left: "34%", width: "22%", transform: "skewX(-24deg)", background: "linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.05), rgba(255,255,255,0))" }} />
+        <div className="absolute rounded-[50%]" style={{ right: "6%", top: "54%", width: "46%", height: "6%", background: "radial-gradient(closest-side, rgba(0,0,0,0.55), rgba(0,0,0,0))" }} />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photo} data-fallback="/mob/cmp-scooter.webp" alt="" className="absolute object-contain" style={{ right: "4%", top: "13%", width: "50%", height: "46%", filter: "drop-shadow(0 2cqw 2.4cqw rgba(0,0,0,0.55))" }} />
-        <div className="absolute inset-x-0 top-0" style={{ height: "1.2cqw", background: "linear-gradient(95deg,#1FA06A,#9FDB7C 60%,#D8E83C)" }} />
+        <img src={photo} data-fallback="/mob/cmp-scooter.webp" alt="" className="absolute object-contain" style={{ right: "5%", top: "9%", width: "50%", height: "50%", filter: "drop-shadow(0 1.6cqw 2cqw rgba(0,0,0,0.5))" }} />
+        <div className="absolute inset-x-0 bottom-0" style={{ height: "0.4cqw", background: "linear-gradient(90deg, rgba(201,168,74,0), #E8D48A 30%, #9FDB7C 70%, rgba(159,219,124,0))" }} />
 
-        <div className="relative flex h-full flex-col" style={{ padding: "5.5cqw 6cqw" }}>
-          <div className="flex items-center justify-between">
-            <span className="flex items-center" style={{ gap: "2cqw" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/logo-h-white.png" alt="Quark" style={{ height: "6.2cqw", width: "auto" }} />
-              <span className="font-semibold" style={{ fontSize: "4.2cqw", color: "#E4F04A" }}>
-                Mobilidade
-              </span>
-            </span>
-            <span className="font-bold tabular-nums" style={{ fontSize: "3cqw", letterSpacing: "0.08em", opacity: 0.65 }}>
+        <div className="relative flex h-full flex-col" style={{ padding: "6cqw 6.4cqw 5.4cqw" }}>
+          <div className="flex items-start justify-between">
+            <div>
+              <p style={{ fontSize: "2.3cqw", letterSpacing: "0.34em", color: "#D9E86A", fontWeight: 600 }}>QUARK MOBILIDADE</p>
+              <div style={{ width: "8cqw", height: "0.18cqw", background: "rgba(217,232,106,0.6)", margin: "1.6cqw 0 1.2cqw" }} />
+              <p className="truncate" style={{ fontSize: model.length > 8 ? "7.4cqw" : "9.4cqw", lineHeight: 1, letterSpacing: "-0.035em", fontWeight: 300, maxWidth: "48cqw" }}>
+                {model}
+              </p>
+              <p style={{ marginTop: "1.4cqw", fontSize: "1.9cqw", letterSpacing: "0.26em", opacity: 0.55, fontWeight: 500 }}>SCOOTER ELÉTRICA{d.color ? ` · ${d.color.toUpperCase()}` : ""}</p>
+            </div>
+            <span className="tabular-nums" style={{ fontSize: "2cqw", letterSpacing: "0.14em", opacity: 0.5, fontWeight: 500 }}>
               {number}
             </span>
           </div>
 
-          <div style={{ marginTop: "2.6cqw" }}>
-            <p className="font-bold uppercase" style={{ fontSize: "2.7cqw", letterSpacing: "0.18em", color: "#E4F04A" }}>
-              Scooter elétrica
-            </p>
-            <p className="truncate font-bold" style={{ fontSize: "7.6cqw", lineHeight: 1.05, letterSpacing: "-0.03em", maxWidth: "52%" }}>
-              {model}
-            </p>
-          </div>
-
           <div className="mt-auto flex items-end justify-between" style={{ gap: "4cqw" }}>
-            <div className="grid min-w-0 flex-1 grid-cols-2" style={{ columnGap: "4cqw", rowGap: "1.5cqw" }}>
+            <div className="grid min-w-0 flex-1" style={{ gridTemplateColumns: "1.35fr 0.75fr", columnGap: "3.4cqw", rowGap: "2.6cqw" }}>
               {[
-                ["Proprietário", owner || "—", true],
-                ["Chassi", d.chassis.trim().toUpperCase() || "—", true],
-                ["Garantia até", end ? dateBr(end) : "na entrega", false],
-                ["Cor · ano", [d.color, d.year].filter(Boolean).join(" · ") || "—", false],
-              ].map(([k, v, wide]) => (
-                <div key={k as string} className="min-w-0" style={wide ? { gridColumn: "span 2" } : undefined}>
-                  <p className="font-bold uppercase" style={{ fontSize: "2.3cqw", letterSpacing: "0.14em", color: "#E4F04A", opacity: 0.85 }}>
-                    {k}
-                  </p>
-                  <p className="truncate font-semibold" style={{ fontSize: "3.6cqw", lineHeight: 1.2 }}>
+                ["PROPRIETÁRIO", owner || "—"],
+                ["GARANTIA ATÉ", end ? dateBr(end) : "na entrega"],
+                ["CHASSI", d.chassis.trim().toUpperCase() || "—"],
+                ["ANO", d.year ? String(d.year) : "—"],
+              ].map(([k, v]) => (
+                <div key={k} className="min-w-0">
+                  <p style={label}>{k}</p>
+                  <p className="truncate" style={{ marginTop: "0.6cqw", fontSize: k === "CHASSI" ? "3cqw" : "3.3cqw", lineHeight: 1.15, fontWeight: 500, letterSpacing: k === "CHASSI" ? "0.03em" : "-0.01em" }}>
                     {v}
                   </p>
                 </div>
               ))}
             </div>
-            <div className="shrink-0 bg-white" style={{ padding: "1.4cqw", borderRadius: "2.4cqw" }}>
+            <div className="shrink-0 bg-white" style={{ padding: "1.3cqw", borderRadius: "2.2cqw", boxShadow: "0 1cqw 3cqw rgba(0,0,0,0.35)" }}>
               {qr ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={qr} alt="QR code com os dados da compra" style={{ width: "19cqw", height: "19cqw", display: "block" }} />
+                <img src={qr} alt="QR code com os dados da compra" style={{ width: "17cqw", height: "17cqw", display: "block" }} />
               ) : (
-                <div style={{ width: "19cqw", height: "19cqw" }} />
+                <div style={{ width: "17cqw", height: "17cqw" }} />
               )}
             </div>
           </div>
@@ -155,7 +156,7 @@ export function WalletSection({
   const btn = "flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-bold transition active:scale-[0.99] disabled:opacity-60";
   const googleBtn = wallet.google && signed && (
     <button key="g" type="button" onClick={google} disabled={!!busy} className={`${btn} bg-[#1F1F1F] text-white hover:bg-black`}>
-      {busy === "google" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Smartphone className="h-5 w-5" />} Salvar no Google Wallet
+      {busy === "google" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Smartphone className="h-5 w-5" />} Adicionar ao Google Wallet
     </button>
   );
 

@@ -43,7 +43,15 @@ test("wallet: link do Google assinado com a conta de serviço", () => {
   const claims = JSON.parse(Buffer.from(p, "base64url").toString());
   assert.equal(claims.typ, "savetowallet");
   const obj = claims.payload.genericObjects[0];
-  assert.match(obj.id, /^3388000000012345678\.scooter_0a1b2c3d/);
+  assert.match(obj.id, /^3388000000012345678\.scooter_v2_0a1b2c3d/);
+  const cls = claims.payload.genericClasses[0];
+  const rows = cls.classTemplateInfo.cardTemplateOverride.cardRowTemplateInfos;
+  assert.equal(rows.length, 2);
+  const ids = obj.textModulesData.map((t: { id: string }) => t.id);
+  for (const r of rows) for (const side of ["startItem", "endItem"]) assert.ok(ids.includes(r.twoItems[side].firstValue.fields[0].fieldPath.match(/'(.+)'/)[1]));
+  assert.equal(obj.header.defaultValue.value, "Cappuccino");
+  assert.equal(obj.logo.sourceUri.uri, "https://x.app/wallet/logo-google.png");
+  assert.ok(obj.linksModuleData.uris.some((u: { uri: string }) => u.uri.startsWith("https://wa.me/5582991831476")));
   assert.equal(obj.heroImage.sourceUri.uri, "https://x.app/wallet/hero-cappuccino.png");
   assert.ok(obj.textModulesData.length <= 20);
   assert.equal(googleWalletConfig({}), null);

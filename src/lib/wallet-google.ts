@@ -85,30 +85,48 @@ export function googleWalletConfig(env: Env = process.env): GoogleWalletConfig |
   return { issuerId, clientEmail: sa.clientEmail, privateKey: sa.privateKey };
 }
 
+/** Versão do visual: muda o id da classe/objeto para o Google aplicar o novo layout. */
+const DESIGN = "v2";
+const pt = (value: string) => ({ defaultValue: { language: "pt-BR", value } });
+const titleCase = (v: string) => v.charAt(0) + v.slice(1).toLowerCase();
+
 export function googleWalletObjects(card: WalletCard, cfg: Pick<GoogleWalletConfig, "issuerId">, origin: string) {
-  const classId = `${cfg.issuerId}.quark_mobilidade_scooter`;
-  const objectId = `${cfg.issuerId}.${safeId(`scooter_${card.serial}`)}`;
-  const text = (h: string, b: string, id: string) => ({ header: h, body: b, id });
+  const classId = `${cfg.issuerId}.quark_scooter_${DESIGN}`;
+  const objectId = `${cfg.issuerId}.${safeId(`scooter_${DESIGN}_${card.serial}`)}`;
+  const front = [...card.secondary, ...card.auxiliary];
+  const field = (key: string) => ({ firstValue: { fields: [{ fieldPath: `object.textModulesData['${key}']` }] } });
   return {
-    genericClasses: [{ id: classId }],
+    genericClasses: [
+      {
+        id: classId,
+        // Frente do cartão: 2 linhas, 2 campos cada (o resto fica nos detalhes).
+        classTemplateInfo: {
+          cardTemplateOverride: {
+            cardRowTemplateInfos: [
+              { twoItems: { startItem: field(front[0].key), endItem: field(front[1].key) } },
+              { twoItems: { startItem: field(front[2].key), endItem: field(front[3].key) } },
+            ],
+          },
+        },
+      },
+    ],
     genericObjects: [
       {
         id: objectId,
         classId,
         state: "ACTIVE",
         hexBackgroundColor: "#0B1A12",
-        logo: { sourceUri: { uri: `${origin}/wallet/icon@3x.png` }, contentDescription: { defaultValue: { language: "pt-BR", value: "Quark Mobilidade" } } },
-        cardTitle: { defaultValue: { language: "pt-BR", value: "Quark Mobilidade" } },
-        subheader: { defaultValue: { language: "pt-BR", value: "Scooter elétrica" } },
-        header: { defaultValue: { language: "pt-BR", value: [card.model, card.color].filter(Boolean).join(" · ") } },
-        heroImage: { sourceUri: { uri: `${origin}/wallet/hero-${card.art}.png` }, contentDescription: { defaultValue: { language: "pt-BR", value: card.model } } },
+        logo: { sourceUri: { uri: `${origin}/wallet/logo-google.png` }, contentDescription: pt("Quark Mobilidade") },
+        cardTitle: pt("Quark Mobilidade"),
+        subheader: pt(card.color ? `Scooter elétrica · ${card.color}` : "Scooter elétrica"),
+        header: pt(card.model),
+        heroImage: { sourceUri: { uri: `${origin}/wallet/hero-${card.art}.png` }, contentDescription: pt(`Scooter ${card.model}`) },
         textModulesData: [
-          ...card.secondary.map((f) => text(f.label, f.value, f.key)),
-          ...card.auxiliary.map((f) => text(f.label, f.value, f.key)),
-          ...card.back.map((f) => text(f.label, f.value, `b_${f.key}`)),
+          ...front.map((f) => ({ id: f.key, header: titleCase(f.label), body: f.value })),
+          ...card.back.map((f) => ({ id: `b_${f.key}`, header: f.label, body: f.value })),
         ].slice(0, 20),
         barcode: { type: "QR_CODE", value: card.qr, alternateText: card.number },
-        linksModuleData: { uris: [{ uri: `${origin}/cliente`, description: "Área do cliente: manual, garantia e comprovante", id: "portal" }] },
+        linksModuleData: { uris: card.links.map((l) => ({ uri: l.uri, description: l.description, id: l.id })) },
       },
     ],
   };

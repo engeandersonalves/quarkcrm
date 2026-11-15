@@ -36,6 +36,8 @@ export interface WalletCard {
   back: WalletField[];
   qr: string;
   warrantyEnd: string;
+  /** Links do cartão: área do cliente e assistência pelo WhatsApp. */
+  links: { id: string; uri: string; description: string }[];
 }
 
 const clean = (v: string | null | undefined) => (v ?? "").replace(/\s+/g, " ").trim();
@@ -56,19 +58,16 @@ export function walletCard(d: MotoData, id: string, company: WalletCompany, port
   const back: WalletField[] = [
     { key: "owner_full", label: "Proprietário", value: clean(d.client.name) },
     { key: "doc", label: doc.length > 11 ? "CNPJ" : "CPF", value: doc.length > 11 ? formatDoc(doc) : maskDoc(doc) },
-    { key: "vehicle", label: "Veículo", value: [vehicleName(d), clean(d.color), d.year].filter(Boolean).join(" · ") },
-    { key: "motor", label: "Nº do motor", value: clean(d.motorNo).toUpperCase() },
-    { key: "battery", label: "Nº da bateria", value: clean(d.batteryNo).toUpperCase() },
-    { key: "charger", label: "Nº do carregador", value: clean(d.chargerNo).toUpperCase() },
-    { key: "specs", label: "Ficha técnica", value: [d.specs.power, d.specs.battery, d.specs.range && `autonomia ${d.specs.range}`, d.specs.speed].filter(Boolean).join(" · ") },
-    { key: "purchase", label: "Compra", value: d.date ? dateBr(d.date) : "" },
+    { key: "motor", label: "Motor", value: clean(d.motorNo).toUpperCase() },
+    { key: "battery", label: "Bateria", value: clean(d.batteryNo).toUpperCase() },
+    { key: "charger", label: "Carregador", value: clean(d.chargerNo).toUpperCase() },
+    { key: "specs", label: "Ficha técnica", value: [d.specs.power, d.specs.battery, d.specs.range && `${d.specs.range} de autonomia`, d.specs.speed].filter(Boolean).join(" · ") },
+    { key: "purchase", label: "Data da compra", value: d.date ? dateBr(d.date) : "" },
     { key: "warranty", label: "Garantia", value: end ? `${d.warrantyDays} dias contra defeitos de fabricação, até ${dateBr(end)}` : `${d.warrantyDays} dias a partir da entrega` },
-    { key: "legal", label: "Documento", value: "Veículo autopropelido (até 1.000 W e 32 km/h), sem placa e sem CNH, conforme a Resolução CONTRAN nº 996/2023." },
     { key: "receipt", label: "Comprovante", value: `${number}${code ? ` · código ${code}` : ""}` },
-    { key: "seller", label: "Vendedora", value: [company.name, company.cnpj && `CNPJ ${formatDoc(company.cnpj)}`, company.city].filter(Boolean).join(" · ") },
-    { key: "help", label: "Assistência", value: contact || "Fale com a Quark Mobilidade" },
-    { key: "portal", label: "Área do cliente", value: `${portalUrl} · manual, garantia e comprovante` },
-    { key: "care", label: "Dica", value: "Recarregue perto de 20%, use só o carregador original e evite jato d'água." },
+    { key: "legal", label: "Categoria", value: "Autopropelido · até 1.000 W e 32 km/h · sem placa e sem CNH (Resolução CONTRAN 996/2023)" },
+    { key: "help", label: "Assistência", value: contact || "Quark Mobilidade" },
+    { key: "seller", label: "Emitido por", value: [company.name, company.cnpj && `CNPJ ${formatDoc(company.cnpj)}`].filter(Boolean).join(" · ") },
   ].filter((f) => f.value);
 
   return {
@@ -89,6 +88,10 @@ export function walletCard(d: MotoData, id: string, company: WalletCompany, port
     ],
     back,
     qr: receiptQrText(d, id, { name: company.name, cnpj: company.cnpj }),
+    links: [
+      { id: "portal", uri: portalUrl, description: "Área do cliente · manual, garantia e comprovante" },
+      ...(company.whatsapp.replace(/\D/g, "").length >= 10 ? [{ id: "help", uri: `https://wa.me/55${company.whatsapp.replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "")}`, description: "Assistência Quark pelo WhatsApp" }] : []),
+    ],
     warrantyEnd: end,
   };
 }
