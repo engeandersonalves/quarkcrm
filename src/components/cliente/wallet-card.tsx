@@ -4,7 +4,7 @@ import { Camera, FileDown, ImageDown, Loader2, Smartphone } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { receiptQrText } from "@/lib/moto-receipt";
 import { vehicleName, type MotoData } from "@/lib/moto-sale";
-import { OwnerCardBack, OwnerCardFront, OwnerCardPdfPage } from "./owner-card";
+import { BOTH_SIZE, OwnerCardBack, OwnerCardBoth, OwnerCardFront, OwnerCardPdfPage } from "./owner-card";
 
 /**
  * Cartão do proprietário na área do cliente: frente e verso, foto 3/4, PDF,
@@ -76,7 +76,6 @@ export function WalletSection({
   const [busy, setBusy] = useState<Busy>(null);
   const [err, setErr] = useState<string | null>(null);
   const [photo, setPhoto] = useState<string | null>(selfie);
-  const [side, setSide] = useState<"frente" | "verso">("frente");
   const fileRef = useRef<HTMLInputElement>(null);
   const model = (vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter").replace(/\W+/g, "");
 
@@ -101,7 +100,7 @@ export function WalletSection({
     setErr(null);
     try {
       const { downloadArtPng } = await import("@/components/bf/download-pdf");
-      await downloadArtPng(<OwnerCardFront d={d} id={id} photo={photo} art />, `Cartao-proprietario-${model}.png`, { width: 1012, height: 638 });
+      await downloadArtPng(<OwnerCardBoth d={d} id={id} photo={photo} qr={qr} contact={contact} />, `Cartao-proprietario-${model}.png`, BOTH_SIZE);
     } catch {
       setErr("Não foi possível salvar a imagem agora.");
     } finally {
@@ -140,15 +139,9 @@ export function WalletSection({
       <h2 className="text-[22px] font-bold tracking-[-0.03em]">Sua identificação da scooter</h2>
       <p className="mt-1 text-[13.5px] leading-snug text-[#0B1A12]/60">Com a sua foto, os dados da scooter e um QR code que confirma a compra. Salve em PDF ou imagem e tenha sempre à mão.</p>
 
-      <div className="mt-5 flex justify-center gap-1 rounded-full bg-[#F4F7F1] p-1 text-[13px] font-semibold">
-        {(["frente", "verso"] as const).map((s) => (
-          <button key={s} type="button" onClick={() => setSide(s)} aria-pressed={side === s} className={`h-9 flex-1 rounded-full capitalize transition ${side === s ? "bg-white text-[#0B1A12] shadow-sm" : "text-[#0B1A12]/55"}`}>
-            {s}
-          </button>
-        ))}
-      </div>
-      <div className="mx-auto mt-4 max-w-[440px]">
-        {side === "frente" ? <OwnerCardFront d={d} id={id} photo={photo} /> : <OwnerCardBack d={d} id={id} qr={qr} contact={contact} />}
+      <div className="mx-auto mt-5 grid max-w-[440px] gap-3">
+        <OwnerCardFront d={d} id={id} photo={photo} />
+        <OwnerCardBack d={d} id={id} qr={qr} contact={contact} />
       </div>
 
       <div className="mt-3 flex items-center justify-center gap-2 text-[13px]">

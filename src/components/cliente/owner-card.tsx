@@ -23,7 +23,7 @@ const GUILLOCHE = `url("data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg xmlns='http://www.w3.org/2000/svg' width='600' height='380' viewBox='0 0 600 380'><g fill='none' stroke='#1F9D55' stroke-opacity='0.07' stroke-width='1'>${Array.from({ length: 16 }, (_, i) => `<circle cx='520' cy='300' r='${40 + i * 18}'/>`).join("")}${Array.from({ length: 9 }, (_, i) => `<path d='M0 ${250 + i * 14} C 150 ${210 + i * 14}, 300 ${290 + i * 14}, 600 ${240 + i * 14}'/>`).join("")}</g></svg>`,
 )}")`;
 
-function Face({ children, art }: { children: ReactNode; art?: boolean }) {
+function Face({ children, art, flat }: { children: ReactNode; art?: boolean; flat?: boolean }) {
   return (
     <div className="w-full [container-type:inline-size]" {...(art ? { "data-art": true } : {})}>
       <div
@@ -34,7 +34,7 @@ function Face({ children, art }: { children: ReactNode; art?: boolean }) {
           fontFamily: INTER,
           color: INK,
           background: `${GUILLOCHE} center / cover no-repeat, linear-gradient(160deg, #FFFFFF 0%, ${IVORY} 60%, #F1F4EC 100%)`,
-          boxShadow: art ? "inset 0 0 0 1px rgba(11,26,18,0.08)" : "0 30px 60px -32px rgba(11,26,18,0.45), inset 0 0 0 1px rgba(11,26,18,0.08)",
+          boxShadow: art || flat ? "inset 0 0 0 1px rgba(11,26,18,0.08)" : "0 30px 60px -32px rgba(11,26,18,0.45), inset 0 0 0 1px rgba(11,26,18,0.08)",
         }}
       >
         {children}
@@ -76,13 +76,13 @@ function Item({ k, v, wide, mono }: { k: string; v: string; wide?: boolean; mono
   );
 }
 
-export function OwnerCardFront({ d, id, photo, art }: { d: MotoData; id: string; photo: string | null; art?: boolean }) {
+export function OwnerCardFront({ d, id, photo, art, flat }: { d: MotoData; id: string; photo: string | null; art?: boolean; flat?: boolean }) {
   const model = vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter";
   const end = d.delivery.date || d.date ? warrantyEnd(d) : "";
   const doc = d.client.doc.replace(/\D/g, "");
   const { number } = receiptNumber(id);
   return (
-    <Face art={art}>
+    <Face art={art} flat={flat}>
       <Band right="CARTÃO DO PROPRIETÁRIO" />
       <div className="flex" style={{ padding: "4.4cqw 5.2cqw 0", gap: "4.4cqw" }}>
         {/* foto 3/4 */}
@@ -122,12 +122,12 @@ export function OwnerCardFront({ d, id, photo, art }: { d: MotoData; id: string;
   );
 }
 
-export function OwnerCardBack({ d, id, qr, contact }: { d: MotoData; id: string; qr: string; contact: string }) {
+export function OwnerCardBack({ d, id, qr, contact, flat }: { d: MotoData; id: string; qr: string; contact: string; flat?: boolean }) {
   const model = vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter";
   const { number, code } = receiptNumber(id);
   const specs = [d.specs.power, d.specs.battery, d.specs.range && `${d.specs.range} de autonomia`, d.specs.speed].filter(Boolean).join(" · ");
   return (
-    <Face>
+    <Face flat={flat}>
       <Band right="VERIFICAÇÃO" />
       <div className="flex" style={{ padding: "4.2cqw 5.2cqw 0", gap: "4.4cqw" }}>
         <div className="min-w-0 flex-1">
@@ -188,16 +188,29 @@ export function OwnerCardPdfPage({ d, id, photo, qr, contact }: { d: MotoData; i
         </div>
         <div style={{ width: 600, marginTop: 34 }}>
           <p style={{ ...LABEL, fontSize: 11, marginBottom: 10 }}>Frente</p>
-          <OwnerCardFront d={d} id={id} photo={photo} art />
+          <OwnerCardFront d={d} id={id} photo={photo} flat />
         </div>
         <div style={{ width: 600, marginTop: 26 }}>
           <p style={{ ...LABEL, fontSize: 11, marginBottom: 10 }}>Verso</p>
-          <OwnerCardBack d={d} id={id} qr={qr} contact={contact} />
+          <OwnerCardBack d={d} id={id} qr={qr} contact={contact} flat />
         </div>
         <p style={{ marginTop: "auto", fontSize: 12, lineHeight: 1.5, color: "#6B7A70", textAlign: "center", maxWidth: 560 }}>
           Este cartão identifica o proprietário da scooter e acompanha o comprovante de compra {number}. Guarde no celular ou imprima e plastifique.
         </p>
       </div>
+    </div>
+  );
+}
+
+/** Tamanho da imagem com frente e verso juntos. */
+export const BOTH_SIZE = { width: 1076, height: 1364 };
+
+/** Imagem única com frente e verso, um embaixo do outro. */
+export function OwnerCardBoth({ d, id, photo, qr, contact }: { d: MotoData; id: string; photo: string | null; qr: string; contact: string }) {
+  return (
+    <div data-art style={{ width: BOTH_SIZE.width, height: BOTH_SIZE.height, padding: 32, background: "#F5F6F1", display: "flex", flexDirection: "column", gap: 24, boxSizing: "border-box" }}>
+      <OwnerCardFront d={d} id={id} photo={photo} flat />
+      <OwnerCardBack d={d} id={id} qr={qr} contact={contact} flat />
     </div>
   );
 }
