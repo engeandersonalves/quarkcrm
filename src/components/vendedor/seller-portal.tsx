@@ -410,7 +410,7 @@ function Materials({ link }: { link: string }) {
           <div className="min-w-0 flex-1">
             <p className="text-[16.5px] font-bold">Catálogo completo</p>
             <p className="text-[13px] text-white/65">
-              Todos os modelos, fichas e preços · {cat.pages} páginas · {cat.size}
+              T1, Cappuccino e MZ, com fichas e preços · {cat.pages} páginas · {cat.size}
             </p>
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">

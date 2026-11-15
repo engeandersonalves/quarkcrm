@@ -2129,3 +2129,20 @@ begin
 end $$;
 
 notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- Modelo City (cadastro inicial). Só cria se ainda não existir: depois disso,
+-- edite à vontade em Mobilidade → Modelos, que este bloco não sobrescreve nada.
+-- Preço da campanha: R$ 7.197 à vista ou 21x de R$ 420 (taxa de 1,928% ao mês).
+-- ---------------------------------------------------------------------------
+insert into public.moto_products (slug, name, kicker, pitch, for_who, accent, photo, gallery, colors, specs, price, installments, rate, active, position)
+select 'city', 'City', 'A estilosa de pneu largo',
+       'Visual chopper, pneus largos e encosto pra garupa.',
+       'quer chegar com estilo, conforto e estabilidade nos pneus largos.',
+       '#E5484D', '/mob/city-lateral.jpg',
+       '[{"src":"/mob/city-lateral.jpg","caption":"Lateral","fit":"contain"},{"src":"/mob/city-frente.jpg","caption":"Frente","fit":"contain"},{"src":"/mob/city-traseira.jpg","caption":"Traseira","fit":"contain"}]'::jsonb,
+       array['Vermelha'],
+       '{"power":"1.000W","battery":"Lítio 60V 24Ah","range":"60 km","speed":"32 km/h","recharge":"~7 h","load":"150 kg","brakes":"Disco dianteiro","weight":"73,7 kg","security":"Alarme","highlight":"Suspensão dupla na traseira"}'::jsonb,
+       7197, 21, 1.928, true,
+       coalesce((select max(position) + 1 from public.moto_products), 0)
+where not exists (select 1 from public.moto_products where slug = 'city');
