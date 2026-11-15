@@ -5,6 +5,8 @@ import { SCOOTERS } from "@/lib/catalog-mobilidade";
 import { loadCatalogModels, loadCatalogPhotos } from "@/lib/catalog-photos";
 import { defaultMoto } from "@/lib/moto-sale";
 import { loadCompany } from "@/lib/public-company";
+import { hasSupabase } from "@/lib/supabase/env";
+import { anonSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -44,14 +46,27 @@ async function sampleCard(origin: string, companyName: string, whatsapp: string 
   }
 }
 
-export default async function ScootersPage() {
+async function loadSeller(ref: string | undefined) {
+  const clean = (ref ?? "").replace(/[^0-9a-zA-Z]/g, "").slice(0, 12);
+  if (!clean || !hasSupabase) return null;
+  try {
+    const { data } = await anonSupabase().rpc("get_seller_public", { p_ref: clean });
+    const s = data as { name?: string; photo?: string | null; ref?: string } | null;
+    return s?.name && s.ref ? { name: s.name, photo: s.photo ?? null, ref: s.ref } : null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function ScootersPage({ searchParams }: { searchParams: Promise<{ v?: string }> }) {
+  const { v } = await searchParams;
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("x-forwarded-host") ?? h.get("host") ?? ""}`;
-  const [company, models, photos] = await Promise.all([loadCompany(), loadCatalogModels(), loadCatalogPhotos()]);
+  const [company, models, photos, seller] = await Promise.all([loadCompany(), loadCatalogModels(), loadCatalogPhotos(), loadSeller(v)]);
   const sample = await sampleCard(origin, company.company_name || "Quark Mobilidade", company.whatsapp ?? null);
   return (
     <div translate="no" className="notranslate">
-      <BioLanding models={models.length ? models : SCOOTERS} photos={photos as Record<string, { url: string; caption: string | null }[]>} whatsapp={company.whatsapp ?? null} instagram={company.instagram ?? null} city={company.city ?? null} sample={sample} />
+      <BioLanding models={models.length ? models : SCOOTERS} photos={photos as Record<string, { url: string; caption: string | null }[]>} whatsapp={company.whatsapp ?? null} instagram={company.instagram ?? null} city={company.city ?? null} sample={sample} seller={seller} />
     </div>
   );
 }

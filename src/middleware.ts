@@ -2,13 +2,14 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, hasSupabase } from "@/lib/supabase/env";
 
-const PUBLIC_PREFIXES = ["/p/", "/cliente", "/captura", "/black-friday", "/catalogo/", "/anamnese", "/indique", "/assinar/", "/verificar", "/scooters", "/api/"];
+const PUBLIC_PREFIXES = ["/p/", "/cliente", "/captura", "/black-friday", "/catalogo/", "/anamnese", "/indique", "/assinar/", "/verificar", "/scooters", "/vendedor", "/api/"];
 
 const SHORT_LINKS = new Map(
   [
     ...["/scooters", "/scooter", "/motos", "/moto", "/bio", "/link", "/links", "/mobilidade-eletrica"].map((p) => [p, "/scooters"] as const),
     ["/cliente", "/cliente"] as const,
     ["/verificar", "/verificar"] as const,
+    ["/vendedor", "/vendedor"] as const,
     ["/catalogo/mobilidade", "/catalogo/mobilidade"] as const,
   ],
 );

@@ -1921,3 +1921,211 @@ begin
     end loop;
   end if;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- Vendedores parceiros da Mobilidade (/vendedor): entram com telefone + código de
+-- 4 dígitos, veem o catálogo para divulgar, indicam clientes e acompanham as
+-- indicações. A equipe cadastra e acompanha tudo no CRM (Mobilidade → Vendedores).
+-- ---------------------------------------------------------------------------
+create table if not exists public.moto_sellers (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  phone text not null,
+  pin text not null default lpad((floor(random() * 10000))::int::text, 4, '0'),
+  ref text not null default lower(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6)),
+  photo text,
+  city text,
+  instagram text,
+  commission text,
+  notes text,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists moto_sellers_phone_idx on public.moto_sellers ((regexp_replace(phone, '\D', '', 'g')));
+create unique index if not exists moto_sellers_ref_idx on public.moto_sellers (ref);
+alter table public.moto_sellers enable row level security;
+drop policy if exists "moto_sellers_team" on public.moto_sellers;
+create policy "moto_sellers_team" on public.moto_sellers for all to authenticated using (public.is_member()) with check (public.is_member());
+
+create table if not exists public.moto_referrals (
+  id uuid primary key default gen_random_uuid(),
+  seller_id uuid not null references public.moto_sellers (id) on delete cascade,
+  lead_id uuid references public.leads (id) on delete set null,
+  name text not null,
+  phone text not null,
+  model text,
+  notes text,
+  status text not null default 'nova' check (status in ('nova', 'contato', 'negociacao', 'fechada', 'perdida')),
+  commission numeric,
+  paid_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists moto_referrals_seller on public.moto_referrals (seller_id, created_at desc);
+alter table public.moto_referrals enable row level security;
+drop policy if exists "moto_referrals_team" on public.moto_referrals;
+create policy "moto_referrals_team" on public.moto_referrals for all to authenticated using (public.is_member()) with check (public.is_member());
+
+-- Confere telefone + código (com limite de tentativas) e devolve o vendedor.
+create or replace function public.seller_check(p_phone text, p_pin text, p_ip text)
+returns public.moto_sellers
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_phone text := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g');
+  v_key text;
+  v_ip text := left(nullif(trim(p_ip), ''), 64);
+  s public.moto_sellers;
+begin
+  v_phone := regexp_replace(v_phone, '^55(?=\d{10,11}$)', '');
+  if length(v_phone) not between 10 and 11 or coalesce(p_pin, '') !~ '^\d{4}$' then
+    return null;
+  end if;
+  v_key := encode(sha256(convert_to('seller:' || v_phone, 'UTF8')), 'hex');
+  if (select count(*) from public.portal_attempts where key = v_key and not ok and at > now() - interval '15 minutes') >= 5
+     or (v_ip is not null and (select count(*) from public.portal_attempts where ip = v_ip and not ok and at > now() - interval '15 minutes') >= 20) then
+    raise exception 'bloqueado';
+  end if;
+  select * into s from public.moto_sellers
+   where active and regexp_replace(regexp_replace(phone, '\D', '', 'g'), '^55(?=\d{10,11}$)', '') = v_phone and pin = p_pin;
+  insert into public.portal_attempts (key, ip, ok) values (v_key, v_ip, s.id is not null);
+  return case when s.id is null then null else s end;
+end;
+$$;
+revoke all on function public.seller_check(text, text, text) from public, anon, authenticated;
+
+create or replace function public.seller_portal(p_phone text, p_pin text, p_ip text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  s public.moto_sellers;
+begin
+  begin
+    s := public.seller_check(p_phone, p_pin, p_ip);
+  exception when others then
+    return jsonb_build_object('ok', false, 'error', 'bloqueado');
+  end;
+  if s.id is null then
+    return jsonb_build_object('ok', false, 'error', 'nao_encontrado');
+  end if;
+  return jsonb_build_object(
+    'ok', true,
+    'seller', jsonb_build_object('id', s.id, 'name', s.name, 'phone', s.phone, 'ref', s.ref, 'photo', s.photo, 'city', s.city,
+                                 'instagram', s.instagram, 'commission', s.commission, 'since', s.created_at),
+    'referrals', coalesce((select jsonb_agg(jsonb_build_object('id', r.id, 'name', r.name, 'phone', r.phone, 'model', r.model, 'status', r.status,
+                                                               'commission', r.commission, 'paid', r.paid_at is not null, 'created_at', r.created_at, 'updated_at', r.updated_at)
+                                            order by r.created_at desc)
+                           from public.moto_referrals r where r.seller_id = s.id), '[]'::jsonb)
+  );
+end;
+$$;
+revoke all on function public.seller_portal(text, text, text) from public;
+grant execute on function public.seller_portal(text, text, text) to anon, authenticated;
+
+-- Indicação feita pelo vendedor: vira lead da Mobilidade e entra no histórico dele.
+create or replace function public.seller_refer(p_phone text, p_pin text, p_name text, p_client_phone text, p_model text, p_notes text, p_ip text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  s public.moto_sellers;
+  v_client text := regexp_replace(coalesce(p_client_phone, ''), '\D', '', 'g');
+  v_lead uuid;
+  v_id uuid;
+begin
+  begin
+    s := public.seller_check(p_phone, p_pin, p_ip);
+  exception when others then
+    return jsonb_build_object('ok', false, 'error', 'bloqueado');
+  end;
+  if s.id is null then
+    return jsonb_build_object('ok', false, 'error', 'acesso');
+  end if;
+  if length(trim(coalesce(p_name, ''))) < 2 or length(v_client) not between 10 and 13 then
+    return jsonb_build_object('ok', false, 'error', 'dados');
+  end if;
+  if exists (select 1 from public.moto_referrals where seller_id = s.id and regexp_replace(phone, '\D', '', 'g') = v_client and created_at > now() - interval '30 days') then
+    return jsonb_build_object('ok', false, 'error', 'repetida');
+  end if;
+  if (select count(*) from public.moto_referrals where seller_id = s.id and created_at > now() - interval '1 day') >= 30 then
+    return jsonb_build_object('ok', false, 'error', 'limite');
+  end if;
+
+  insert into public.leads (name, phone, segment, source, temperature, notes)
+  values (left(trim(p_name), 120), v_client, 'mobilidade', 'Vendedor parceiro', 'quente',
+          concat_ws(E'\n', 'Indicação do vendedor ' || s.name || ' (' || s.phone || ')',
+                    nullif('Modelo: ' || nullif(trim(coalesce(p_model, '')), ''), 'Modelo: '),
+                    nullif(left(trim(coalesce(p_notes, '')), 600), '')))
+  returning id into v_lead;
+
+  insert into public.moto_referrals (seller_id, lead_id, name, phone, model, notes)
+  values (s.id, v_lead, left(trim(p_name), 120), v_client, left(nullif(trim(coalesce(p_model, '')), ''), 60), left(nullif(trim(coalesce(p_notes, '')), ''), 600))
+  returning id into v_id;
+  return jsonb_build_object('ok', true, 'id', v_id);
+end;
+$$;
+revoke all on function public.seller_refer(text, text, text, text, text, text, text) from public;
+grant execute on function public.seller_refer(text, text, text, text, text, text, text) to anon, authenticated;
+
+create or replace function public.seller_set_photo(p_phone text, p_pin text, p_photo text, p_ip text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  s public.moto_sellers;
+begin
+  if p_photo is not null and (p_photo not like 'data:image/jpeg;base64,%' or length(p_photo) > 700000) then
+    return jsonb_build_object('ok', false, 'error', 'imagem');
+  end if;
+  begin
+    s := public.seller_check(p_phone, p_pin, p_ip);
+  exception when others then
+    return jsonb_build_object('ok', false, 'error', 'bloqueado');
+  end;
+  if s.id is null then
+    return jsonb_build_object('ok', false, 'error', 'acesso');
+  end if;
+  update public.moto_sellers set photo = p_photo, updated_at = now() where id = s.id;
+  return jsonb_build_object('ok', true);
+end;
+$$;
+revoke all on function public.seller_set_photo(text, text, text, text) from public;
+grant execute on function public.seller_set_photo(text, text, text, text) to anon, authenticated;
+
+-- Link de divulgação (/scooters?v=código): mostra quem está atendendo. Só nome e foto.
+create or replace function public.get_seller_public(p_ref text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object('name', name, 'photo', photo, 'ref', ref)
+    from public.moto_sellers where active and ref = lower(regexp_replace(coalesce(p_ref, ''), '[^0-9a-zA-Z]', '', 'g'));
+$$;
+revoke all on function public.get_seller_public(text) from public;
+grant execute on function public.get_seller_public(text) to anon, authenticated;
+
+do $$
+declare t text;
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    foreach t in array array['moto_sellers', 'moto_referrals'] loop
+      if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+        execute format('alter publication supabase_realtime add table public.%I', t);
+      end if;
+    end loop;
+  end if;
+end $$;
+
+notify pgrst, 'reload schema';

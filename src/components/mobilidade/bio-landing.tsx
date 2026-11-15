@@ -61,6 +61,7 @@ export function BioLanding({
   instagram,
   city,
   sample,
+  seller,
 }: {
   models: Scooter[];
   photos: ExtraPhotos;
@@ -69,11 +70,15 @@ export function BioLanding({
   city: string | null;
   /** Cartão de exemplo (dados fictícios) para mostrar o documento que o cliente recebe. */
   sample: { d: MotoData; qr: string; contact: string } | null;
+  /** Vendedor parceiro que divulgou o link (/scooters?v=código). */
+  seller?: { name: string; photo: string | null; ref: string } | null;
 }) {
   const place = city || "Maceió/AL";
   const town = place.split("/")[0];
   const years = new Date().getFullYear() - SINCE;
-  const talk = (text: string) => waHref(whatsapp, text) ?? "/catalogo/mobilidade";
+  // Com link de vendedor, toda mensagem leva a indicação para a equipe registrar.
+  const tag = seller ? `\n\n(Indicação de ${seller.name} · código ${seller.ref})` : "";
+  const talk = (text: string) => waHref(whatsapp, text + tag) ?? "/catalogo/mobilidade";
   const hello = talk("Olá! Vim pelo Instagram e quero saber mais sobre as scooters elétricas da Quark.");
   const resale = talk("Olá! Tenho uma loja e quero saber as condições para revenda das scooters elétricas Quark.");
   const cheapest = models.reduce<Scooter | null>((b, m) => (m.installment > 0 && (!b || m.installment < b.installment) ? m : b), null);
@@ -111,6 +116,23 @@ export function BioLanding({
         <section className="mx-auto max-w-5xl px-4 pt-6 pb-10 sm:pt-12">
           <div className="grid items-center gap-8 lg:grid-cols-[1fr_1.05fr]">
             <div className="order-2 lg:order-1">
+              {seller && (
+                <div className="mb-4 flex items-center gap-3 rounded-2xl bg-[#F6F8F4] p-3 ring-1 ring-[#0B1A12]/[0.06]">
+                  <span className="grid h-14 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-white ring-1 ring-[#0B1A12]/10">
+                    {seller.photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={seller.photo} alt={`Foto de ${seller.name}`} className="h-full w-full object-cover" />
+                    ) : (
+                      <BadgeCheck className="h-5 w-5" style={{ color: GREEN }} />
+                    )}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[12px] font-semibold text-[#0B1A12]/55">Você será atendido por</span>
+                    <span className="block truncate text-[16px] font-bold">{seller.name}</span>
+                    <span className="block text-[12px] text-[#1F7A45]">Vendedor parceiro Quark</span>
+                  </span>
+                </div>
+              )}
               <p className="inline-flex items-center gap-2 rounded-full bg-[#EEF7EF] px-3.5 py-1.5 text-[12.5px] font-bold text-[#1F7A45]">
                 <BadgeCheck className="h-4 w-4" /> Desde {SINCE} · {years}+ anos em {place}
               </p>
