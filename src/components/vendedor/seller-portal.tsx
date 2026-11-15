@@ -27,6 +27,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { GalleryPhoto, Scooter } from "@/lib/catalog-mobilidade";
 import { toPortrait } from "@/lib/moto-customers-db";
+import { SELLER_ARTS, SELLER_CAMPAIGN, campaignEnded } from "@/lib/seller-materials";
 
 /**
  * Área do vendedor parceiro: catálogo para divulgar (fotos, ficha e textos prontos),
@@ -347,6 +348,131 @@ function LinkBox({ link, seller }: { link: string; seller: Seller }) {
   );
 }
 
+/* ------------------------------------------------------------------ materiais */
+
+async function fileFrom(src: string, name: string) {
+  const blob = await (await fetch(src)).blob();
+  return new File([blob], name, { type: blob.type || (name.endsWith(".pdf") ? "application/pdf" : "image/jpeg") });
+}
+
+/** Envia arquivos pelo menu de compartilhar do celular; sem suporte, baixa os arquivos. */
+async function shareFiles(items: { src: string; name: string }[], text: string) {
+  try {
+    const files = await Promise.all(items.map((i) => fileFrom(i.src, i.name)));
+    if (navigator.canShare?.({ files })) {
+      await navigator.share({ files, text });
+      return;
+    }
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") return;
+  }
+  for (const i of items) {
+    const a = document.createElement("a");
+    a.href = i.src;
+    a.download = i.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+}
+
+function Materials({ link }: { link: string }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const ended = campaignEnded();
+  const run = async (key: string, items: { src: string; name: string }[], text: string) => {
+    setBusy(key);
+    try {
+      await shareFiles(items, text);
+    } finally {
+      setBusy(null);
+    }
+  };
+  const cat = SELLER_CAMPAIGN.catalog;
+  const until = SELLER_CAMPAIGN.until.split("-").reverse().slice(0, 2).join("/");
+  const msg = (model?: string) => `${model ? `Scooter elétrica ${model}` : "Scooters elétricas Quark"}: sem CNH, sem placa e com garantia. Veja mais e fale comigo: ${link}`;
+
+  return (
+    <section className={cx(CARD, "overflow-hidden")}>
+      <div className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[11px] font-bold tracking-[0.2em] uppercase" style={{ color: GREEN }}>
+            Materiais de divulgação
+          </p>
+          <span className={cx("rounded-full px-2.5 py-1 text-[11.5px] font-bold", ended ? "bg-[#FDECEA] text-[#A12A17]" : "bg-[#0B1A12] text-[#D8E83C]")}>
+            {SELLER_CAMPAIGN.name} · {ended ? "encerrada" : `até ${until}`}
+          </span>
+        </div>
+        {ended && <p className="mt-3 rounded-2xl bg-[#FFF6DA] px-4 py-3 text-[13.5px] text-[#8A6100]">A campanha terminou. Antes de divulgar estas artes, confirme os preços com a Quark.</p>}
+
+        {/* catálogo em PDF */}
+        <div className="mt-4 flex flex-wrap items-center gap-4 rounded-[22px] p-4 text-white" style={{ background: DARK }}>
+          <span className="grid h-14 w-12 shrink-0 place-items-center rounded-xl bg-white/10 text-[11px] font-extrabold tracking-wider text-[#D8E83C] ring-1 ring-white/15">PDF</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[16.5px] font-bold">Catálogo completo</p>
+            <p className="text-[13px] text-white/65">
+              Todos os modelos, fichas e preços · {cat.pages} páginas · {cat.size}
+            </p>
+          </div>
+          <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
+            <a href={cat.src} download={cat.file} className="flex h-11 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-[14px] font-semibold ring-1 ring-white/15">
+              <Download className="h-4 w-4" /> Baixar
+            </a>
+            <button type="button" disabled={!!busy} onClick={() => run("pdf", [{ src: cat.src, name: cat.file }], msg())} className="flex h-11 items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 text-[14px] font-bold text-[#06210F] disabled:opacity-60">
+              {busy === "pdf" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />} Enviar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* artes por modelo */}
+      <div className="grid gap-5 border-t border-[#0B1A12]/[0.06] p-5 sm:grid-cols-2 sm:p-6">
+        {SELLER_ARTS.map((g) => (
+          <div key={g.model}>
+            <div className="flex items-end justify-between gap-2">
+              <div>
+                <p className="text-[18px] leading-tight font-extrabold">{g.model}</p>
+                <p className="text-[12.5px] text-[#0B1A12]/55">{g.tagline}</p>
+              </div>
+              <button
+                type="button"
+                disabled={!!busy}
+                onClick={() => run(`all-${g.model}`, g.arts.map((a, i) => ({ src: a.src, name: `Quark-${g.model}-${i + 1}.jpg` })), msg(g.model))}
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-[12.5px] font-bold text-[#06210F] disabled:opacity-60"
+              >
+                {busy === `all-${g.model}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />} Enviar as 2
+              </button>
+            </div>
+            <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+              {g.arts.map((a, i) => (
+                <figure key={a.src} className="overflow-hidden rounded-2xl bg-[#F4F6F2] ring-1 ring-[#0B1A12]/[0.06]">
+                  <a href={a.src} target="_blank" rel="noopener noreferrer" className="block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={a.src} alt={`${g.model} · ${a.label}`} loading="lazy" className="aspect-[9/16] w-full object-cover" />
+                  </a>
+                  <figcaption className="p-2">
+                    <p className="text-center text-[12px] font-semibold text-[#0B1A12]/60">{a.label}</p>
+                    <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                      <a href={a.src} download={`Quark-${g.model}-${a.label.replace(/\s+/g, "-")}.jpg`} aria-label={`Baixar ${a.label} da ${g.model}`} className="flex h-9 items-center justify-center rounded-xl bg-white ring-1 ring-[#0B1A12]/10">
+                        <Download className="h-4 w-4" />
+                      </a>
+                      <button type="button" disabled={!!busy} onClick={() => run(`${g.model}-${i}`, [{ src: a.src, name: `Quark-${g.model}-${i + 1}.jpg` }], msg(g.model))} aria-label={`Enviar ${a.label} da ${g.model}`} className="flex h-9 items-center justify-center rounded-xl bg-[#0B1A12] text-white disabled:opacity-60">
+                        {busy === `${g.model}-${i}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="border-t border-[#0B1A12]/[0.06] px-5 py-3 text-[12px] text-[#0B1A12]/50 sm:px-6">
+        No celular, “Enviar” abre o WhatsApp, o Instagram e outros apps com a imagem pronta e o seu link na legenda. As artes têm o tamanho certo para stories e status.
+      </p>
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ catálogo */
 
 function pitch(m: Scooter, link: string) {
@@ -376,6 +502,7 @@ function pitch(m: Scooter, link: string) {
 function Catalog({ models, photos, link, seller }: { models: Scooter[]; photos: Extra; link: string; seller: Seller }) {
   return (
     <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5">
+      <Materials link={link} />
       <section className={cx(CARD, "p-5 sm:p-6")}>
         <p className="text-[11px] font-bold tracking-[0.2em] uppercase" style={{ color: GREEN }}>
           Argumentos que vendem
