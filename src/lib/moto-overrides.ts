@@ -15,6 +15,11 @@ export interface SaleInfo {
   /** Novo dono depois de uma transferência concluída (substitui o comprador do contrato). */
   owner?: Partial<MotoData["client"]> | null;
   transferred_at?: string | null;
+  /** Data em que a scooter foi entregue ao cliente (controle de vendas). */
+  delivered_at?: string | null;
+  /** Custo real da unidade informado na venda (substitui o custo do modelo). */
+  cost?: number | null;
+  cost_notes?: string | null;
   updated_at?: string;
 }
 

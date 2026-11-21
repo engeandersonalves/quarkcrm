@@ -2176,3 +2176,41 @@ update public.moto_products a2
 update public.moto_products
    set price = 6400, installments = 21, rate = 2.23, active = true, updated_at = now()
  where slug = 'a2' and coalesce(price, 0) = 0;
+
+-- ---------------------------------------------------------------------------
+-- Vendas da Mobilidade (controle financeiro): entrega, custo da unidade e as
+-- formas de pagamento de cada venda (PIX/à vista, cartão, boleto ou misto),
+-- com data e se já foi pago. Não mexe no contrato assinado.
+-- ---------------------------------------------------------------------------
+alter table public.moto_sale_info add column if not exists delivered_at date;
+alter table public.moto_sale_info add column if not exists cost numeric;
+alter table public.moto_sale_info add column if not exists cost_notes text;
+
+create table if not exists public.moto_payments (
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null references public.documents (id) on delete cascade,
+  method text not null default 'pix' check (method in ('pix', 'dinheiro', 'cartao', 'boleto', 'transferencia')),
+  amount numeric not null default 0,
+  installments int,
+  fee numeric not null default 0,
+  date date,
+  paid boolean not null default false,
+  notes text,
+  position int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists moto_payments_doc on public.moto_payments (document_id, position);
+alter table public.moto_payments enable row level security;
+drop policy if exists "moto_payments_team" on public.moto_payments;
+create policy "moto_payments_team" on public.moto_payments for all to authenticated using (public.is_member()) with check (public.is_member());
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'moto_payments') then
+    alter publication supabase_realtime add table public.moto_payments;
+  end if;
+end $$;
+
+notify pgrst, 'reload schema';

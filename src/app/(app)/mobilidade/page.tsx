@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight, BookOpen, Handshake, Home, LayoutGrid, Link2, Plus, ShieldCheck, Users, Wallet } from "lucide-react";
+import { ArrowLeftRight, BookOpen, Handshake, Home, Receipt, LayoutGrid, Link2, Plus, ShieldCheck, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, type ReactNode } from "react";
@@ -12,6 +12,7 @@ import { CustomersPanel, NegotiationPanel } from "@/components/mobilidade/client
 import { DashboardPanel } from "@/components/mobilidade/dashboard-panel";
 import { ModelsPanel } from "@/components/mobilidade/models-panel";
 import { useSaleActions, useSales } from "@/components/mobilidade/sale-row";
+import { SalesLedger } from "@/components/mobilidade/sales-ledger";
 import { SellersPanel, useSellers } from "@/components/mobilidade/sellers-panel";
 import { TransfersPanel, useTransfers } from "@/components/mobilidade/transfers-panel";
 import { cx } from "@/components/ui";
@@ -21,10 +22,10 @@ import { useMotoProducts } from "@/lib/moto-products-db";
 import { contractValue, type MotoData } from "@/lib/moto-sale";
 import type { DocumentRow } from "@/lib/types";
 
-type Aba = "painel" | "negociacao" | "clientes" | "garantias" | "transferencias" | "vendedores" | "modelos" | "catalogo";
-const ABAS: Aba[] = ["painel", "negociacao", "clientes", "garantias", "transferencias", "vendedores", "modelos", "catalogo"];
+type Aba = "painel" | "vendas" | "negociacao" | "clientes" | "garantias" | "transferencias" | "vendedores" | "modelos" | "catalogo";
+const ABAS: Aba[] = ["painel", "vendas", "negociacao", "clientes", "garantias", "transferencias", "vendedores", "modelos", "catalogo"];
 /** Endereços antigos continuam funcionando. */
-const ALIAS: Record<string, Aba> = { inicio: "painel", vendas: "negociacao", cadastro: "negociacao" };
+const ALIAS: Record<string, Aba> = { inicio: "painel", cadastro: "negociacao" };
 const sale = (d: DocumentRow) => d.data as unknown as MotoData;
 
 export default function MobilidadePage() {
@@ -51,11 +52,13 @@ export default function MobilidadePage() {
       warranty: sold.filter((d) => warrantyOf(sale(d)).state !== "encerrada").length,
       clients: groupClients(all, (d) => contractValue(d)).filter((c) => c.bought > 0).length,
       todo: todos(all).length,
+      toDeliver: sold.filter((d) => !(d as { info?: { delivered_at?: string | null } }).info?.delivered_at).length,
     };
   }, [all]);
 
   const tabs: { id: Aba; label: string; icon: ReactNode; count?: number; alert?: boolean }[] = [
     { id: "painel", label: "Painel", icon: <Home className="h-4 w-4" />, count: stats.todo, alert: stats.todo > 0 },
+    { id: "vendas", label: "Vendas", icon: <Receipt className="h-4 w-4" />, count: stats.toDeliver || undefined },
     { id: "negociacao", label: "Negociação", icon: <Wallet className="h-4 w-4" />, count: stats.waiting + stats.quotes },
     { id: "clientes", label: "Clientes", icon: <Users className="h-4 w-4" />, count: stats.clients },
     { id: "garantias", label: "Garantias", icon: <ShieldCheck className="h-4 w-4" />, count: stats.warranty },
@@ -127,6 +130,7 @@ export default function MobilidadePage() {
       </section>
 
       {aba === "painel" && <DashboardPanel sales={sales} products={products} />}
+      {aba === "vendas" && <SalesLedger sales={sales} products={products} />}
       {aba === "negociacao" && <NegotiationPanel sales={sales} actions={actions} startWithCadastro={raw === "cadastro"} />}
       {aba === "clientes" && <CustomersPanel sales={sales} />}
       {aba === "garantias" && <WarrantyPanel sales={sales} actions={actions} />}
