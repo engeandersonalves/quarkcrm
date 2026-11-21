@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Trash2,
 } from "lucide-react";
+import type { ModelFix } from "@/lib/moto-overrides";
 import type { MotoData } from "@/lib/moto-sale";
 import { saleCompany } from "../mobilidade/sale-docs";
 import { MotoForm } from "./moto-form";
@@ -92,6 +93,16 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
   const signers = useMemo(() => [...initial.signers].sort((a, b) => a.position - b.position), [initial.signers]);
   const anySigned = signers.some((s) => s.signed_at);
   const locked = anySigned || initial.status === "cancelado";
+  // Modelo corrigido depois da assinatura (vale por cima do contrato, sem reassinar).
+  const { data: modelFix } = useLive(
+    async () => {
+      if (kind !== "moto" || !initial.id) return null;
+      const { data: row } = await supabase().from("moto_sale_info").select("model_fix").eq("document_id", initial.id).maybeSingle();
+      return ((row as { model_fix?: ModelFix | null } | null)?.model_fix ?? null) as ModelFix | null;
+    },
+    [initial.id, kind],
+    ["moto_sale_info"],
+  );
 
   const { data: leads } = useLive(
     async () => must(await supabase().from("leads").select("id,name,document,email,phone,address,city,state").order("name").limit(3000)) as LeadLite[],
@@ -281,6 +292,13 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
           <p className="min-w-0 flex-1">
             <b>{initial.status === "assinado" ? "Documento assinado por todas as partes." : "Assinatura em andamento."}</b> O texto está protegido contra alterações. Para mudar algo,
             crie uma nova versão.
+            {kind === "moto" && !modelFix?.model && " Se foi só o modelo digitado errado, use “Corrigir modelo” na venda (em Vendas ou na ficha do cliente): o cliente não precisa reassinar."}
+            {modelFix?.model && (
+              <span className="mt-1 block">
+                <b>Modelo corrigido:</b> {modelFix.modelName}
+                {modelFix.color ? ` (${modelFix.color})` : ""} no lugar de {modelFix.from.replace(/^Scooter elétrica\s*/, "")}. Vale no CRM, no cartão e na área do cliente, onde o contrato aparece com a nota de correção.
+              </span>
+            )}
           </p>
           <Button size="sm" variant="secondary" onClick={newVersion}>
             <CopyPlus className="h-4 w-4" /> Nova versão

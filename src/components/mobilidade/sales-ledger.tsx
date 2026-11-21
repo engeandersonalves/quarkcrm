@@ -16,6 +16,7 @@ import type { MotoProduct } from "@/lib/moto-products";
 import { contractValue, motoPhoto, vehicleName, type MotoData } from "@/lib/moto-sale";
 import { relativeTime } from "@/lib/format";
 import { supabase } from "@/lib/supabase/client";
+import { ModelFix } from "./model-fix";
 import { RegisterSale } from "./register-sale";
 import { wa, type SaleDoc, type Sales } from "./sale-row";
 
@@ -275,7 +276,7 @@ export function SalesLedger({ sales, products }: { sales: Sales; products: MotoP
                       {on && (
                         <tr className="border-b border-ink-100 dark:border-white/[0.05]">
                           <td colSpan={9} className="bg-ink-50/50 p-4 dark:bg-white/[0.02]">
-                            <SaleDetail x={x} reload={() => void Promise.all([payments.reload(), sales.reload()])} />
+                            <SaleDetail x={x} products={products} reload={() => void Promise.all([payments.reload(), sales.reload()])} />
                           </td>
                         </tr>
                       )}
@@ -341,7 +342,7 @@ export function SalesLedger({ sales, products }: { sales: Sales; products: MotoP
                   </button>
                   {on && (
                     <div className="border-t border-ink-100 p-4 dark:border-white/[0.06]">
-                      <SaleDetail x={x} reload={() => void Promise.all([payments.reload(), sales.reload()])} />
+                      <SaleDetail x={x} products={products} reload={() => void Promise.all([payments.reload(), sales.reload()])} />
                     </div>
                   )}
                 </article>
@@ -420,13 +421,16 @@ function DeliveryChip({ delivered, planned }: { delivered: string | null; planne
 
 /* ------------------------------------------------------------ detalhe */
 
-function SaleDetail({ x, reload }: { x: Row; reload: () => void }) {
+function SaleDetail({ x, products, reload }: { x: Row; products: MotoProduct[]; reload: () => void }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <Payments x={x} reload={reload} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
         <Costs x={x} reload={reload} />
-        <Delivery x={x} reload={reload} />
+        <div className="grid content-start gap-4">
+          <Delivery x={x} reload={reload} />
+          <ModelFix doc={x.doc} products={products} onSaved={reload} />
+        </div>
       </div>
     </div>
   );

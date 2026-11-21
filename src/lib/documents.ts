@@ -945,6 +945,15 @@ export function motoBlocks(d: MotoData): Block[] {
     { t: "li", text: `Garantia: ${d.warrantyDays} dias a partir da entrega${end ? `, até ${dateBr(end)}` : ""}` },
     { t: "place", text: `${blank(d.place, 16)}, ${dateInWords(d.date)}.` },
   );
+  if (d.modelFix?.from) {
+    blocks.push(
+      { t: "h", text: "Nota de correção" },
+      {
+        t: "p",
+        text: `Em ${dateBr(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Maceio" }).format(new Date(d.modelFix.at)))}, a VENDEDORA corrigiu um erro de digitação no modelo da scooter: onde consta "${d.modelFix.from}", leia-se "${vehicle}${d.color.trim() ? ` (${d.color.trim()})` : ""}". Preço, forma de pagamento, garantia e demais condições permanecem exatamente como assinados.`,
+      },
+    );
+  }
   return blocks;
 }
 

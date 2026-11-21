@@ -43,6 +43,8 @@ export interface MotoData {
   specs: MotoSpecs;
   /** Foto do modelo cadastrado (quando vem do catálogo do CRM). */
   photo?: string;
+  /** Modelo corrigido depois da assinatura (o contrato original fica igual; vem de moto_sale_info). */
+  modelFix?: { from: string; at: string } | null;
   /** Preço unitário da scooter (à vista). */
   price: number;
   accessories: MotoItem[];
@@ -98,19 +100,23 @@ export const MOTO_ACCESSORIES: { name: string; price: number }[] = [
   { name: "Retrovisores extras", price: 60 },
 ];
 
-const specLookup = (id: ModelId, label: string) => SCOOTERS.find((s) => s.id === id)?.table?.[label] ?? "";
+/** Valor da ficha do catálogo: undefined = modelo sem a linha; "—" vira vazio (não informado, não inventa). */
+const specLookup = (id: ModelId, label: string): string | undefined => {
+  const v = SCOOTERS.find((s) => s.id === id)?.table?.[label];
+  return v == null ? undefined : /^[—–-]+$/.test(v.trim()) ? "" : v;
+};
 
 /** Especificações do modelo do catálogo (ficam salvas na venda e podem ser ajustadas). */
 export function specsOf(id: ModelId): MotoSpecs {
   return {
-    power: specLookup(id, "Motor") || "1.000W",
-    battery: specLookup(id, "Bateria"),
-    range: specLookup(id, "Autonomia"),
-    speed: specLookup(id, "Velocidade") || "32 km/h",
-    load: specLookup(id, "Carga máx."),
-    brakes: specLookup(id, "Freios"),
-    recharge: specLookup(id, "Recarga"),
-    weight: specLookup(id, "Peso"),
+    power: specLookup(id, "Motor") ?? "1.000W",
+    battery: specLookup(id, "Bateria") ?? "",
+    range: specLookup(id, "Autonomia") ?? "",
+    speed: specLookup(id, "Velocidade") ?? "32 km/h",
+    load: specLookup(id, "Carga máx.") ?? "",
+    brakes: specLookup(id, "Freios") ?? "",
+    recharge: specLookup(id, "Recarga") ?? "",
+    weight: specLookup(id, "Peso") ?? "",
   };
 }
 
@@ -335,4 +341,4 @@ export function applyProduct(d: MotoData, p: MotoProduct): MotoData {
 
 /** Foto da scooter da venda (modelo cadastrado ou do catálogo de lançamento). */
 export const motoPhoto = (d: Pick<MotoData, "photo" | "model">) =>
-  d.photo || ({ t1: "/mob/t1-perfil.webp", cappuccino: "/mob/cappuccino-estudio.png", mz: "/mob/mz-perfil.webp" } as Record<string, string>)[d.model] || "/mob/cmp-scooter.webp";
+  d.photo || ({ a2: "/mob/a2-perfil.webp", t1: "/mob/t1-perfil.webp", city: "/mob/city-lateral.jpg", cappuccino: "/mob/cappuccino-estudio.png", mz: "/mob/mz-perfil.webp" } as Record<string, string>)[d.model] || "/mob/cmp-scooter.webp";

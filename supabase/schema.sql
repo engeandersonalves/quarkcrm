@@ -1543,6 +1543,8 @@ create policy "moto_sale_info_team" on public.moto_sale_info for all to authenti
 -- Transferência de propriedade: o novo dono passa a valer por cima do comprador do contrato.
 alter table public.moto_sale_info add column if not exists owner jsonb;
 alter table public.moto_sale_info add column if not exists transferred_at timestamptz;
+-- Correção do modelo depois da assinatura (erro de digitação): vale por cima do contrato, que fica igual.
+alter table public.moto_sale_info add column if not exists model_fix jsonb;
 
 -- Venda com as atualizações da ficha aplicadas (o que o cliente vê).
 create or replace function public.moto_effective_data(p_data jsonb, p_info public.moto_sale_info, p_cust public.moto_customers)
@@ -1556,7 +1558,13 @@ returns jsonb language sql immutable as $$
          'transferredAt', p_info.transferred_at,
          'client', coalesce(p_info.owner, p_data -> 'client', '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
            'phone', nullif(p_cust.phone, ''), 'email', nullif(p_cust.email, ''), 'address', nullif(p_cust.address, ''),
-           'city', nullif(p_cust.city, ''), 'state', nullif(p_cust.state, ''), 'cep', nullif(p_cust.cep, ''))));
+           'city', nullif(p_cust.city, ''), 'state', nullif(p_cust.state, ''), 'cep', nullif(p_cust.cep, ''))))
+    || case when coalesce(p_info.model_fix ->> 'model', '') <> '' then jsonb_strip_nulls(jsonb_build_object(
+         'model', p_info.model_fix -> 'model', 'modelName', p_info.model_fix -> 'modelName',
+         'color', nullif(p_info.model_fix ->> 'color', ''), 'photo', nullif(p_info.model_fix ->> 'photo', ''),
+         'specs', coalesce(p_data -> 'specs', '{}'::jsonb) || coalesce(p_info.model_fix -> 'specs', '{}'::jsonb),
+         'modelFix', jsonb_build_object('from', p_info.model_fix -> 'from', 'at', p_info.model_fix -> 'at')))
+       else '{}'::jsonb end;
 $$;
 
 -- Documento (só dígitos) do dono atual: o novo dono, se houve transferência; senão o comprador.

@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyOverrides, emptyCustomer, portalPin } from "./moto-overrides.ts";
+import { applyOverrides, buildModelFix, emptyCustomer, portalPin } from "./moto-overrides.ts";
+import { documentBlocks } from "./documents.ts";
+import { seedProducts } from "./moto-products.ts";
 import { defaultMoto } from "./moto-sale.ts";
 
 const contractor = { name: "Q", doc: "", address: "", city: "", state: "AL", cep: "", repName: "", repDoc: "", repRole: "", repNationality: "", repMarital: "" };
@@ -38,4 +40,27 @@ test("transferência: o novo dono substitui o comprador e a ficha dele vale por 
   assert.equal(portalPin(e.client.phone), "1234");
   // Sem dono novo, nada muda no comprador.
   assert.equal(applyOverrides(d, { ...info, owner: null }, null).client.name, "Maria Lima");
+});
+
+test("modelo corrigido sem reassinar: vale por cima, preço igual e contrato com nota de correção", () => {
+  const d = defaultMoto({ contractor, model: "t1" });
+  d.color = "Branca";
+  const a2 = seedProducts().find((p) => p.slug === "a2")!;
+  const fix = buildModelFix(d, a2, "Bege", "2026-11-21T02:00:00Z");
+  assert.equal(fix.from, "Scooter elétrica T1 (Branca)");
+  const info = { document_id: "x", chassis: null, motor_no: null, battery_no: null, charger_no: null, delivery_date: null, model_fix: fix };
+  const v = applyOverrides(d, info);
+  assert.equal(v.model, "a2");
+  assert.equal(v.modelName, "A2");
+  assert.equal(v.color, "Bege");
+  assert.equal(v.specs.battery, "Lítio");
+  assert.equal(v.specs.range, "");
+  assert.equal(v.price, d.price);
+  assert.deepEqual(v.payment, d.payment);
+  assert.equal(d.model, "t1", "o contrato original não muda");
+  const note = documentBlocks("moto", v).map((b) => b.text).join("\n");
+  assert.match(note, /Nota de correção/);
+  assert.match(note, /Em 20\/11\/2026, a VENDEDORA corrigiu .*"Scooter elétrica T1 \(Branca\)", leia-se "Scooter elétrica A2 \(Bege\)"/);
+  assert.doesNotMatch(documentBlocks("moto", d).map((b) => b.text).join("\n"), /Nota de correção/);
+  assert.equal(applyOverrides(d, { ...info, model_fix: null }).model, "t1");
 });

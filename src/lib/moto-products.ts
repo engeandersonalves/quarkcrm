@@ -243,6 +243,9 @@ const MANUAL_SEED: Record<string, Partial<MotoSpecsFull>> = {
   },
 };
 
+/** "—" no catálogo quer dizer "não informado". */
+const given = (v: string | undefined) => (v && !/^[—–-]+$/.test(v.trim()) ? v : "");
+
 /** Taxa mensal (%) que leva o preço à vista exatamente à parcela do catálogo em 21x. */
 export const CATALOG_RATES: Record<string, number> = { a2: 2.1009, t1: 1.6316, city: 1.9277, cappuccino: 2.1151, mz: 2.0527 };
 
@@ -260,16 +263,16 @@ export function seedProducts(): MotoProduct[] {
       gallery: s.gallery,
       colors: { a2: ["Branca e bordô", "Bege"], t1: ["Branca", "Preta"], city: ["Vermelha"], cappuccino: ["Creme"], mz: ["Cinza e laranja"] }[s.id] ?? [],
       specs: {
-        power: s.table.Motor ?? "",
-        battery: s.table.Bateria ?? "",
-        range: s.table.Autonomia ?? "",
-        speed: s.table.Velocidade ?? "",
-        recharge: s.table.Recarga ?? "",
-        load: s.table["Carga máx."] ?? "",
-        brakes: s.table.Freios ?? "",
-        weight: s.table.Peso ?? "",
+        power: given(s.table.Motor ?? ""),
+        battery: given(s.table.Bateria ?? ""),
+        range: given(s.table.Autonomia ?? ""),
+        speed: given(s.table.Velocidade ?? ""),
+        recharge: given(s.table.Recarga ?? ""),
+        load: given(s.table["Carga máx."] ?? ""),
+        brakes: given(s.table.Freios ?? ""),
+        weight: given(s.table.Peso ?? ""),
         security: s.specs.find((x) => x.icon === "lock")?.value ?? "",
-        highlight: s.table.Destaque ?? "",
+        highlight: given(s.table.Destaque ?? ""),
         ...(MANUAL_SEED[s.id] ?? {}),
       },
       price: s.cash,

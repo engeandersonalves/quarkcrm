@@ -43,6 +43,8 @@ import { buyerOf, closedAt, saleStage, signaturePending, todos, warrantyOf, type
 import { groupClients, portalMessage, type MotoClient } from "@/lib/moto-clients";
 import { fetchCustomerPhoto, saveCustomer, saveSaleInfo, toPortrait } from "@/lib/moto-customers-db";
 import { portalPin } from "@/lib/moto-overrides";
+import { useMotoProducts } from "@/lib/moto-products-db";
+import { ModelFix } from "@/components/mobilidade/model-fix";
 import { contractValue, motoPhoto, vehicleName, type MotoData } from "@/lib/moto-sale";
 
 type Tab = "resumo" | "dados" | "scooters" | "documentos" | "acesso" | "notas";
@@ -445,6 +447,7 @@ function ScooterNumbers({ r, reload }: { r: SaleDoc; reload: () => Promise<void>
 }
 
 function ScootersTab({ rows, reload, actions }: { rows: SaleDoc[]; reload: () => Promise<void>; actions: SaleActions }) {
+  const { products } = useMotoProducts();
   return (
     <div className="grid gap-3">
       {rows.map((r) => {
@@ -476,6 +479,7 @@ function ScootersTab({ rows, reload, actions }: { rows: SaleDoc[]; reload: () =>
               </Link>
             </div>
             <ScooterNumbers key={`${r.id}-${r.info?.updated_at ?? ""}`} r={r} reload={reload} />
+            {stage !== "orcamento" && <ModelFix key={`fix-${r.id}-${r.info?.updated_at ?? ""}`} doc={r} products={products} onSaved={() => void reload()} className="mt-4" />}
             <Manage r={r} stage={stage} actions={actions} />
           </section>
         );
@@ -520,7 +524,7 @@ function Manage({ r, stage, actions }: { r: SaleDoc; stage: SaleStage; actions: 
                 {spin("revisar") ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" /> : <CopyPlus className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />}
                 <span>
                   <span className="block text-[14px] font-semibold">Criar versão corrigida</span>
-                  <span className="block text-[12.5px] text-ink-500">Copia como orçamento para mudar modelo, preço ou condição</span>
+                  <span className="block text-[12.5px] text-ink-500">Copia como orçamento para mudar preço ou condição (modelo errado: use “Corrigir modelo”)</span>
                 </span>
               </button>
               <button type="button" disabled={!!actions.busy} onClick={() => actions.cancel(r)} className={cx(ROW, "ring-amber-200 hover:ring-amber-300 dark:ring-amber-500/30")}>
