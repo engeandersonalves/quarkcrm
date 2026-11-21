@@ -185,7 +185,7 @@ export function SaleCoupon({ d, c, id, payments = [], qr, origin, sheet }: { d: 
 
       <Rule />
       <div className="text-center text-[11px] leading-snug">
-        <p>Documento sem valor fiscal. Comprovante da compra e da propriedade do veículo{x.company ? ". Para empresas, a nota fiscal é emitida à parte" : ", emitido por MEI dispensado de nota fiscal na venda a consumidor"}.</p>
+        <p>Comprovante da compra e da propriedade do veículo. Guarde este cupom junto com o contrato.</p>
         <p className="mt-1">Veículo autopropelido · dispensado de placa e CNH · Res. CONTRAN 996/2023</p>
         <p className="mt-2.5 text-[12.5px] font-extrabold tracking-[0.1em]">OBRIGADO PELA PREFERÊNCIA!</p>
       </div>
@@ -212,7 +212,7 @@ async function qrFor(d: MotoData, c: SaleCompany, id: string | null) {
   }
 }
 
-const fileName = (d: MotoData) => {
+export const couponFileName = (d: MotoData) => {
   const slug = (v: string) => v.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "") || "cliente";
   return `Cupom-${slug(d.modelName || "Scooter")}-${slug(d.client.name.split(" ")[0] ?? "")}.pdf`;
 };
@@ -225,8 +225,19 @@ export async function couponPdf(d: MotoData, c: SaleCompany, id: string | null, 
 
 export async function downloadCoupon(d: MotoData, c: SaleCompany, id: string | null, payments: CouponPayment[] = []) {
   const [{ saveBlob }, blob] = await Promise.all([import("@/components/bf/download-pdf"), couponPdf(d, c, id, payments)]);
-  saveBlob(blob, fileName(d));
+  saveBlob(blob, couponFileName(d));
 }
+
+/** Envia o PDF pelos apps do celular (WhatsApp, e-mail…); sem suporte, baixa. */
+export async function shareCoupon(d: MotoData, c: SaleCompany, id: string | null, payments: CouponPayment[] = []) {
+  const blob = await couponPdf(d, c, id, payments);
+  const file = new File([blob], couponFileName(d), { type: "application/pdf" });
+  if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "Cupom de venda" });
+  else (await import("@/components/bf/download-pdf")).saveBlob(blob, couponFileName(d));
+}
+
+/** QR do cupom (página de verificação). */
+export const couponQr = (d: MotoData, c: SaleCompany, id: string | null) => qrFor(d, c, id);
 
 /** Cupom na tela com os botões de baixar e enviar. */
 export function CouponView({ d, c, id, payments, tone = "light" }: { d: MotoData; c: SaleCompany; id: string | null; payments?: CouponPayment[]; tone?: "light" | "crm" }) {
@@ -249,12 +260,7 @@ export function CouponView({ d, c, id, payments, tone = "light" }: { d: MotoData
     setErr(null);
     try {
       if (kind === "pdf") await downloadCoupon(d, c, id, payments);
-      else {
-        const blob = await couponPdf(d, c, id, payments);
-        const file = new File([blob], fileName(d), { type: "application/pdf" });
-        if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "Cupom de venda" });
-        else (await import("@/components/bf/download-pdf")).saveBlob(blob, fileName(d));
-      }
+      else await shareCoupon(d, c, id, payments);
     } catch (e) {
       if (!(e instanceof DOMException && e.name === "AbortError")) setErr("Não foi possível gerar o PDF agora. Tente de novo em instantes.");
     } finally {

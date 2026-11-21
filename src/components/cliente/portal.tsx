@@ -34,7 +34,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { dateBr, digits } from "@/lib/br";
 import { REFERRAL_BONUS, firstName, maskDocInput, maskPhoneInput, referralNotes, validDoc, warrantyStatus, type PortalCompany, type PortalResult, type PortalSale } from "@/lib/client-portal";
 import { motoPhoto, vehicleName } from "@/lib/moto-sale";
-import { CouponView } from "@/components/mobilidade/sale-coupon";
+import { PurchaseTab } from "./purchase-tab";
 import { TransferPanel } from "./transfer-panel";
 import { PRINT_CSS, WalletLocked, WalletSection } from "./wallet-card";
 
@@ -337,9 +337,10 @@ function Welcome({ sale, onDone }: { sale: PortalSale; onDone: () => void }) {
 
 /* ------------------------------------------------------------------ início */
 
-type PTab = "documento" | "scooter" | "arquivos" | "transferir" | "indique";
+type PTab = "documento" | "compra" | "scooter" | "arquivos" | "transferir" | "indique";
 const PTABS: { id: PTab; label: string; icon: LucideIcon }[] = [
   { id: "documento", label: "Meu documento", icon: IdCard },
+  { id: "compra", label: "Minha compra", icon: ReceiptText },
   { id: "scooter", label: "Minha scooter", icon: Bike },
   { id: "arquivos", label: "Arquivos", icon: FolderOpen },
   { id: "transferir", label: "Transferir", icon: ArrowLeftRight },
@@ -553,24 +554,14 @@ function Home({ session, fallback, models, wallet, onLogout }: { session: Sessio
                 ) : (
                   <DocRow icon={FileSignature} title="Assinar contrato" text="Falta só a sua assinatura. Leva 1 minuto, pelo celular." href={`/assinar/${sale.token}`} highlight />
                 ))}
+              <DocRow icon={ReceiptText} title="Cupom de venda" text="Itens, números da scooter, pagamento e garantia, com QR de autenticidade" go onClick={() => { setPtab("compra"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
               <DocRow icon={BookOpen} title="Manual do proprietário completo" text="Uso, recarga, cuidados com a bateria, manutenção e garantia, com os números da sua scooter" state={docs[`${sale.id}-manual`]} onClick={() => download("manual")} />
             </div>
             <div aria-live="polite">{docErr && <p className="qp-up mt-3 rounded-2xl bg-[#FDECEA] px-4 py-3 text-[13px] text-[#A12A17]">{docErr}</p>}</div>
           </section>
-
-          <section className={cx(CARD, "qp-up p-5 [animation-delay:.15s] sm:p-6")}>
-            <div className="mb-4 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-bold tracking-[0.2em] text-[#1F9D55] uppercase">Comprovante</p>
-                <h2 className="text-[22px] font-bold tracking-[-0.03em]">Cupom de venda</h2>
-                <p className="mt-0.5 text-[13px] text-[#0B1A12]/55">Tudo da sua compra: itens, números da scooter, pagamento e garantia.</p>
-              </div>
-              <ReceiptText className="h-7 w-7 shrink-0 text-[#1F9D55]" />
-            </div>
-            <CouponView key={sale.id} d={d} c={couponCompany} id={sale.id} payments={sale.payments ?? []} />
-          </section>
-
       </div>}
+
+      {ptab === "compra" && <PurchaseTab key={sale.id} d={d} id={sale.id} company={couponCompany} payments={sale.payments ?? []} />}
 
       {ptab === "transferir" && <TransferPanel key={sale.id} sale={sale} creds={session.creds} whatsapp={brand.whatsapp || null} />}
 
@@ -599,7 +590,7 @@ const TIPS: [LucideIcon, string, string][] = [
   [Wrench, "Revise quando precisar", "Reaperto aos 300 km e revisão a cada 6 meses, onde preferir."],
 ];
 
-function DocRow({ icon: I, title, text, state, onClick, href, locked, highlight }: { icon: LucideIcon; title: string; text: string; state?: DocState; onClick?: () => void; href?: string; locked?: boolean; highlight?: boolean }) {
+function DocRow({ icon: I, title, text, state, onClick, href, locked, highlight, go }: { icon: LucideIcon; title: string; text: string; state?: DocState; onClick?: () => void; href?: string; locked?: boolean; highlight?: boolean; go?: boolean }) {
   const inner = (
     <>
       <span className={cx("grid h-12 w-12 shrink-0 place-items-center rounded-2xl", highlight ? "bg-[#0B1A12] text-[#E4F04A]" : locked ? "bg-[#0B1A12]/[0.05] text-[#0B1A12]/35" : "bg-[#EAF6EC] text-[#1F9D55]")}>
@@ -616,7 +607,7 @@ function DocRow({ icon: I, title, text, state, onClick, href, locked, highlight 
           <Loader2 className="h-[18px] w-[18px] animate-spin" />
         ) : state === "done" ? (
           <Check className="qp-pop h-[18px] w-[18px]" strokeWidth={3} />
-        ) : href ? (
+        ) : href || go ? (
           <ArrowRight className="h-[18px] w-[18px]" />
         ) : (
           <Download className="h-[18px] w-[18px]" />
