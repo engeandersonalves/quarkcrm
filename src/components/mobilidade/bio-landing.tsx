@@ -174,7 +174,7 @@ export function BioLanding({
           <ul className="mt-10 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[
               { icon: CalendarCheck, t: `Desde ${SINCE}`, s: `${years}+ anos no mercado` },
-              { icon: ShieldCheck, t: `Garantia de ${WARRANTY_DAYS} dias`, s: "com certificado no seu nome" },
+              { icon: ShieldCheck, t: `Garantia de ${WARRANTY_DAYS} dias`, s: "contra defeitos de fabricação" },
               { icon: Receipt, t: "Comprovante de propriedade", s: "e cartão do dono com QR" },
               { icon: IdCard, t: "Sem CNH e sem placa*", s: "autopropelido" },
             ].map((x) => (
@@ -270,7 +270,7 @@ export function BioLanding({
               <Doc icon={Receipt} t="Comprovante de compra e propriedade" s="Com chassi, motor e bateria da sua scooter, além de um cartão de bolso para andar junto." highlight />
               <Doc icon={FileSignature} t="Contrato de compra e venda" s="Assinado pelo celular, com validade jurídica, selfie e registro da assinatura." />
               <Doc icon={QrCode} t="Verificação oficial pelo QR" s="Qualquer pessoa aponta a câmera e vê se o documento é original, com os dados da scooter." />
-              <Doc icon={BookOpen} t="Manual e certificado de garantia" s="Uso, recarga e cuidados com a bateria, com os números da sua scooter." />
+              <Doc icon={BookOpen} t="Manual do proprietário completo" s="Uso, recarga, cuidados com a bateria e garantia, com os números da sua scooter." />
               <Doc icon={Smartphone} t="Área do cliente online" s="Entre com o CPF e acesse documentos, garantia e cartão quando quiser. Dá para salvar no celular." />
             </div>
           </div>
@@ -293,7 +293,7 @@ export function BioLanding({
                 <p className="text-[12px] font-bold tracking-[0.2em] text-[#D8E83C] uppercase">Garantia Quark</p>
                 <h2 className="mt-2 text-[28px] leading-tight font-extrabold tracking-[-0.03em] sm:text-[36px]">Garantia contra defeitos de fabricação, com suporte aqui em {town}.</h2>
                 <ul className="mt-5 grid gap-2.5 text-[15.5px] text-white/80 sm:grid-cols-2">
-                  {["Certificado com os números da sua scooter", "Atendimento direto pelo WhatsApp", "Assistência e peças com a Quark", "Garantia passa junto se você vender a scooter"].map((x) => (
+                  {["Garantia registrada no contrato e no cartão", "Atendimento direto pelo WhatsApp", "Assistência e peças com a Quark", "Garantia passa junto se você vender a scooter"].map((x) => (
                     <li key={x} className="flex items-start gap-2.5">
                       <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#9FDB7C]" /> {x}
                     </li>
@@ -366,7 +366,7 @@ export function BioLanding({
             {[
               ["Quanto tempo leva para carregar?", "Numa tomada comum de casa, com o carregador que vem junto. O tempo de cada modelo está na ficha técnica: dá para carregar à noite e sair com a bateria cheia."],
               ["Qual é a autonomia de verdade?", "Depende do modelo, do peso, do relevo e do jeito de pilotar. A autonomia de cada modelo está na ficha técnica acima, e explicamos tudo no WhatsApp antes da compra."],
-              ["O que a garantia cobre?", `Defeitos de fabricação por ${WARRANTY_DAYS} dias, com certificado emitido no seu nome. Desgaste natural e mau uso não entram, e tudo isso está explicado no manual.`],
+              ["O que a garantia cobre?", `Defeitos de fabricação por ${WARRANTY_DAYS} dias, registrada no seu contrato. Desgaste natural e mau uso não entram, e tudo isso está explicado no manual.`],
               ["Como provo que a scooter é minha?", "Você recebe o contrato assinado, o comprovante de compra e propriedade e o cartão do proprietário com a sua foto. O QR do cartão abre a página oficial da Quark confirmando que o documento é original."],
               ["Posso vender a minha scooter depois?", "Pode. Pela área do cliente você pede a transferência de propriedade para o novo dono, e a garantia restante vai junto."],
               ["Vocês entregam?", `Sim. Você pode retirar na loja ou receber em casa em ${town} e região, com a scooter montada e revisada.`],

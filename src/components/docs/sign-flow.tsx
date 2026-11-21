@@ -68,10 +68,34 @@ export function SignFlow({ data, token, scriptFont }: { data: PublicDocument; to
   const signedCount = signers.filter((s) => s.signed_at).length;
   const first = me.name.split(/[\s(]/)[0];
   const iSigned = !!me.signed_at || done;
+  const mob = doc.kind === "moto";
+  const steps = ["Ler o documento", "Confirmar seus dados", "Assinar"];
 
   return (
-    <Shell company={data.company}>
+    <Shell company={data.company} mob={mob}>
       {/* Cabeçalho */}
+      {mob ? (
+        <section className="px-5 pt-7 pb-5 print:hidden">
+          <div className="mx-auto max-w-[800px]">
+            <p className="text-[11px] font-bold tracking-[0.22em] text-[#1F9D55] uppercase">Assinatura eletrônica</p>
+            <h1 className="mt-1.5 text-[26px] leading-tight font-extrabold tracking-[-0.03em] text-[#0B1A12] sm:text-[32px]">
+              {iSigned ? `Tudo certo, ${first}!` : `Olá, ${first}!`}
+            </h1>
+            <p className="mt-1 text-[15px] text-[#0B1A12]/60">{iSigned ? "Sua assinatura foi registrada." : "Leia o contrato da sua scooter e assine pelo celular. Leva 1 minuto."}</p>
+            <ol className="mt-4 grid grid-cols-3 gap-2 text-[11.5px] font-semibold">
+              {steps.map((t, i) => {
+                const active = iSigned || (i === 0 ? true : i === 1 ? read || open : open);
+                return (
+                  <li key={t} className={`flex items-center gap-1.5 rounded-xl px-2.5 py-2 ring-1 transition ${active ? "bg-white text-[#0B1A12] ring-[#1F9D55]/30" : "bg-white/50 text-[#0B1A12]/40 ring-[#0B1A12]/[0.06]"}`}>
+                    <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10.5px] ${active ? "bg-[#1F9D55] text-white" : "bg-[#0B1A12]/10"}`}>{iSigned ? "✓" : i + 1}</span>
+                    {t}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </section>
+      ) : (
       <section className="relative overflow-hidden bg-ink-950 px-5 pt-10 pb-24 text-white print:hidden">
         <div className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full bg-sun-500/25 blur-[100px]" />
         <div className="pointer-events-none absolute -bottom-40 -left-24 h-80 w-80 rounded-full bg-brand-purple/60 blur-[100px]" />
@@ -101,10 +125,11 @@ export function SignFlow({ data, token, scriptFont }: { data: PublicDocument; to
           </ol>
         </div>
       </section>
+      )}
 
-      <main className="relative -mt-16 px-0 pb-40 sm:px-5 print:mt-0 print:p-0">
+      <main className={`relative px-0 pb-40 sm:px-5 print:mt-0 print:p-0 ${mob ? "" : "-mt-16"}`}>
         {iSigned && !selfieDone && (
-          <div className="animate-fade-up relative mx-auto mb-3 flex max-w-[800px] items-center gap-3 overflow-hidden bg-[#1C1234] p-4 text-white ring-1 ring-white/10 sm:rounded-2xl print:hidden">
+          <div className={`animate-fade-up relative mx-auto mb-3 flex max-w-[800px] items-center gap-3 overflow-hidden p-4 text-white ring-1 ring-white/10 sm:rounded-2xl print:hidden ${mob ? "bg-[#0B1A12]" : "bg-[#1C1234]"}`}>
             <div className="pointer-events-none absolute -top-12 -right-8 h-32 w-32 rounded-full bg-[#F3EA3B]/25 blur-2xl" />
             <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/10 ring-1 ring-white/15">
               <Camera className="h-5 w-5 text-[#F3EA3B]" />
@@ -165,7 +190,7 @@ export function SignFlow({ data, token, scriptFont }: { data: PublicDocument; to
             )}
             <button
               onClick={() => setOpen(true)}
-              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-ink-950 px-6 text-[15px] font-semibold text-white shadow-lift transition active:scale-[0.98] sm:flex-none"
+              className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-6 text-[15px] font-semibold text-white shadow-lift transition active:scale-[0.98] sm:flex-none ${mob ? "bg-[#0B1A12]" : "bg-ink-950"}`}
             >
               <FileSignature className="h-5 w-5 text-brand-yellow" /> Assinar documento
             </button>
@@ -188,7 +213,7 @@ export function SignFlow({ data, token, scriptFont }: { data: PublicDocument; to
           }}
         />
       )}
-      {selfieOpen && <SelfieStep token={token} first={first} onClose={() => setSelfieOpen(false)} onSent={() => setSelfieDone(true)} />}
+      {selfieOpen && <SelfieStep token={token} first={first} mob={mob} onClose={() => setSelfieOpen(false)} onSent={() => setSelfieDone(true)} />}
     </Shell>
   );
 }
@@ -300,7 +325,22 @@ function SignSheet({
   );
 }
 
-function Shell({ company, children }: { company: PublicDocument["company"]; children: React.ReactNode }) {
+function Shell({ company, children, mob }: { company: PublicDocument["company"]; children: React.ReactNode; mob?: boolean }) {
+  if (mob)
+    return (
+      <div className="min-h-dvh bg-[#F7F9F4] print:bg-white" style={{ fontFamily: "var(--font-jakarta), -apple-system, system-ui, sans-serif" }}>
+        <header className="sticky top-0 z-20 border-b border-[#0B1A12]/[0.06] bg-white/90 backdrop-blur-xl print:hidden">
+          <div className="mx-auto flex h-14 max-w-[800px] items-center justify-between px-5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/mob/ic/logo.png" alt="Quark Mobilidade" className="h-8 w-auto" />
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[#0B1A12]/55">
+              <Lock className="h-3.5 w-3.5 text-[#1F9D55]" /> Ambiente seguro
+            </span>
+          </div>
+        </header>
+        {children}
+      </div>
+    );
   return (
     <div className="min-h-dvh bg-ink-50 print:bg-white">
       <header className="sticky top-0 z-20 border-b border-white/10 bg-ink-950/90 backdrop-blur-xl print:hidden">

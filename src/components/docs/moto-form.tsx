@@ -130,7 +130,7 @@ export function MotoForm({
         </details>
       </Section>
 
-      <Section icon={<Hash className="h-4 w-4" />} title="Identificação do veículo" subtitle="Números de série: vão no contrato e no certificado de garantia">
+      <Section icon={<Hash className="h-4 w-4" />} title="Identificação do veículo" subtitle="Números de série: vão no contrato, no manual e no cartão do proprietário">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Chassi / quadro">
             <Input value={d.chassis} onChange={(e) => update({ chassis: e.target.value.toUpperCase() })} placeholder="Gravado no quadro" className="font-mono" />
@@ -145,7 +145,7 @@ export function MotoForm({
             <Input value={d.chargerNo} onChange={(e) => update({ chargerNo: e.target.value.toUpperCase() })} placeholder="Etiqueta do carregador" className="font-mono" />
           </Field>
         </div>
-        <p className="mt-2 text-xs text-ink-500">Pode deixar em branco no orçamento e completar na entrega, antes de gerar o certificado.</p>
+        <p className="mt-2 text-xs text-ink-500">Pode deixar em branco no orçamento e completar na entrega, antes de gerar o manual e o cartão.</p>
       </Section>
 
       <Section icon={<PackagePlus className="h-4 w-4" />} title="Acessórios" subtitle={accessoriesTotal(d) > 0 ? `Total em acessórios: ${brl(accessoriesTotal(d))}` : "Opcional: capacete, baú, cadeado…"}>

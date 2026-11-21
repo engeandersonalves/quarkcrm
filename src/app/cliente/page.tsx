@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: { absolute: "Área do cliente · Quark Mobilidade" },
-  description: "Manual, garantia, comprovante de compra e contrato da sua scooter Quark, sempre à mão.",
+  description: "Contrato, manual completo e cartão do proprietário da sua scooter Quark, sempre à mão.",
   robots: { index: false, follow: false },
   other: { google: "notranslate" },
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ChevronDown, ChevronRight, Clock3, FileSignature, Hash, MessageCircle, PencilLine, Search, ShieldAlert, ShieldCheck, Trash2, Truck, X } from "lucide-react";
+import { BookOpen, Camera, ChevronDown, ChevronRight, Clock3, FileSignature, Hash, MessageCircle, PencilLine, Search, ShieldAlert, ShieldCheck, Trash2, Truck, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { Empty, Skeleton, cx } from "@/components/ui";
@@ -295,7 +295,7 @@ export function WarrantyPanel({ sales, actions }: { sales: Sales; actions: SaleA
             </a>
           )}
           <button type="button" disabled={!!actions.busy} onClick={() => actions.pdf(doc, "manual")} className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold ring-1 ring-ink-200 hover:ring-ink-300 disabled:opacity-50 sm:flex-none dark:ring-white/[0.12]">
-            <ShieldCheck className="h-4 w-4" /> Certificado
+            <BookOpen className="h-4 w-4" /> Manual
           </button>
         </div>
       </div>

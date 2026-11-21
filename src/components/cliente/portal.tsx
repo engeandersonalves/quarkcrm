@@ -6,7 +6,6 @@ import {
   Bike,
   FolderOpen,
   IdCard,
-  BadgeCheck,
   BatteryCharging,
   BookOpen,
   Check,
@@ -195,7 +194,7 @@ function Login({ company, onLogin }: { company: Company; onLogin: (cpf: string, 
           <br />
           na palma da mão<span className="text-[#3FBF6A]">.</span>
         </h1>
-        <p className="mx-auto mt-4 max-w-[440px] text-[16px] leading-relaxed text-[#0B1A12]/65 lg:mx-0">Manual, garantia, comprovante de compra e contrato da sua scooter. Tudo organizado, a qualquer hora.</p>
+        <p className="mx-auto mt-4 max-w-[440px] text-[16px] leading-relaxed text-[#0B1A12]/65 lg:mx-0">Contrato, manual completo e o cartão do proprietário da sua scooter. Tudo organizado, a qualquer hora.</p>
         <div className="relative mx-auto mt-4 h-[210px] max-w-[440px] sm:h-[280px] lg:mx-0">
           <div className="absolute inset-x-8 bottom-4 h-6 rounded-[50%] bg-[#0B1A12]/15 blur-xl" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -542,21 +541,13 @@ function Home({ session, fallback, models, wallet, onLogout }: { session: Sessio
               <span className="text-[12px] text-[#0B1A12]/45">PDF · gerado na hora</span>
             </div>
             <div className="mt-4 grid gap-2.5">
-              <DocRow icon={BookOpen} title="Manual + certificado de garantia" text="Uso, bateria, cuidados e o seu certificado com os números da scooter" state={docs[`${sale.id}-manual`]} onClick={() => download("manual")} />
-              <DocRow
-                icon={BadgeCheck}
-                title="Comprovante de compra"
-                text={signed ? "Prova que a scooter é sua, com cartão de bolso para levar na carteira" : "Fica disponível assim que você assinar o contrato"}
-                state={docs[`${sale.id}-comprovante`]}
-                onClick={() => download("comprovante")}
-                locked={!signed}
-              />
               {sale.token &&
                 (signed ? (
                   <DocRow icon={FileSignature} title="Contrato assinado" text={`Assinado em ${dateBr((sale.signed_at ?? sale.completed_at ?? "").slice(0, 10))}, com validade jurídica`} href={`/assinar/${sale.token}`} />
                 ) : (
                   <DocRow icon={FileSignature} title="Assinar contrato" text="Falta só a sua assinatura. Leva 1 minuto, pelo celular." href={`/assinar/${sale.token}`} highlight />
                 ))}
+              <DocRow icon={BookOpen} title="Manual do proprietário completo" text="Uso, recarga, cuidados com a bateria, manutenção e garantia, com os números da sua scooter" state={docs[`${sale.id}-manual`]} onClick={() => download("manual")} />
             </div>
             <div aria-live="polite">{docErr && <p className="qp-up mt-3 rounded-2xl bg-[#FDECEA] px-4 py-3 text-[13px] text-[#A12A17]">{docErr}</p>}</div>
           </section>

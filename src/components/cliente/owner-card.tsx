@@ -195,7 +195,7 @@ export function OwnerCardPdfPage({ d, id, photo, qr, contact }: { d: MotoData; i
           <OwnerCardBack d={d} id={id} qr={qr} contact={contact} flat />
         </div>
         <p style={{ marginTop: "auto", fontSize: 12, lineHeight: 1.5, color: "#6B7A70", textAlign: "center", maxWidth: 560 }}>
-          Este cartão identifica o proprietário da scooter e acompanha o comprovante de compra {number}. Guarde no celular ou imprima e plastifique.
+          Este cartão identifica o proprietário da scooter e corresponde à venda {number}. Guarde no celular ou imprima e plastifique.
         </p>
       </div>
     </div>

@@ -2,7 +2,6 @@
 
 import {
   Archive,
-  Award,
   Baby,
   BatteryCharging,
   CircleDot,
@@ -30,13 +29,13 @@ import {
 } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { PDF_PAGE_H, PDF_PAGE_W } from "@/components/bf/proposal-pdf";
-import { dateBr, formatDoc, maskDoc } from "@/lib/br";
+import { dateBr, maskDoc } from "@/lib/br";
 import { formatPhone } from "@/lib/format";
 import { MANUAL_SPEC_FIELDS, type MotoProduct } from "@/lib/moto-products";
-import { revisionPlan, shortNo, warrantyEnd, type MotoData } from "@/lib/moto-sale";
+import { revisionPlan, shortNo, type MotoData } from "@/lib/moto-sale";
 
 /**
- * Manual do proprietário + certificado de garantia da scooter, no design branco da
+ * Manual do proprietário da scooter, no design branco da
  * Quark Mobilidade (A4). Cada bloco tem altura previsível e textos com limite de linhas,
  * para nenhuma página estourar, com ou sem os dados do cliente.
  */
@@ -210,8 +209,6 @@ function Row({ k, v, w = 140, mono, wide, h = 34 }: { k: string; v: string; w?: 
   );
 }
 
-const COVERS_SHORT = ["Motor elétrico e rolamentos", "Controlador e chicote elétrico", "Bateria (células e BMS)", "Carregador original", "Painel, faróis e setas", "Quadro, garfo e soldas"];
-const EXCLUDES_SHORT = ["Desgaste natural (pneus, pastilhas, lâmpadas)", "Quedas, colisões e mau uso", "Água em excesso ou jato de alta pressão", "Carregador não original", "Excesso de carga", "Alterações e aumento de potência"];
 
 /* ======================================================================= */
 
@@ -231,7 +228,6 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
     { i: "lock", k: "Segurança", v: clean(s.security) },
   ].filter((x) => x.v);
   const extra = [...MANUAL_SPEC_FIELDS.map((f) => ({ k: f.label, v: clean(s[f.k] as string | undefined) })), { k: "Peso", v: clean(s.weight) }].filter((x) => x.v).slice(0, 14);
-  const end = owner.deliveryDate ? warrantyEnd({ delivery: { date: owner.deliveryDate, mode: "entrega", address: "" }, warrantyDays: days, date: owner.purchaseDate }) : "";
   const contact = [brand.whatsapp && formatPhone(brand.whatsapp), brand.instagram && `@${brand.instagram.replace(/^@/, "")}`].filter(Boolean).join(" · ");
 
   /* As páginas são uma lista: a numeração e o sumário saem dela, mesmo quando uma página some. */
@@ -257,7 +253,7 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
             {name}
             <span style={{ color: "#3FBF6A" }}>.</span>
           </h1>
-          <p className="mx-auto mt-5 max-w-[560px] text-[21px] leading-snug text-[#0B1A12]/70">Uso seguro, cuidados com a bateria, manutenção e o seu certificado de garantia, tudo em um só lugar.</p>
+          <p className="mx-auto mt-5 max-w-[560px] text-[21px] leading-snug text-[#0B1A12]/70">Uso seguro, cuidados com a bateria, manutenção e garantia, tudo em um só lugar.</p>
         </div>
         <div className="relative mt-8 h-[440px]">
           <div className="absolute top-[18px] left-1/2 h-[380px] w-[380px] -translate-x-1/2 rounded-full" style={{ background: "radial-gradient(closest-side, rgba(126,214,150,0.35), rgba(126,214,150,0))" }} />
@@ -395,7 +391,7 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
             <p className="text-[21px] font-extrabold">O que você recebe</p>
           </div>
           <ul className="mt-4 grid gap-2.5 text-[17px] text-[#0B1A12]/80">
-            {["Scooter montada, com guidão e retrovisores", "Bateria instalada e carregada", "Carregador original bivolt", "Chaves, controle do alarme e cartão NFC", "Este manual com o certificado de garantia"].map((t) => (
+            {["Scooter montada, com guidão e retrovisores", "Bateria instalada e carregada", "Carregador original bivolt", "Chaves, controle do alarme e cartão NFC", "Este manual do proprietário"].map((t) => (
               <li key={t} className="flex items-center gap-3">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#2FB061]" />
                 {t}
@@ -614,116 +610,6 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
     ),
   });
 
-  pages.push({
-    id: "certificado",
-    toc: "Certificado de garantia",
-    body: (
-      <>
-        <div className="relative mt-3 rounded-[28px] p-[2px]" style={{ background: "linear-gradient(135deg,#C9A84A,#E4F04A 30%,#4FC38A 65%,#C9A84A)" }}>
-          <div className="rounded-[26px] bg-[#FDFDF9] px-8 pt-6 pb-6">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <p className="text-[14px] font-bold tracking-[0.26em] uppercase" style={{ color: GREEN }}>
-                  Quark Mobilidade
-                </p>
-                <h2 className="mt-1 text-[42px] leading-none font-extrabold tracking-[-0.04em]">Certificado de garantia</h2>
-                <p className="mt-2.5 max-w-[470px] text-[16px] leading-snug text-[#0B1A12]/70">
-                  <b className="text-[#0B1A12]">{days} dias</b> contra defeitos de fabricação, contados da entrega, para o veículo e o proprietário abaixo.
-                </p>
-              </div>
-              <div className="relative grid h-[112px] w-[112px] shrink-0 place-items-center">
-                <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#C9A84A,#E4F04A,#9FDB7C,#4FC38A,#C9A84A)]" />
-                <div className="absolute inset-[4px] rounded-full bg-[#0B1A12]" />
-                <div className="absolute inset-[9px] rounded-full border border-dashed border-[#E4F04A]/50" />
-                <div className="relative text-center text-white">
-                  <p className="text-[10px] font-bold tracking-[0.2em] text-[#E4F04A] uppercase">Garantia</p>
-                  <p className="text-[38px] leading-[0.9] font-extrabold tracking-[-0.05em]">{days}</p>
-                  <p className="text-[11px] font-bold tracking-[0.2em] uppercase">dias</p>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-x-8">
-              <Row k="Proprietário" v={owner.name} w={420} wide h={40} />
-              {[
-                ["CPF / CNPJ", owner.doc ? (owner.doc.replace(/\D/g, "").length > 11 ? formatDoc(owner.doc) : maskDoc(owner.doc)) : "", 150, false],
-                ["Telefone", owner.phone ? formatPhone(owner.phone) : "", 150, false],
-                ["Modelo", [name, clean(owner.color), clean(owner.year)].filter(Boolean).join(" · "), 0, false],
-                ["Cidade", owner.city, 150, false],
-                ["Chassi", owner.chassis, 180, true],
-                ["Motor", owner.motorNo, 170, true],
-                ["Bateria", owner.batteryNo, 170, true],
-                ["Carregador", owner.chargerNo, 170, true],
-              ].map(([k, v, w, mono]) => (
-                <Row key={k as string} k={k as string} v={v as string} w={w as number} mono={mono as boolean} h={40} />
-              ))}
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              {[
-                ["Compra", owner.purchaseDate ? dateBr(owner.purchaseDate) : ""],
-                ["Entrega · início", owner.deliveryDate ? dateBr(owner.deliveryDate) : ""],
-                ["Válida até", end ? dateBr(end) : ""],
-              ].map(([k, v], i) => (
-                <div key={k} className={cx("rounded-[18px] px-5 py-3", i === 2 ? "bg-[#0B1A12] text-white" : "bg-[#F1F6EE]")}>
-                  <p className={cx("text-[13px] font-bold tracking-[0.12em] uppercase", i === 2 ? "text-[#E4F04A]" : "text-[#0B1A12]/55")}>{k}</p>
-                  <p className="mt-1 text-[21px] font-extrabold">{v || <span className={cx("inline-block w-[120px] border-b", i === 2 ? "border-white/40" : "border-[#0B1A12]/30")} style={{ height: 20 }} />}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          {[
-            [ShieldCheck, "Está coberto", COVERS_SHORT, "#1F9D55"],
-            [TriangleAlert, "Não está coberto", EXCLUDES_SHORT, "#E8432A"],
-          ].map(([I, t, list, color]) => {
-            const Icon = I as LucideIcon;
-            return (
-              <Card key={t as string} className="rounded-[22px] px-6 py-4">
-                <p className="flex items-center gap-2 text-[17px] font-extrabold">
-                  <Icon className="h-5 w-5" style={{ color: color as string }} /> {t as string}
-                </p>
-                <ul className="mt-2 grid gap-1 text-[14.5px] leading-snug text-[#0B1A12]/75">
-                  {(list as string[]).map((x) => (
-                    <li key={x} className="flex items-center gap-2.5">
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color as string }} />
-                      {x}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            );
-          })}
-        </div>
-        <Card className="mt-3 flex items-center gap-4 rounded-[22px] px-6 py-4">
-          <Tile icon={Award} size={46} dark />
-          <p className="min-w-0 flex-1 text-[14.5px] leading-snug text-[#0B1A12]/75">
-            <b className="text-[#0B1A12]">Como acionar:</b> fale com a assistência{contact ? ` (${contact})` : ""} e apresente este certificado. O reparo ou a troca da peça com defeito é feito sem custo em até 30 dias (CDC, art. 18).
-          </p>
-        </Card>
-        <div className="grow" />
-        <div className="mt-4 grid grid-cols-2 gap-10">
-          <div className="min-w-0 text-center">
-            <div className="h-[40px]" />
-            <div className="border-t border-[#0B1A12]/40 pt-2">
-              <p className="truncate text-[15px] font-bold">{clean(brand.legalName) || clean(brand.company)}</p>
-              <p className="h-[18px] truncate text-[13px] text-[#0B1A12]/60">{brand.cnpj ? `CNPJ ${formatDoc(brand.cnpj)}` : "Vendedora"}</p>
-            </div>
-          </div>
-          <div className="min-w-0 text-center">
-            <div className="flex h-[40px] items-end justify-center pb-1 text-[13px] text-[#0B1A12]/55">{owner.signedAt ? `Contrato assinado em ${dateBr(owner.signedAt.slice(0, 10))}` : ""}</div>
-            <div className="border-t border-[#0B1A12]/40 pt-2">
-              <p className="h-[21px] truncate text-[15px] font-bold">{clean(owner.name)}</p>
-              <p className="truncate text-[13px] text-[#0B1A12]/60">Proprietário(a)</p>
-            </div>
-          </div>
-        </div>
-        <p className="mt-3 mb-1 h-[16px] text-center text-[12.5px] tracking-[0.08em] text-[#0B1A12]/45 uppercase">
-          {[owner.number && `Certificado ${owner.number}`, owner.code && `código ${owner.code}`].filter(Boolean).join(" · ")}
-        </p>
-      </>
-    ),
-  });
-
   const toc = pages.map((pg, i) => ({ t: pg.toc, n: i + 1 })).filter((x): x is { t: string; n: number } => !!x.t);
   pages[tocAt].body = (
     <>
@@ -788,7 +674,7 @@ export function MotoManualPages({ p, brand, owner: o }: { p: MotoProduct; brand:
   );
 }
 
-/** Baixa o manual do proprietário com o certificado de garantia. */
+/** Baixa o manual do proprietário completo. */
 export async function downloadMotoManual(p: MotoProduct, brand: ManualBrand, owner?: ManualOwner | null) {
   const { downloadPagesPdf, pdfFileSlug } = await import("@/components/bf/download-pdf");
   await downloadPagesPdf(<MotoManualPages p={p} brand={brand} owner={owner} />, `Manual-e-garantia-${pdfFileSlug(p.name)}${owner?.name ? `-${pdfFileSlug(owner.name)}` : ""}.pdf`, { background: "#F7F9F4" });

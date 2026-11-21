@@ -511,7 +511,7 @@ function Catalog({ models, photos, link, seller }: { models: Scooter[]; photos: 
           {[
             "Sem CNH e sem placa: autopropelido até 1.000 W e 32 km/h (CONTRAN 996/2023)",
             "Economia de até R$ 146 por mês em relação a uma moto a gasolina",
-            "Garantia de 90 dias com certificado no nome do cliente",
+            "Garantia de 90 dias registrada no contrato",
             "Contrato assinado, comprovante de propriedade e cartão do dono com QR",
             "Pagamento em até 21x no cartão ou PIX à vista",
             "Entrega montada e revisada, com suporte em Maceió",

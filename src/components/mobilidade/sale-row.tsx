@@ -208,7 +208,7 @@ export function useSaleActions(sales: Sales) {
     if (!confirm(`Criar uma versão corrigida desta ${stage === "vendida" ? "venda" : "proposta"}?\n\nUma cópia é aberta como orçamento para você editar e enviar de novo. A original continua como está: depois de assinar a nova, cancele a antiga.`)) return;
     setBusy(`${doc.id}-revisar`);
     try {
-      const data = { ...(doc.data as Record<string, unknown>) };
+      const data: Record<string, unknown> = { ...(doc.data as Record<string, unknown>), contractVersion: 2 };
       delete data.transferredAt;
       const { data: row, error } = await supabase().from("documents").insert({ kind: doc.kind, title: doc.title, data, lead_id: doc.lead_id ?? null, status: "rascunho" }).select("id").single();
       if (error || !row) throw new Error(error?.message ?? "Não foi possível criar a cópia");
@@ -347,7 +347,7 @@ export function SaleRow({ doc, actions, hideClient, profit }: { doc: DocumentRow
           ))}
         {stage === "vendida" && (
           <>
-            <button type="button" disabled={!!busy} onClick={() => pdf(doc, "manual")} className={cx(BTN, "flex-1 sm:flex-none")} title="Manual do proprietário com o certificado de garantia">
+            <button type="button" disabled={!!busy} onClick={() => pdf(doc, "manual")} className={cx(BTN, "flex-1 sm:flex-none")} title="Manual do proprietário completo, com os dados da scooter">
               {spin("manual") ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />} Manual
             </button>
             <button type="button" disabled={!!busy} onClick={() => pdf(doc, "comprovante")} className={cx(BTN, "flex-1 sm:flex-none")} title="Comprovante de compra e propriedade">

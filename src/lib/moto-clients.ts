@@ -110,7 +110,7 @@ export function portalMessage(name: string, url: string) {
   return [
     `Olá${first ? `, ${first}` : ""}! Aqui é da Quark Mobilidade.`,
     "",
-    "Na sua área do cliente estão o manual, o certificado de garantia, o comprovante de compra, o contrato e o cartão digital da sua scooter para guardar na carteira do celular:",
+    "Na sua área do cliente estão o contrato, o manual completo e o cartão do proprietário da sua scooter, para guardar no celular ou imprimir:",
     url,
     "",
     "Para entrar, use o seu CPF e os 4 últimos dígitos deste celular.",

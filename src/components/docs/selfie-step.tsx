@@ -22,14 +22,19 @@ function toJpeg(source: CanvasImageSource, w: number, h: number) {
  * cliente que assinou. Câmera frontal com guia do rosto; se a câmera não abrir,
  * o cliente envia uma foto pelo seletor do celular.
  */
-export function SelfieStep({ token, first, onClose, onSent }: { token: string; first: string; onClose: () => void; onSent: () => void }) {
+export function SelfieStep({ token, first, onClose, onSent, mob }: { token: string; first: string; onClose: () => void; onSent: () => void; mob?: boolean }) {
   const [step, setStep] = useState<Step>("intro");
   const [photo, setPhoto] = useState<string | null>(null);
   const [error, setError] = useState("");
+  // No celular, a câmera nativa (seletor com capture) funciona em qualquer navegador,
+  // inclusive dentro do WhatsApp e do Instagram, onde a câmera ao vivo costuma ficar preta.
   const [noCamera, setNoCamera] = useState(false);
+  const [live, setLive] = useState(false);
+  const mobile = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   const stop = useCallback(() => {
     stream.current?.getTracks().forEach((t) => t.stop());
@@ -47,25 +52,44 @@ export function SelfieStep({ token, first, onClose, onSent }: { token: string; f
 
   const openCamera = async () => {
     setError("");
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setNoCamera(true);
+    if (mobile || !navigator.mediaDevices?.getUserMedia) {
       fileRef.current?.click();
       return;
     }
     try {
       stream.current = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false });
+      setLive(false);
       setStep("camera");
-      requestAnimationFrame(() => {
-        if (video.current && stream.current) {
-          video.current.srcObject = stream.current;
-          video.current.play().catch(() => {});
-        }
-      });
     } catch {
       setNoCamera(true);
       setError("Não conseguimos abrir a câmera. Libere o acesso nas permissões do navegador ou envie uma foto do seu rosto.");
     }
   };
+
+  // Liga o vídeo só depois que ele existe na tela (antes ficava preto quando o elemento ainda não tinha sido montado).
+  useEffect(() => {
+    if (step !== "camera") return;
+    const v = video.current;
+    const s = stream.current;
+    if (!v || !s) return;
+    v.srcObject = s;
+    const onPlaying = () => setLive(true);
+    v.addEventListener("playing", onPlaying);
+    v.addEventListener("loadedmetadata", () => v.play().catch(() => {}), { once: true });
+    v.play().catch(() => {});
+    const timer = window.setTimeout(() => {
+      if (!v.videoWidth) {
+        stop();
+        setNoCamera(true);
+        setStep("intro");
+        setError("A câmera não mostrou a imagem. Toque em “Enviar foto do rosto” para usar a câmera do aparelho.");
+      }
+    }, 5000);
+    return () => {
+      v.removeEventListener("playing", onPlaying);
+      window.clearTimeout(timer);
+    };
+  }, [step, stop]);
 
   const shoot = () => {
     const v = video.current;
@@ -110,18 +134,25 @@ export function SelfieStep({ token, first, onClose, onSent }: { token: string; f
 
   const retake = () => {
     setPhoto(null);
-    if (noCamera) fileRef.current?.click();
+    if (noCamera || mobile) fileRef.current?.click();
     else openCamera();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6 print:hidden" role="dialog" aria-modal="true" aria-label="Selfie de segurança">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6 print:hidden" role="dialog" aria-modal="true" aria-label="Selfie de segurança" style={{ ["--sf-ink" as string]: mob ? "#0B1A12" : "#1C1234" }}>
       <div className="absolute inset-0 bg-ink-950/60 backdrop-blur-sm" />
       <div className="animate-sheet-up relative max-h-[94dvh] w-full max-w-md overflow-y-auto rounded-t-[30px] bg-white shadow-lift sm:rounded-[30px]">
-        <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => fromFile(e.target.files?.[0])} />
+        <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => {
+            fromFile(e.target.files?.[0]);
+            e.target.value = "";
+          }} />
+        <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+            fromFile(e.target.files?.[0]);
+            e.target.value = "";
+          }} />
 
         {/* topo da marca */}
-        <div className="relative overflow-hidden bg-[#1C1234] px-6 pt-6 pb-5 text-white">
+        <div className="relative overflow-hidden bg-[var(--sf-ink)] px-6 pt-6 pb-5 text-white">
           <div className="pointer-events-none absolute -top-16 -right-10 h-44 w-44 rounded-full bg-[#F3EA3B]/25 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-20 -left-10 h-44 w-44 rounded-full bg-[#6CC690]/25 blur-3xl" />
           <div className="relative flex items-start justify-between gap-3">
@@ -159,7 +190,7 @@ export function SelfieStep({ token, first, onClose, onSent }: { token: string; f
                   { icon: <Lock className="h-4 w-4" />, t: "Guardada com sigilo", s: "Usada só para comprovar a autoria, nunca divulgada" },
                 ].map((x) => (
                   <li key={x.t} className="flex items-start gap-3 rounded-2xl bg-[#F6F5FA] p-3 ring-1 ring-ink-200/60">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#1C1234] text-[#F3EA3B]">{x.icon}</span>
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--sf-ink)] text-[#F3EA3B]">{x.icon}</span>
                     <span>
                       <span className="block text-sm font-semibold text-ink-900">{x.t}</span>
                       <span className="block text-xs text-ink-500">{x.s}</span>
@@ -170,14 +201,14 @@ export function SelfieStep({ token, first, onClose, onSent }: { token: string; f
               {error && <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2.5 text-[13px] text-amber-900 ring-1 ring-amber-200">{error}</p>}
               <button
                 onClick={noCamera ? () => fileRef.current?.click() : openCamera}
-                className="mt-5 flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[#1C1234] py-3.5 text-[15px] font-semibold text-white shadow-lift transition active:scale-[0.98]"
+                className="mt-5 flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--sf-ink)] py-3.5 text-[15px] font-semibold text-white shadow-lift transition active:scale-[0.98]"
               >
                 {noCamera ? <ImagePlus className="h-5 w-5 text-[#F3EA3B]" /> : <Camera className="h-5 w-5 text-[#F3EA3B]" />}
                 {noCamera ? "Enviar foto do rosto" : "Tirar selfie"}
               </button>
               {!noCamera && (
-                <button onClick={() => fileRef.current?.click()} className="mt-2 w-full py-2 text-center text-[13px] font-semibold text-ink-500 hover:text-ink-800">
-                  Prefiro escolher uma foto
+                <button onClick={() => galleryRef.current?.click()} className="mt-2 w-full py-2 text-center text-[13px] font-semibold text-ink-500 hover:text-ink-800">
+                  Prefiro escolher uma foto da galeria
                 </button>
               )}
               <p className="mt-2 text-center text-[11px] text-ink-400">Leva 5 segundos · rosto visível, sem óculos escuros ou boné</p>
@@ -188,6 +219,13 @@ export function SelfieStep({ token, first, onClose, onSent }: { token: string; f
             <>
               <div className="relative mx-auto aspect-[3/4] w-full max-w-[320px] overflow-hidden rounded-[28px] bg-ink-950">
                 <video ref={video} playsInline muted autoPlay className="h-full w-full -scale-x-100 object-cover" />
+                {!live && (
+                  <div className="absolute inset-0 grid place-items-center text-white/80">
+                    <span className="flex items-center gap-2 text-[13px] font-semibold">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Abrindo a câmera…
+                    </span>
+                  </div>
+                )}
                 {/* guia do rosto */}
                 <svg viewBox="0 0 300 400" className="pointer-events-none absolute inset-0 h-full w-full" preserveAspectRatio="none" aria-hidden>
                   <defs>
@@ -202,8 +240,8 @@ export function SelfieStep({ token, first, onClose, onSent }: { token: string; f
                 <p className="absolute inset-x-0 bottom-4 text-center text-[13px] font-semibold text-white drop-shadow">Encaixe o rosto no contorno</p>
               </div>
               <div className="mt-5 flex items-center justify-center">
-                <button onClick={shoot} aria-label="Tirar foto" className="grid h-[72px] w-[72px] place-items-center rounded-full bg-gradient-to-br from-[#F3EA3B] to-[#6CC690] p-1 shadow-lift transition active:scale-95">
-                  <span className="grid h-full w-full place-items-center rounded-full border-4 border-white bg-[#1C1234]">
+                <button onClick={shoot} disabled={!live} aria-label="Tirar foto" className="disabled:opacity-40 grid h-[72px] w-[72px] place-items-center rounded-full bg-gradient-to-br from-[#F3EA3B] to-[#6CC690] p-1 shadow-lift transition active:scale-95">
+                  <span className="grid h-full w-full place-items-center rounded-full border-4 border-white bg-[var(--sf-ink)]">
                     <Camera className="h-6 w-6 text-white" />
                   </span>
                 </button>
@@ -226,7 +264,7 @@ export function SelfieStep({ token, first, onClose, onSent }: { token: string; f
                 <button
                   onClick={send}
                   disabled={step === "sending"}
-                  className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#1C1234] text-[15px] font-semibold text-white transition active:scale-[0.98] disabled:opacity-60"
+                  className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--sf-ink)] text-[15px] font-semibold text-white transition active:scale-[0.98] disabled:opacity-60"
                 >
                   {step === "sending" ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5 text-[#F3EA3B]" />}
                   {step === "sending" ? "Enviando com segurança…" : "Usar esta foto"}
@@ -241,7 +279,7 @@ export function SelfieStep({ token, first, onClose, onSent }: { token: string; f
                 <ShieldCheck className="h-8 w-8" />
               </div>
               <p className="mt-4 text-[15px] leading-relaxed text-ink-700">Pronto, {first}! Sua assinatura está protegida e vinculada a você.</p>
-              <button onClick={onClose} className="mt-5 h-12 w-full rounded-2xl bg-[#1C1234] text-[15px] font-semibold text-white">
+              <button onClick={onClose} className="mt-5 h-12 w-full rounded-2xl bg-[var(--sf-ink)] text-[15px] font-semibold text-white">
                 Ver meu documento
               </button>
             </div>

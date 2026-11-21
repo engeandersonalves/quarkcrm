@@ -75,12 +75,12 @@ const LEAD = /^(Cláusula \d+ª\.|§\s?\d+º\.|Parágrafo único\.)\s*/;
 const MARK = /^((?:[a-z]|[ivx]+|[IVX]+)[.)])\s+([\s\S]*)$/;
 
 /** Texto do parágrafo com o "Cláusula Nª." / "§1º." em destaque. */
-function Rich({ text }: { text: string }) {
+function Rich({ text, color = NAVY }: { text: string; color?: string }) {
   const m = text.match(LEAD);
   if (!m) return <>{text}</>;
   return (
     <>
-      <strong className="font-semibold" style={{ color: NAVY }}>
+      <strong className="font-semibold" style={{ color }}>
         {m[1]}
       </strong>{" "}
       {text.slice(m[0].length)}
@@ -148,14 +148,60 @@ export function DocumentView({
     : people;
 
   const kpis = summary(kind, data);
+  // Mobilidade: folha branca e limpa, na identidade Quark Mobilidade.
+  const mob = kind === "moto";
+  const INK = mob ? "#0B1A12" : NAVY;
   const companyName = company?.company_name || "Quark Energia";
   const date = (data as { date?: string }).date;
   const where = (data as { place?: string }).place;
 
   return (
-    <article className="doc-paper palette-classic @container relative mx-auto w-full max-w-[820px] overflow-hidden bg-white font-sans text-[14px] leading-[1.75] text-[#2B2541] shadow-lift ring-1 ring-ink-200/70 sm:rounded-[28px] print:max-w-none print:overflow-visible print:rounded-none print:text-[10.5pt] print:leading-[1.6] print:shadow-none print:ring-0">
+    <article className={cx("doc-paper palette-classic @container relative mx-auto w-full max-w-[820px] overflow-hidden bg-white font-sans text-[14px] leading-[1.75] shadow-lift ring-1 ring-ink-200/70 sm:rounded-[28px] print:max-w-none print:overflow-visible print:rounded-none print:text-[10.5pt] print:leading-[1.6] print:shadow-none print:ring-0", mob ? "text-[#2A3530]" : "text-[#2B2541]")}>
       {/* ------------------------------------------------------------ capa */}
-      <header className="relative overflow-hidden px-6 pt-7 pb-6 text-white sm:px-12 sm:pt-10 sm:pb-8 print:rounded-[18px] print:px-8 print:pt-7 print:pb-6" style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #261845 55%, #120B24 100%)` }}>
+      {mob ? (
+        <header className="relative px-6 pt-7 pb-6 sm:px-12 sm:pt-10 sm:pb-8 print:px-2 print:pt-2 print:pb-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/mob/ic/logo.png" alt="Quark Mobilidade" className="h-9 w-auto sm:h-10" />
+            <span className="hidden items-center gap-1.5 rounded-full bg-[#F1F6EE] px-3 py-1 text-[10px] font-semibold tracking-[0.16em] whitespace-nowrap text-[#1F7A45] uppercase @md:flex print:flex">
+              <ShieldCheck className="h-3.5 w-3.5" /> Documento eletrônico
+            </span>
+          </div>
+          <p className="mt-8 text-[11px] font-bold tracking-[0.24em] text-[#1F9D55] uppercase sm:mt-10">Venda de scooter elétrica</p>
+          <h1 className="mt-1.5 max-w-[640px] text-[27px] leading-[1.12] font-extrabold tracking-[-0.03em] text-[#0B1A12] @2xl:text-[36px] print:text-[22pt]">{title}</h1>
+          {sub && <p className="mt-2 max-w-[600px] text-[13.5px] leading-relaxed text-[#0B1A12]/60 sm:text-sm">{sub}</p>}
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-[12px] text-[#0B1A12]/55">
+            {where && (
+              <span className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-[#1F9D55]" /> {where}
+              </span>
+            )}
+            {date && (
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-[#1F9D55]" /> {dateBr(date)}
+              </span>
+            )}
+            <span className="flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-[#1F9D55]" /> {list.length} {list.length === 1 ? "assinatura" : "assinaturas"}
+            </span>
+            {hash && (
+              <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                <Fingerprint className="h-3.5 w-3.5 text-[#1F9D55]" /> {hash.slice(0, 12).toUpperCase()}
+              </span>
+            )}
+          </div>
+          <dl className="mt-6 grid grid-cols-2 gap-2 @2xl:grid-cols-4 print:grid-cols-4">
+            {kpis.map((x) => (
+              <div key={x.k} className="rounded-2xl bg-[#F6F8F4] px-4 py-3 ring-1 ring-[#0B1A12]/[0.05]">
+                <dt className="text-[10px] font-bold tracking-[0.14em] text-[#0B1A12]/45 uppercase">{x.k}</dt>
+                <dd className="mt-0.5 text-[15px] leading-snug font-bold text-[#0B1A12] tabular-nums sm:text-base print:text-[10.5pt]">{x.v}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-7 h-px bg-[#0B1A12]/[0.08] print:mt-4" />
+        </header>
+      ) : (
+        <header className="relative overflow-hidden px-6 pt-7 pb-6 text-white sm:px-12 sm:pt-10 sm:pb-8 print:rounded-[18px] print:px-8 print:pt-7 print:pb-6" style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #261845 55%, #120B24 100%)` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/symbol.png" alt="" aria-hidden className="pointer-events-none absolute -right-10 -bottom-16 w-[260px] opacity-[0.07] select-none sm:w-[320px]" />
         <div className="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full bg-[#F3EA3B]/20 blur-3xl print:hidden" />
@@ -208,9 +254,10 @@ export function DocumentView({
           ))}
         </dl>
       </header>
-      <div className="h-1.5 bg-gradient-to-r from-[#F3EA3B] via-[#9BD373] to-[#6CC690] print:mt-2 print:rounded-full" />
+      )}
+      {!mob && <div className="h-1.5 bg-gradient-to-r from-[#F3EA3B] via-[#9BD373] to-[#6CC690] print:mt-2 print:rounded-full" />}
 
-      <div className="px-6 py-8 sm:px-12 sm:py-10 print:px-1 print:py-6">
+      <div className={cx("px-6 sm:px-12 print:px-1", mob ? "pt-2 pb-8 sm:pb-10 print:py-4" : "py-8 sm:py-10 print:py-6")}>
         {/* --------------------------------------------------------- partes */}
         {partyGroups.length > 0 && (
           <div className="grid gap-3 @2xl:grid-cols-2 print:grid-cols-2">
@@ -220,13 +267,13 @@ export function DocumentView({
               const name = cut > 0 ? text.slice(0, cut) : text;
               const qual = cut > 0 ? text.slice(cut + 2) : "";
               return (
-                <div key={g.h} className="relative break-inside-avoid overflow-hidden rounded-2xl bg-[#F6F5FA] p-4 ring-1 ring-ink-200/70 sm:p-5">
-                  <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#F3EA3B] to-[#6CC690]" />
+                <div key={g.h} className={cx("relative break-inside-avoid overflow-hidden rounded-2xl p-4 sm:p-5", mob ? "bg-white ring-1 ring-[#0B1A12]/[0.09]" : "bg-[#F6F5FA] ring-1 ring-ink-200/70")}>
+                  {!mob && <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-[#F3EA3B] to-[#6CC690]" />}
                   <p className="text-[10px] font-bold tracking-[0.2em] text-[#2C7A52] uppercase">{g.h}</p>
-                  <p className="mt-1 font-display text-[15px] leading-snug font-semibold" style={{ color: NAVY }}>
+                  <p className={cx("mt-1 text-[15px] leading-snug", mob ? "font-bold" : "font-display font-semibold")} style={{ color: INK }}>
                     {name}
                   </p>
-                  {qual && <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-600 print:text-[9pt]">{qual}</p>}
+                  {qual && <p className={cx("mt-1.5 text-[12.5px] leading-relaxed print:text-[9pt]", mob ? "text-[#0B1A12]/60" : "text-ink-600")}>{qual}</p>}
                 </div>
               );
             })}
@@ -245,11 +292,11 @@ export function DocumentView({
             <div key={gi} className={cx(annex && "break-inside-avoid")}>
               {g.h && (
                 <h2 className="mt-9 mb-3 flex items-center gap-3 break-after-avoid print:mt-6">
-                  <span className="h-5 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-[#F3EA3B] to-[#6CC690]" />
-                  <span className="font-display text-[13px] font-semibold tracking-[0.12em] uppercase" style={{ color: NAVY }}>
+                  {mob ? <span className="h-2 w-2 shrink-0 rounded-full bg-[#1F9D55]" /> : <span className="h-5 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-[#F3EA3B] to-[#6CC690]" />}
+                  <span className={cx("text-[13px] tracking-[0.12em] uppercase", mob ? "font-bold" : "font-display font-semibold")} style={{ color: INK }}>
                     {g.h}
                   </span>
-                  <span className="h-px flex-1 bg-ink-200/70" />
+                  <span className={cx("h-px flex-1", mob ? "bg-[#0B1A12]/[0.08]" : "bg-ink-200/70")} />
                 </h2>
               )}
               {annex ? (
@@ -257,10 +304,10 @@ export function DocumentView({
                   {g.items.map((b, i) => {
                     const m = b.text.match(/^(\d+) × (.*)$/);
                     return (
-                      <div key={i} className={cx("flex items-center gap-3 px-4 py-2.5 text-[13px]", i % 2 ? "bg-white" : "bg-[#F6F5FA]")}>
+                      <div key={i} className={cx("flex items-center gap-3 px-4 py-2.5 text-[13px]", i % 2 ? "bg-white" : mob ? "bg-[#F6F8F4]" : "bg-[#F6F5FA]")}>
                         {m ? (
                           <>
-                            <span className="grid h-7 min-w-7 place-items-center rounded-lg px-1.5 font-display text-[12px] font-bold text-[#F3EA3B] tabular-nums" style={{ background: NAVY }}>
+                            <span className="grid h-7 min-w-7 place-items-center rounded-lg px-1.5 font-display text-[12px] font-bold text-[#F3EA3B] tabular-nums" style={{ background: INK }}>
                               {m[1]}
                             </span>
                             <span className="font-medium text-ink-800">{m[2]}</span>
@@ -285,7 +332,7 @@ export function DocumentView({
                   }
                   return (
                     <p key={i} className="my-2.5 hyphens-auto sm:text-justify print:text-justify">
-                      <Rich text={b.text} />
+                      <Rich text={b.text} color={INK} />
                     </p>
                   );
                 })
@@ -294,16 +341,16 @@ export function DocumentView({
           );
         })}
 
-        {place && <p className="mt-8 text-right font-medium text-ink-700">{place}</p>}
+        {place && <p className={cx("mt-8 text-right font-medium", mob ? "text-[#0B1A12]/75" : "text-ink-700")}>{place}</p>}
 
         {/* ---------------------------------------------------- assinaturas */}
         <div className="mt-10">
           <h2 className="mb-4 flex items-center gap-3 break-after-avoid">
-            <span className="h-5 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-[#F3EA3B] to-[#6CC690]" />
-            <span className="font-display text-[13px] font-semibold tracking-[0.12em] uppercase" style={{ color: NAVY }}>
+            {mob ? <span className="h-2 w-2 shrink-0 rounded-full bg-[#1F9D55]" /> : <span className="h-5 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-[#F3EA3B] to-[#6CC690]" />}
+            <span className={cx("text-[13px] tracking-[0.12em] uppercase", mob ? "font-bold" : "font-display font-semibold")} style={{ color: INK }}>
               Assinaturas
             </span>
-            <span className="h-px flex-1 bg-ink-200/70" />
+            <span className={cx("h-px flex-1", mob ? "bg-[#0B1A12]/[0.08]" : "bg-ink-200/70")} />
           </h2>
           <div className="grid gap-3 @lg:grid-cols-2 print:grid-cols-2">
             {list.map((s) => {
@@ -332,7 +379,7 @@ export function DocumentView({
                     )}
                   </div>
                   <div className="border-t border-dashed border-ink-300 pt-2 text-center">
-                    <p className="text-sm font-semibold" style={{ color: NAVY }}>
+                    <p className="text-sm font-semibold" style={{ color: INK }}>
                       {s.signed_name ?? s.name}
                     </p>
                     <p className="text-[11.5px] text-ink-500">
@@ -349,7 +396,7 @@ export function DocumentView({
         {/* ---------------------------------------------------- auditoria */}
         {signed.length > 0 && (
           <div className="mt-8 break-inside-avoid overflow-hidden rounded-2xl ring-1 ring-ink-200/80">
-            <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: NAVY }}>
+            <div className="flex items-center gap-2 px-4 py-3 text-white" style={{ background: INK }}>
               <ShieldCheck className="h-4 w-4 text-[#C9E97A]" />
               <p className="font-display text-[13px] font-semibold">Registro de assinaturas eletrônicas</p>
             </div>
@@ -379,17 +426,17 @@ export function DocumentView({
           </div>
         )}
 
-        <Footer company={companyName} />
+        <Footer company={companyName} mob={mob} />
       </div>
     </article>
   );
 }
 
-function Footer({ company }: { company: string }): ReactNode {
+function Footer({ company, mob }: { company: string; mob?: boolean }): ReactNode {
   return (
     <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-ink-100 pt-5 text-[11px] text-ink-400">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/brand/logo-h-color.png" alt={company} className="h-7 w-auto" />
+      <img src={mob ? "/mob/ic/logo.png" : "/brand/logo-h-color.png"} alt={mob ? "Quark Mobilidade" : company} className="h-7 w-auto" />
       <p className="flex items-center gap-1.5">
         <ShieldCheck className="h-3.5 w-3.5 text-[#2C7A52]" /> Assinatura eletrônica com validade jurídica · MP 2.200-2/2001 e Lei 14.063/2020
       </p>

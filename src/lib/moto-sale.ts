@@ -71,6 +71,8 @@ export interface MotoData {
   extraClauses: string;
   witnesses: { name: string; doc: string }[];
   contractorSignature: string;
+  /** Versão do texto do contrato (2 = sem certificado de garantia avulso). Vazio = versão 1. */
+  contractVersion?: number;
   /** Quando a scooter mudou de dono (transferência concluída). */
   transferredAt?: string | null;
   place: string;
@@ -174,6 +176,7 @@ export function defaultMoto(opts: { client?: Partial<Party>; contractor: Contrac
     payment: { method: "cartao", installments: 21, installmentValue: 0, entry: 0, balanceWhen: "na entrega da scooter", multipleCards: true, custom: "" },
     delivery: { mode: "entrega", address: "", date: iso(delivery) },
     warrantyDays: 90,
+    contractVersion: 2,
     freeRevision: false,
     quoteValidityDays: 7,
     quoteNotes: "",

@@ -23,7 +23,7 @@ const FIELDS: { k: keyof ManualOwner; label: string; type?: string; placeholder?
   { k: "deliveryDate", label: "Data da entrega (início da garantia)", type: "date" },
 ];
 
-/** Pede os dados do cliente que vão no certificado de garantia antes de gerar o manual. */
+/** Pede os dados do cliente e da scooter antes de gerar o manual. */
 export function ManualOwnerModal({ product, onClose, onGenerate, busy }: { product: MotoProduct | null; onClose: () => void; onGenerate: (owner: ManualOwner | null) => void; busy?: boolean }) {
   const [o, setO] = useState<ManualOwner>(() => emptyOwner());
   useEffect(() => {
@@ -37,7 +37,7 @@ export function ManualOwnerModal({ product, onClose, onGenerate, busy }: { produ
       onClose={onClose}
       size="lg"
       title={`Manual + garantia${product ? ` · ${product.name}` : ""}`}
-      subtitle="Os dados abaixo vão para a identificação do veículo e para o certificado de garantia na última página. Campos vazios saem com linha para preencher à mão."
+      subtitle="Os dados abaixo vão para a identificação do veículo no manual. Campos vazios saem com linha para preencher à mão."
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-2">
           <Button variant="ghost" onClick={() => onGenerate(null)} disabled={busy}>

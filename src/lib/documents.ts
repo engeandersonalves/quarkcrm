@@ -810,6 +810,9 @@ export function motoPaymentText(d: MotoData) {
 
 /** Contrato de compra e venda de scooter elétrica (autopropelido), com garantia e selfie. */
 export function motoBlocks(d: MotoData): Block[] {
+  // Versão 2 do texto (vendas criadas a partir de nov/2026): sem certificado de garantia avulso.
+  // Contratos antigos continuam com o texto exatamente como foram assinados.
+  const v2 = (Number(d.contractVersion) || 1) >= 2;
   const c = d.contractor;
   const sp = d.specs;
   const vehicle = vehicleName(d);
@@ -852,7 +855,7 @@ export function motoBlocks(d: MotoData): Block[] {
   blocks.push(
     {
       t: "p",
-      text: `${cl()} A scooter é entregue montada, testada e com carregador original, manual de uso e certificado de garantia, acompanhada do comprovante de compra e propriedade emitido em nome do COMPRADOR.`,
+      text: `${cl()} A scooter é entregue montada, testada e com carregador original, ${v2 ? "manual do proprietário" : "manual de uso e certificado de garantia"}, acompanhada do comprovante de compra e propriedade emitido em nome do COMPRADOR.`,
     },
 
     { t: "h", text: "Do enquadramento e do uso" },
@@ -893,7 +896,7 @@ export function motoBlocks(d: MotoData): Block[] {
     },
     {
       t: "p",
-      text: `${cl()} Constatado o defeito coberto, a VENDEDORA fará o reparo ou a substituição da peça sem custo, no prazo de até 30 (trinta) dias, conforme o art. 18, § 1º, do Código de Defesa do Consumidor. O atendimento é feito na assistência técnica da VENDEDORA em ${c.city.trim() || "Maceió"}/${c.state || "AL"}, mediante apresentação do certificado de garantia ou deste contrato.`,
+      text: `${cl()} Constatado o defeito coberto, a VENDEDORA fará o reparo ou a substituição da peça sem custo, no prazo de até 30 (trinta) dias, conforme o art. 18, § 1º, do Código de Defesa do Consumidor. O atendimento é feito na assistência técnica da VENDEDORA em ${c.city.trim() || "Maceió"}/${c.state || "AL"}, mediante apresentação ${v2 ? "deste contrato ou do cartão do proprietário" : "do certificado de garantia ou deste contrato"}.`,
     },
     { t: "p", text: `${cl()} A garantia não cobre: ${WARRANTY_EXCLUDES.map((x) => x.charAt(0).toLowerCase() + x.slice(1)).join("; ")}.` },
     {

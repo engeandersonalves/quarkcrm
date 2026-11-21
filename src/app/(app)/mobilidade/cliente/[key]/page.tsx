@@ -621,7 +621,7 @@ function DocsTab({ rows, actions, photo }: { rows: SaleDoc[]; actions: SaleActio
               )}
               {item(
                 <BookOpen className="h-5 w-5" />,
-                "Manual + certificado de garantia",
+                "Manual do proprietário completo",
                 "Com os números da scooter e os dados do proprietário",
                 <button type="button" disabled={!!actions.busy} onClick={() => actions.pdf(r, "manual")} className={cx(BTN, "flex-1 sm:flex-none")}>
                   {spin("manual") ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Baixar
