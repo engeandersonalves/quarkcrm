@@ -4,6 +4,7 @@
  */
 import { digits } from "./br.ts";
 import { warrantyEnd, type MotoData } from "./moto-sale.ts";
+import type { CouponPayment } from "./moto-coupon.ts";
 
 export interface PortalSale {
   id: string;
@@ -17,6 +18,8 @@ export interface PortalSale {
   selfie?: string | null;
   /** Último pedido de transferência de propriedade feito por este dono. */
   transfer?: PortalTransfer | null;
+  /** Pagamentos lançados na venda (para o cupom). */
+  payments?: CouponPayment[];
 }
 
 export type TransferStatus = "analise" | "aprovada" | "recusada" | "concluida" | "cancelada";

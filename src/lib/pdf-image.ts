@@ -61,7 +61,8 @@ export function dataUrlToBytes(dataUrl: string) {
  * PDF de várias páginas A4 (595 × 842 pt), uma imagem JPEG ocupando cada página.
  * Usado para baixar a proposta já paginada, sem a caixa de impressão do navegador.
  */
-export function jpegPagesToPdf(pages: { jpeg: Uint8Array; width: number; height: number }[]): Uint8Array {
+/** Páginas A4 (padrão) ou do tamanho pedido em pontos (`page`), com a imagem ocupando a página toda. */
+export function jpegPagesToPdf(pages: { jpeg: Uint8Array; width: number; height: number; page?: { w: number; h: number } }[]): Uint8Array {
   const PW = 595;
   const PH = 842;
   const enc = new TextEncoder();
@@ -89,10 +90,12 @@ export function jpegPagesToPdf(pages: { jpeg: Uint8Array; width: number; height:
   pages.forEach((p, i) => {
     const id = pageId(i);
     // A imagem ocupa a largura da página; a altura segue a proporção (centralizada se sobrar).
-    const h = Math.min(PH, Math.round((p.height / p.width) * PW));
-    const y = Math.round((PH - h) / 2);
-    const content = `q ${PW} 0 0 ${h} 0 ${y} cm /Im${i} Do Q`;
-    obj(id, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /XObject << /Im${i} ${id + 1} 0 R >> >> /Contents ${id + 2} 0 R >>`);
+    const W = p.page ? Math.round(p.page.w * 100) / 100 : PW;
+    const H = p.page ? Math.round(p.page.h * 100) / 100 : PH;
+    const h = p.page ? H : Math.min(PH, Math.round((p.height / p.width) * PW));
+    const y = p.page ? 0 : Math.round((PH - h) / 2);
+    const content = `q ${W} 0 0 ${h} 0 ${y} cm /Im${i} Do Q`;
+    obj(id, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im${i} ${id + 1} 0 R >> >> /Contents ${id + 2} 0 R >>`);
     obj(id + 1, () => {
       push(`<< /Type /XObject /Subtype /Image /Width ${p.width} /Height ${p.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.jpeg.length} >>\nstream\n`);
       push(p.jpeg);

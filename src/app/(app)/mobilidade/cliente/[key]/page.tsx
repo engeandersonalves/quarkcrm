@@ -22,6 +22,7 @@ import {
   NotebookPen,
   Phone,
   Plus,
+  ReceiptText,
   Save,
   Send,
   ShieldCheck,
@@ -36,7 +37,9 @@ import { use, useEffect, useMemo, useRef, useState, type ReactNode } from "react
 import { toast } from "sonner";
 import { useApp } from "@/components/app/app-context";
 import { STAGE, brl0, useSaleActions, useSales, wa, type SaleActions, type SaleDoc } from "@/components/mobilidade/sale-row";
-import { Button, Empty, Field, Input, Skeleton, Textarea, cx } from "@/components/ui";
+import { CouponView } from "@/components/mobilidade/sale-coupon";
+import { saleCompany } from "@/components/mobilidade/sale-docs";
+import { Button, Empty, Field, Input, Modal, Skeleton, Textarea, cx } from "@/components/ui";
 import { dateBr, digits, formatCep, formatDoc } from "@/lib/br";
 import { formatPhone, relativeTime } from "@/lib/format";
 import { buyerOf, closedAt, saleStage, signaturePending, todos, warrantyOf, type SaleStage } from "@/lib/moto-board";
@@ -45,7 +48,9 @@ import { fetchCustomerPhoto, saveCustomer, saveSaleInfo, toPortrait } from "@/li
 import { portalPin } from "@/lib/moto-overrides";
 import { useMotoProducts } from "@/lib/moto-products-db";
 import { ModelFix } from "@/components/mobilidade/model-fix";
+import type { CouponPayment } from "@/lib/moto-coupon";
 import { contractValue, motoPhoto, vehicleName, type MotoData } from "@/lib/moto-sale";
+import { supabase } from "@/lib/supabase/client";
 
 type Tab = "resumo" | "dados" | "scooters" | "documentos" | "acesso" | "notas";
 const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
@@ -552,8 +557,27 @@ function Manage({ r, stage, actions }: { r: SaleDoc; stage: SaleStage; actions: 
 /* ============================================================ Documentos */
 
 function DocsTab({ rows, actions, photo }: { rows: SaleDoc[]; actions: SaleActions; photo: string | null }) {
-  const { settings } = useApp();
+  const { settings, profile } = useApp();
   const [busy, setBusy] = useState<string | null>(null);
+  const [coupon, setCoupon] = useState<{ r: SaleDoc; payments: CouponPayment[] } | null>(null);
+  const company = useMemo(() => saleCompany(settings, profile), [settings, profile]);
+  /** Pagamentos lançados em Vendas (sem as taxas): entram no cupom. */
+  const paymentsOf = async (id: string): Promise<CouponPayment[]> => {
+    const { data } = await supabase().from("moto_payments").select("method,amount,installments,date,paid").eq("document_id", id).order("position");
+    return ((data ?? []) as CouponPayment[]).map((p) => ({ ...p, amount: Number(p.amount) || 0 }));
+  };
+  const openCoupon = async (r: SaleDoc, download = false) => {
+    setBusy(`${r.id}-cupom${download ? "-pdf" : ""}`);
+    try {
+      const payments = await paymentsOf(r.id).catch(() => []);
+      if (download) await (await import("@/components/mobilidade/sale-coupon")).downloadCoupon(sale(r), company, r.id, payments);
+      else setCoupon({ r, payments });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o cupom");
+    } finally {
+      setBusy(null);
+    }
+  };
   const card = async (r: SaleDoc, kind: "pdf" | "image") => {
     setBusy(`${r.id}-${kind}`);
     try {
@@ -633,6 +657,20 @@ function DocsTab({ rows, actions, photo }: { rows: SaleDoc[]; actions: SaleActio
               )}
               {stage === "vendida" &&
                 item(
+                  <ReceiptText className="h-5 w-5" />,
+                  "Cupom de venda",
+                  "Estilo cupom fiscal (não fiscal): itens, números da scooter, pagamentos e garantia",
+                  <>
+                    <button type="button" disabled={!!busy} onClick={() => openCoupon(r)} className={cx(BTN, "flex-1 sm:flex-none")}>
+                      {spin("cupom") ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Ver
+                    </button>
+                    <button type="button" disabled={!!busy} onClick={() => openCoupon(r, true)} className={cx(BTN, "flex-1 sm:flex-none")}>
+                      {spin("cupom-pdf") ? <Loader2 className="h-4 w-4 animate-spin" /> : null} PDF
+                    </button>
+                  </>,
+                )}
+              {stage === "vendida" &&
+                item(
                   <BadgeCheck className="h-5 w-5" />,
                   "Comprovante de compra e propriedade",
                   "Documento não fiscal com o cartão de bolso",
@@ -663,6 +701,9 @@ function DocsTab({ rows, actions, photo }: { rows: SaleDoc[]; actions: SaleActio
           </section>
         );
       })}
+      <Modal open={!!coupon} onClose={() => setCoupon(null)} title="Cupom de venda" subtitle="Não é documento fiscal · o cliente também vê na área do cliente">
+        {coupon && <CouponView d={sale(coupon.r)} c={company} id={coupon.r.id} payments={coupon.payments} tone="crm" />}
+      </Modal>
     </div>
   );
 }

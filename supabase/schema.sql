@@ -1656,6 +1656,11 @@ begin
            -- Foto 3/4 do cartão: a salva na ficha ou, na falta, a selfie da assinatura.
            -- Depois de transferida, a selfie do comprador original não vale para o novo dono.
            'selfie', coalesce(v_cust.photo, case when i.owner is null then s.selfie end),
+           -- Pagamentos da venda para o cupom (sem as taxas internas). Depois de transferida, o novo dono não vê.
+           'payments', case when i.owner is null then (
+                         select coalesce(jsonb_agg(jsonb_build_object('method', p.method, 'amount', p.amount, 'installments', p.installments,
+                                                                      'date', p.date, 'paid', p.paid) order by p.position, p.date), '[]'::jsonb)
+                           from public.moto_payments p where p.document_id = d.id and p.amount > 0) else '[]'::jsonb end,
            'transfer', (select jsonb_build_object('id', t.id, 'status', t.status, 'created_at', t.created_at, 'new_owner', t.new_owner ->> 'name',
                                                   'decision_note', t.decision_note, 'fee', t.fee, 'paid', t.paid_at is not null)
                           from public.moto_transfers t where t.document_id = d.id and t.from_doc = v_doc

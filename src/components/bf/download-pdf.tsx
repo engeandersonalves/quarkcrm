@@ -93,6 +93,49 @@ export async function downloadPagesPdf(node: ReactNode, fileName: string, opts: 
 
 export const pdfFileSlug = slug;
 
+/**
+ * Uma folha de tamanho livre (ex.: cupom de 80 mm): monta o elemento com data-pdf-sheet
+ * fora da tela, mede a altura e baixa (ou devolve) um PDF de uma página nessa proporção.
+ */
+export async function sheetPdf(node: ReactNode, opts: { widthPx: number; widthMm: number; background?: string }): Promise<Blob> {
+  const host = document.createElement("div");
+  host.setAttribute("aria-hidden", "true");
+  host.style.cssText = `position:fixed;left:-20000px;top:0;width:${opts.widthPx}px;pointer-events:none;z-index:-1;`;
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  try {
+    root.render(node);
+    for (let i = 0; i < 50 && !host.querySelector("[data-pdf-sheet]"); i++) await wait(40);
+    await ensureImages(host);
+    await (document.fonts?.ready ?? Promise.resolve());
+    await wait(120);
+    const el = host.querySelector<HTMLElement>("[data-pdf-sheet]")!;
+    const width = opts.widthPx;
+    const height = Math.ceil(el.getBoundingClientRect().height);
+    const { toJpeg, toPng } = await import("html-to-image");
+    const shot = { pixelRatio: 3, width, height, backgroundColor: opts.background ?? "#FFFFFF", imagePlaceholder: BLANK };
+    await toPng(el, { ...shot, pixelRatio: 0.3 }).catch(() => null);
+    const url = await toJpeg(el, { ...shot, quality: 0.92 });
+    const w = (opts.widthMm * 72) / 25.4;
+    const pdf = jpegPagesToPdf([{ jpeg: dataUrlToBytes(url), width: width * 3, height: height * 3, page: { w, h: (w * height) / width } }]);
+    return new Blob([pdf.buffer as ArrayBuffer], { type: "application/pdf" });
+  } finally {
+    root.unmount();
+    host.remove();
+  }
+}
+
+export function saveBlob(blob: Blob, fileName: string) {
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 60_000);
+}
+
 /** Proposta Black Friday em PDF. */
 export function downloadProposalPdf(data: PublicProposal, onProgress?: (done: number, total: number) => void) {
   return downloadPagesPdf(<ProposalPdfPages data={data} />, `Proposta-${data.proposal.number}-${slug(data.lead.name)}.pdf`, { onProgress });

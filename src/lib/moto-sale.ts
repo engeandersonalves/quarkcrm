@@ -84,9 +84,11 @@ export interface MotoData {
 /* ---------------------------------------------------------------- catálogo */
 
 export const MOTO_COLORS: Record<ModelId | "outro", string[]> = {
-  t1: ["Branca", "Preta", "Prata"],
-  cappuccino: ["Creme", "Branca", "Verde menta"],
-  mz: ["Cinza e laranja", "Preta", "Branca"],
+  a2: ["Branca e bordô", "Bege"],
+  t1: ["Branca", "Preta"],
+  city: ["Vermelha"],
+  cappuccino: ["Creme"],
+  mz: ["Cinza e laranja"],
   outro: [],
 };
 
@@ -135,7 +137,7 @@ export function applyModel(d: MotoData, id: ModelId | "outro"): MotoData {
     ...d,
     model: id,
     modelName: s.name,
-    color: MOTO_COLORS[id][0],
+    color: MOTO_COLORS[id]?.[0] ?? "",
     specs: specsOf(id),
     price: s.cash,
     payment: { ...d.payment, installments: s.installments, installmentValue: s.installment },

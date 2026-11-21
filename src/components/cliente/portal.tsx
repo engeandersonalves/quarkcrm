@@ -20,6 +20,7 @@ import {
   LogOut,
   MessageCircle,
   Plug,
+  ReceiptText,
   Share2,
   ShieldCheck,
   Sparkles,
@@ -33,6 +34,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { dateBr, digits } from "@/lib/br";
 import { REFERRAL_BONUS, firstName, maskDocInput, maskPhoneInput, referralNotes, validDoc, warrantyStatus, type PortalCompany, type PortalResult, type PortalSale } from "@/lib/client-portal";
 import { motoPhoto, vehicleName } from "@/lib/moto-sale";
+import { CouponView } from "@/components/mobilidade/sale-coupon";
 import { TransferPanel } from "./transfer-panel";
 import { PRINT_CSS, WalletLocked, WalletSection } from "./wallet-card";
 
@@ -368,6 +370,10 @@ function Home({ session, fallback, models, wallet, onLogout }: { session: Sessio
   const sale = sales[Math.min(idx, sales.length - 1)];
   const d = sale.data;
   const brand = useMemo(() => brandSettings(company, fallback), [company, fallback]);
+  const couponCompany = useMemo(
+    () => ({ name: brand.company_name || "Quark Mobilidade", legalName: brand.legal_name || brand.company_name || "", cnpj: brand.cnpj || "", address: brand.address || "", city: brand.city || "", phone: brand.whatsapp || brand.phone || "", email: brand.email || "", instagram: brand.instagram || "", logo: brand.logo_url || "", seller: "", sellerPhone: "" }),
+    [brand],
+  );
   const [docs, setDocs] = useState<Record<string, DocState>>({});
   const [docErr, setDocErr] = useState<string | null>(null);
   const [refer, setRefer] = useState(false);
@@ -550,6 +556,18 @@ function Home({ session, fallback, models, wallet, onLogout }: { session: Sessio
               <DocRow icon={BookOpen} title="Manual do proprietário completo" text="Uso, recarga, cuidados com a bateria, manutenção e garantia, com os números da sua scooter" state={docs[`${sale.id}-manual`]} onClick={() => download("manual")} />
             </div>
             <div aria-live="polite">{docErr && <p className="qp-up mt-3 rounded-2xl bg-[#FDECEA] px-4 py-3 text-[13px] text-[#A12A17]">{docErr}</p>}</div>
+          </section>
+
+          <section className={cx(CARD, "qp-up p-5 [animation-delay:.15s] sm:p-6")}>
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-bold tracking-[0.2em] text-[#1F9D55] uppercase">Comprovante</p>
+                <h2 className="text-[22px] font-bold tracking-[-0.03em]">Cupom de venda</h2>
+                <p className="mt-0.5 text-[13px] text-[#0B1A12]/55">Tudo da sua compra: itens, números da scooter, pagamento e garantia.</p>
+              </div>
+              <ReceiptText className="h-7 w-7 shrink-0 text-[#1F9D55]" />
+            </div>
+            <CouponView key={sale.id} d={d} c={couponCompany} id={sale.id} payments={sale.payments ?? []} />
           </section>
 
       </div>}
