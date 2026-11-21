@@ -138,7 +138,8 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
     const keep = new Set(specs.map((s) => s.role));
     const stale = signers.filter((s) => !keep.has(s.role) && !s.signed_at).map((s) => s.id);
     if (stale.length) await sb.from("document_signers").delete().in("id", stale);
-    if (initial.status === "rascunho") await sb.from("documents").update({ status: "enviado" }).eq("id", docId);
+    // Venda registrada que ganhou contrato: passa a aguardar assinatura (continua contando como venda).
+    if (initial.status === "rascunho" || initial.status === "registrada") await sb.from("documents").update({ status: "enviado" }).eq("id", docId);
   };
 
   const openSend = async () => {

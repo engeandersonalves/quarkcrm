@@ -109,7 +109,7 @@ export interface DocumentRow {
   title: string;
   lead_id: string | null;
   data: Record<string, unknown>;
-  status: "rascunho" | "enviado" | "assinado" | "cancelado";
+  status: "rascunho" | "enviado" | "assinado" | "cancelado" | "registrada";
   completed_at: string | null;
   created_by: string | null;
   created_at: string;

@@ -371,8 +371,8 @@ function Home({ session, fallback, models, wallet, onLogout }: { session: Sessio
   const [docs, setDocs] = useState<Record<string, DocState>>({});
   const [docErr, setDocErr] = useState<string | null>(null);
   const [refer, setRefer] = useState(false);
-  const [ptab, setPtab] = useState<PTab>(sales.some((x) => x.signed_at || x.status === "assinado") ? "documento" : "scooter");
-  const signed = !!sale.signed_at || sale.status === "assinado";
+  const [ptab, setPtab] = useState<PTab>(sales.some((x) => x.signed_at || x.status === "assinado" || x.status === "registrada") ? "documento" : "scooter");
+  const signed = !!sale.signed_at || sale.status === "assinado" || sale.status === "registrada";
   const w = warrantyStatus(d, new Date(), signed);
   const model = vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter";
   const whats = brand.whatsapp;

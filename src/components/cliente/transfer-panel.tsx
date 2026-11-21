@@ -33,7 +33,7 @@ type Form = { name: string; doc: string; phone: string; email: string; cep: stri
 const EMPTY: Form = { name: "", doc: "", phone: "", email: "", cep: "", address: "", city: "", state: "AL", reason: REASONS[0], notes: "", owner: false, feeOk: false };
 
 export function TransferPanel({ sale, creds, whatsapp }: { sale: PortalSale; creds: { cpf: string; check: string }; whatsapp: string | null }) {
-  const signed = Boolean(sale.signed_at) || sale.status === "assinado";
+  const signed = Boolean(sale.signed_at) || sale.status === "assinado" || sale.status === "registrada";
   const [transfer, setTransfer] = useState<PortalTransfer | null>(sale.transfer ?? null);
   const [f, setF] = useState<Form>(EMPTY);
   const [busy, setBusy] = useState(false);

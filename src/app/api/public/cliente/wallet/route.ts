@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const portal = data as Portal | null;
   if (error || !portal?.ok) return fail("Não foi possível confirmar os seus dados. Entre de novo na área do cliente.", 401);
   const sale = portal.sales?.find((s) => s.id === body.sale);
-  if (!sale || (sale.status !== "assinado" && !sale.signed_at)) return fail("O cartão fica disponível depois que o contrato é assinado.", 404);
+  if (!sale || (sale.status !== "assinado" && sale.status !== "registrada" && !sale.signed_at)) return fail("O cartão fica disponível depois que o contrato é assinado.", 404);
 
   const origin = new URL(req.url).origin;
   const c = portal.company ?? {};

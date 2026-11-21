@@ -2,6 +2,7 @@
 
 import { Banknote, Check, ChevronDown, CircleAlert, CreditCard, FileSignature, Loader2, PackageCheck, Plus, Receipt, Search, Trash2, Truck, Wand2, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { cx } from "@/components/ui";
@@ -12,9 +13,11 @@ import { clientHref, clientKey } from "@/lib/moto-clients";
 import { saveSaleInfo } from "@/lib/moto-customers-db";
 import { PAY_METHODS, ledgerRow, paymentsFromContract, type LedgerRow, type MotoPayment, type PayMethod } from "@/lib/moto-ledger";
 import type { MotoProduct } from "@/lib/moto-products";
-import { motoPhoto, vehicleName, type MotoData } from "@/lib/moto-sale";
+import { contractValue, motoPhoto, vehicleName, type MotoData } from "@/lib/moto-sale";
+import { relativeTime } from "@/lib/format";
 import { supabase } from "@/lib/supabase/client";
-import type { SaleDoc, Sales } from "./sale-row";
+import { RegisterSale } from "./register-sale";
+import { wa, type SaleDoc, type Sales } from "./sale-row";
 
 /**
  * Vendas da Mobilidade: o controle direto ao ponto de cada scooter vendida —
@@ -47,23 +50,9 @@ export function usePayments() {
   );
 }
 
-interface Row {
-  doc: SaleDoc;
-  d: MotoData;
-  at: string;
-  delivered: string | null;
-  payments: MotoPayment[];
-  r: LedgerRow;
-}
-
-export function SalesLedger({ sales, products }: { sales: Sales; products: MotoProduct[] }) {
-  const payments = usePayments();
-  const [period, setPeriod] = useState<Period>("mes");
-  const [filter, setFilter] = useState<Filter>("todas");
-  const [q, setQ] = useState("");
-  const [open, setOpen] = useState<string | null>(null);
-
-  const rows = useMemo<Row[]>(() => {
+/** Linhas do controle de vendas (uma por scooter vendida), usadas na aba Vendas e no Painel. */
+export function useLedgerRows(sales: Sales, products: MotoProduct[], payments: ReturnType<typeof usePayments>) {
+  return useMemo<Row[]>(() => {
     const byDoc = new Map<string, MotoPayment[]>();
     for (const p of payments.data?.list ?? []) (byDoc.get(p.document_id) ?? byDoc.set(p.document_id, []).get(p.document_id)!).push(p);
     return ((sales.data ?? []) as SaleDoc[])
@@ -76,6 +65,28 @@ export function SalesLedger({ sales, products }: { sales: Sales; products: MotoP
       })
       .sort((a, b) => b.at.localeCompare(a.at));
   }, [sales.data, payments.data, products]);
+}
+
+export interface Row {
+  doc: SaleDoc;
+  d: MotoData;
+  at: string;
+  delivered: string | null;
+  payments: MotoPayment[];
+  r: LedgerRow;
+}
+
+export function SalesLedger({ sales, products }: { sales: Sales; products: MotoProduct[] }) {
+  const payments = usePayments();
+  const params = useSearchParams();
+  const router = useRouter();
+  const [registering, setRegistering] = useState(params.get("registrar") === "1");
+  const [period, setPeriod] = useState<Period>("mes");
+  const [filter, setFilter] = useState<Filter>("todas");
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState<string | null>(null);
+
+  const rows = useLedgerRows(sales, products, payments);
 
   const shown = useMemo(() => {
     const now = new Date();
@@ -113,8 +124,73 @@ export function SalesLedger({ sales, products }: { sales: Sales; products: MotoP
   if (payments.data?.missing)
     return <p className={cx(PANEL, "p-5 text-[14px] text-ink-600")}>Rode o arquivo supabase/schema.sql no Supabase (SQL Editor) para ativar o controle de vendas.</p>;
 
+  const pending = ((sales.data ?? []) as SaleDoc[]).filter((x) => saleStage(x) === "aguardando");
+  const closeRegister = () => {
+    setRegistering(false);
+    if (params.get("registrar")) router.replace("/mobilidade?aba=vendas", { scroll: false });
+  };
+
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
+      {/* ações */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => setRegistering(true)} className="inline-flex h-11 items-center gap-2 rounded-full bg-[linear-gradient(95deg,#F3E93B_0%,#9FDB7C_45%,#4FC38A_100%)] px-5 text-[14px] font-bold text-[#0A0D0B] shadow-[0_10px_30px_-14px_rgba(79,195,138,0.9)]">
+          <Plus className="h-4 w-4" /> Registrar venda
+        </button>
+        <Link href="/documentos/novo?tipo=moto" className="inline-flex h-11 items-center gap-2 rounded-full px-4 text-[13.5px] font-semibold ring-1 ring-ink-200 hover:ring-ink-300 dark:ring-white/10">
+          <FileSignature className="h-4 w-4" /> Gerar contrato para assinar
+        </Link>
+      </div>
+      <RegisterSale
+        open={registering}
+        onClose={closeRegister}
+        products={products}
+        onSaved={(id) => {
+          closeRegister();
+          setPeriod("tudo");
+          setFilter("todas");
+          setOpen(id);
+          void Promise.all([sales.reload(), payments.reload()]);
+        }}
+      />
+
+      {/* contratos aguardando assinatura */}
+      {pending.length > 0 && (
+        <details className={cx(PANEL, "group px-4 py-3")}>
+          <summary className="flex cursor-pointer list-none items-center gap-2 text-[13.5px] font-semibold [&::-webkit-details-marker]:hidden">
+            <span className="grid h-6 min-w-6 place-items-center rounded-full bg-amber-100 px-1.5 text-[12px] font-bold text-amber-800">{pending.length}</span>
+            {pending.length === 1 ? "contrato aguardando assinatura" : "contratos aguardando assinatura"}
+            <ChevronDown className="ml-auto h-4 w-4 text-ink-400 transition group-open:rotate-180" />
+          </summary>
+          <ul className="mt-3 grid gap-2">
+            {pending.map((doc) => {
+              const d = sale(doc);
+              const token = (doc.signers?.find((s) => s.role === "comprador") as { token?: string } | undefined)?.token;
+              const link = token && typeof window !== "undefined" ? `${window.location.origin}/assinar/${token}` : "";
+              const chat = wa(d.client.phone, `Olá, ${(d.client.name || "").trim().split(/\s+/)[0]}! Seu contrato da scooter ${model(d)} está pronto para assinar pelo celular, leva 1 minuto${link ? `: ${link}` : "."}`);
+              return (
+                <li key={doc.id} className="flex flex-wrap items-center gap-3 rounded-xl bg-ink-50 px-3 py-2.5 dark:bg-white/[0.04]">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[14px] font-semibold">{d.client.name || "Cliente"}</p>
+                    <p className="text-[12px] text-ink-500">
+                      {model(d)} · {brl0(contractValue(d))} · enviado {relativeTime(doc.updated_at)}
+                    </p>
+                  </div>
+                  {chat && (
+                    <a href={chat} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 text-[12.5px] font-semibold text-white">
+                      Cobrar assinatura
+                    </a>
+                  )}
+                  <Link href={`/documentos/${doc.id}`} className="inline-flex h-9 items-center rounded-full px-3 text-[12.5px] font-semibold ring-1 ring-ink-200 dark:ring-white/10">
+                    Abrir
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      )}
+
       {/* totais */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Kpi k="Vendas" v={String(t.count)} sub={`${t.toDeliver} falta${t.toDeliver === 1 ? "" : "m"} entregar`} />
@@ -167,7 +243,10 @@ export function SalesLedger({ sales, products }: { sales: Sales; products: MotoP
                       <tr onClick={() => setOpen(on ? null : x.doc.id)} className={cx("cursor-pointer border-b border-ink-100 transition hover:bg-ink-50/70 dark:border-white/[0.05] dark:hover:bg-white/[0.03]", on && "bg-ink-50/70 dark:bg-white/[0.03]")}>
                         <td className="py-3 pl-4">
                           <p className="max-w-[200px] truncate font-semibold">{x.d.client.name || "Cliente"}</p>
-                          <p className="text-[12px] text-ink-500">{dateBr(x.at)}</p>
+                          <p className="text-[12px] text-ink-500">
+                            {dateBr(x.at)}
+                            {x.doc.status === "registrada" && <span className="ml-1.5 rounded bg-sky-50 px-1.5 py-px text-[10.5px] font-semibold text-sky-800 dark:bg-sky-500/10">registrada</span>}
+                          </p>
                         </td>
                         <td className="py-3">
                           <p className="font-medium">{model(x.d)}</p>
@@ -635,7 +714,7 @@ function Delivery({ x, reload }: { x: Row; reload: () => void }) {
           Ficha do cliente
         </Link>
         <Link href={`/documentos/${x.doc.id}`} className="inline-flex items-center gap-1 text-ink-600 hover:underline dark:text-ink-300">
-          <FileSignature className="h-3.5 w-3.5" /> Contrato
+          <FileSignature className="h-3.5 w-3.5" /> {x.doc.status === "registrada" && !(x.doc.signers ?? []).length ? "Gerar contrato para assinar" : "Contrato"}
         </Link>
         <span className="inline-flex items-center gap-1 text-ink-400">
           <CreditCard className="h-3.5 w-3.5" /> {contractPayText(x.d)}

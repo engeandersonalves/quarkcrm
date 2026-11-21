@@ -12,7 +12,7 @@ export type WarrantyState = "ativa" | "entrega" | "encerrada";
 
 export interface BoardDoc {
   id: string;
-  status: "rascunho" | "enviado" | "assinado" | "cancelado";
+  status: "rascunho" | "enviado" | "assinado" | "cancelado" | "registrada";
   data: unknown;
   created_at: string;
   updated_at: string;
@@ -29,7 +29,8 @@ export const buyerOf = (doc: BoardDoc) => (doc.signers ?? []).find((s) => s.role
 export const saleData = (doc: BoardDoc) => doc.data as MotoData;
 
 export function saleStage(doc: BoardDoc): SaleStage {
-  if (doc.status === "assinado" || buyerOf(doc)?.signed_at) return "vendida";
+  // Venda registrada direto no CRM continua vendida mesmo se depois gerar contrato para assinar.
+  if (doc.status === "assinado" || doc.status === "registrada" || (doc.data as { registeredAt?: string } | null)?.registeredAt || buyerOf(doc)?.signed_at) return "vendida";
   if (doc.status === "enviado") return "aguardando";
   return "orcamento";
 }

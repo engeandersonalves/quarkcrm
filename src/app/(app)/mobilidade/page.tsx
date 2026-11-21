@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight, BookOpen, Handshake, Home, Receipt, LayoutGrid, Link2, Plus, ShieldCheck, Users, Wallet } from "lucide-react";
+import { ArrowLeftRight, BookOpen, Handshake, Home, Receipt, LayoutGrid, Link2, Plus, ShieldCheck, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, type ReactNode } from "react";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { GlyphTile } from "@/components/app/ios-glyphs";
 import { WarrantyPanel } from "@/components/mobilidade/board-panels";
 import { CatalogPanel } from "@/components/mobilidade/catalog-panel";
-import { CustomersPanel, NegotiationPanel } from "@/components/mobilidade/clients-panel";
+import { CustomersPanel } from "@/components/mobilidade/clients-panel";
 import { DashboardPanel } from "@/components/mobilidade/dashboard-panel";
 import { ModelsPanel } from "@/components/mobilidade/models-panel";
 import { useSaleActions, useSales } from "@/components/mobilidade/sale-row";
@@ -16,16 +16,17 @@ import { SalesLedger } from "@/components/mobilidade/sales-ledger";
 import { SellersPanel, useSellers } from "@/components/mobilidade/sellers-panel";
 import { TransfersPanel, useTransfers } from "@/components/mobilidade/transfers-panel";
 import { cx } from "@/components/ui";
-import { saleStage, todos, warrantyOf } from "@/lib/moto-board";
+import { saleStage, warrantyOf } from "@/lib/moto-board";
 import { groupClients } from "@/lib/moto-clients";
 import { useMotoProducts } from "@/lib/moto-products-db";
 import { contractValue, type MotoData } from "@/lib/moto-sale";
 import type { DocumentRow } from "@/lib/types";
 
-type Aba = "painel" | "vendas" | "negociacao" | "clientes" | "garantias" | "transferencias" | "vendedores" | "modelos" | "catalogo";
-const ABAS: Aba[] = ["painel", "vendas", "negociacao", "clientes", "garantias", "transferencias", "vendedores", "modelos", "catalogo"];
+type Aba = "painel" | "vendas" | "clientes" | "garantias" | "transferencias" | "vendedores" | "modelos" | "catalogo";
+const ABAS: Aba[] = ["painel", "vendas", "clientes", "garantias", "transferencias", "vendedores", "modelos", "catalogo"];
 /** Endereços antigos continuam funcionando. */
-const ALIAS: Record<string, Aba> = { inicio: "painel", cadastro: "negociacao" };
+// Endereços antigos (a Negociação saiu): caem em Vendas.
+const ALIAS: Record<string, Aba> = { inicio: "painel", negociacao: "vendas", cadastro: "vendas" };
 const sale = (d: DocumentRow) => d.data as unknown as MotoData;
 
 export default function MobilidadePage() {
@@ -47,19 +48,15 @@ export default function MobilidadePage() {
   const stats = useMemo(() => {
     const sold = all.filter((d) => saleStage(d) === "vendida");
     return {
-      waiting: all.filter((d) => saleStage(d) === "aguardando").length,
-      quotes: all.filter((d) => saleStage(d) === "orcamento").length,
       warranty: sold.filter((d) => warrantyOf(sale(d)).state !== "encerrada").length,
       clients: groupClients(all, (d) => contractValue(d)).filter((c) => c.bought > 0).length,
-      todo: todos(all).length,
       toDeliver: sold.filter((d) => !(d as { info?: { delivered_at?: string | null } }).info?.delivered_at).length,
     };
   }, [all]);
 
   const tabs: { id: Aba; label: string; icon: ReactNode; count?: number; alert?: boolean }[] = [
-    { id: "painel", label: "Painel", icon: <Home className="h-4 w-4" />, count: stats.todo, alert: stats.todo > 0 },
+    { id: "painel", label: "Painel", icon: <Home className="h-4 w-4" /> },
     { id: "vendas", label: "Vendas", icon: <Receipt className="h-4 w-4" />, count: stats.toDeliver || undefined },
-    { id: "negociacao", label: "Negociação", icon: <Wallet className="h-4 w-4" />, count: stats.waiting + stats.quotes },
     { id: "clientes", label: "Clientes", icon: <Users className="h-4 w-4" />, count: stats.clients },
     { id: "garantias", label: "Garantias", icon: <ShieldCheck className="h-4 w-4" />, count: stats.warranty },
     { id: "transferencias", label: "Transferências", icon: <ArrowLeftRight className="h-4 w-4" />, count: openTransfers, alert: review > 0 },
@@ -99,7 +96,7 @@ export default function MobilidadePage() {
               <Link2 className="h-4 w-4" /> Área do cliente
             </button>
             <Link
-              href="/documentos/novo?tipo=moto"
+              href="/mobilidade?aba=vendas&registrar=1"
               className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[linear-gradient(95deg,#F3E93B_0%,#9FDB7C_45%,#4FC38A_100%)] px-5 text-[15px] font-bold text-[#0A0D0B] shadow-[0_14px_40px_-12px_rgba(111,191,142,0.9)] sm:flex-none sm:text-sm"
             >
               <Plus className="h-4 w-4" /> Nova venda
@@ -131,7 +128,6 @@ export default function MobilidadePage() {
 
       {aba === "painel" && <DashboardPanel sales={sales} products={products} />}
       {aba === "vendas" && <SalesLedger sales={sales} products={products} />}
-      {aba === "negociacao" && <NegotiationPanel sales={sales} actions={actions} startWithCadastro={raw === "cadastro"} />}
       {aba === "clientes" && <CustomersPanel sales={sales} />}
       {aba === "garantias" && <WarrantyPanel sales={sales} actions={actions} />}
       {aba === "transferencias" && <TransfersPanel sales={sales} transfers={transfers} />}

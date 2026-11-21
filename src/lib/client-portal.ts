@@ -7,7 +7,7 @@ import { warrantyEnd, type MotoData } from "./moto-sale.ts";
 
 export interface PortalSale {
   id: string;
-  status: "enviado" | "assinado";
+  status: "enviado" | "assinado" | "registrada";
   created_at: string;
   completed_at: string | null;
   data: MotoData;

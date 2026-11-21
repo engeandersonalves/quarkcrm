@@ -17,7 +17,7 @@ const nw = (n: number) => `${n} (${numberInWords(n)})`;
 /* ---------------------------------------------------------------- tipos */
 
 export type DocKind = "procuracao" | "aluguel" | "contrato" | "moto";
-export type DocStatus = "rascunho" | "enviado" | "assinado" | "cancelado";
+export type DocStatus = "rascunho" | "enviado" | "assinado" | "cancelado" | "registrada";
 
 export interface Party {
   kind: "pf" | "pj";
@@ -1024,4 +1024,5 @@ export const DOC_STATUS: Record<DocStatus, { label: string; cls: string }> = {
   enviado: { label: "Aguardando assinatura", cls: "bg-amber-50 text-amber-800 ring-amber-600/20" },
   assinado: { label: "Assinado", cls: "bg-emerald-50 text-emerald-700 ring-emerald-600/15" },
   cancelado: { label: "Cancelado", cls: "bg-rose-50 text-rose-700 ring-rose-600/15" },
+  registrada: { label: "Venda registrada", cls: "bg-sky-50 text-sky-800 ring-sky-600/20" },
 };

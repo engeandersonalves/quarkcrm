@@ -774,7 +774,7 @@ create table if not exists public.documents (
   title text not null,
   lead_id uuid references public.leads (id) on delete set null,
   data jsonb not null default '{}'::jsonb,
-  status text not null default 'rascunho' check (status in ('rascunho', 'enviado', 'assinado', 'cancelado')),
+  status text not null default 'rascunho' check (status in ('rascunho', 'enviado', 'assinado', 'cancelado', 'registrada')),
   completed_at timestamptz,
   created_by uuid references public.profiles (id) on delete set null default auth.uid(),
   created_at timestamptz not null default now(),
@@ -1625,7 +1625,7 @@ begin
   select exists (
     select 1 from public.documents d
     left join public.moto_sale_info i on i.document_id = d.id
-    where d.kind = 'moto' and d.status in ('enviado', 'assinado')
+    where d.kind = 'moto' and d.status in ('enviado', 'assinado', 'registrada')
       and public.moto_owner_doc(d.data, i) = v_doc
       and (right(public.moto_owner_phone(d.data, i), 4) = v_check
            or right(regexp_replace(coalesce(v_cust.phone, ''), '\D', '', 'g'), 4) = v_check)
@@ -1657,7 +1657,7 @@ begin
     from public.documents d
     left join public.document_signers s on s.document_id = d.id and s.role = 'comprador'
     left join public.moto_sale_info i on i.document_id = d.id
-   where d.kind = 'moto' and d.status in ('enviado', 'assinado')
+   where d.kind = 'moto' and d.status in ('enviado', 'assinado', 'registrada')
      and public.moto_owner_doc(d.data, i) = v_doc;
 
   return jsonb_build_object(
@@ -1752,7 +1752,7 @@ begin
 
   v_state := case
     when d.status = 'cancelado' then 'cancelado'
-    when d.status = 'assinado' or s.signed_at is not null then 'original'
+    when d.status in ('assinado', 'registrada') or s.signed_at is not null then 'original'
     else 'pendente'
   end;
 
@@ -1821,7 +1821,7 @@ begin
   if v_sale is null then
     return jsonb_build_object('ok', false, 'error', 'venda');
   end if;
-  if v_sale ->> 'status' <> 'assinado' and v_sale ->> 'signed_at' is null then
+  if v_sale ->> 'status' not in ('assinado', 'registrada') and v_sale ->> 'signed_at' is null then
     return jsonb_build_object('ok', false, 'error', 'nao_assinada');
   end if;
   if length(trim(coalesce(p_new ->> 'name', ''))) < 5 or length(v_new_doc) not in (11, 14) or length(v_new_phone) not between 10 and 13 then
@@ -2213,4 +2213,12 @@ begin
   end if;
 end $$;
 
+notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- Venda registrada: scooter vendida lançada direto no CRM, sem contrato digital
+-- (o contrato pode ser gerado depois). Conta como venda fechada em todo o sistema.
+-- ---------------------------------------------------------------------------
+alter table public.documents drop constraint if exists documents_status_check;
+alter table public.documents add constraint documents_status_check check (status in ('rascunho', 'enviado', 'assinado', 'cancelado', 'registrada'));
 notify pgrst, 'reload schema';
