@@ -49,7 +49,7 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
   const [lostReason, setLostReason] = useState("");
   const [askLost, setAskLost] = useState(false);
 
-  const { data, loading } = useLive<Data>(
+  const { data, loading, reload, setData } = useLive<Data>(
     async () => {
       const sb = supabase();
       const [lead, proposals, tasks, activities] = await Promise.all([
@@ -102,6 +102,22 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
     if (error) return toast.error(error.message);
     setNote("");
     if (noteType !== "nota") reward("followup", added?.id);
+  };
+
+  /** Apaga um ou mais orçamentos do cliente (a lista atualiza na hora). */
+  const removeProposals = async (list: Proposal[]) => {
+    if (!list.length) return;
+    const text =
+      list.length === 1
+        ? `Apagar o orçamento #${list[0].number} (${brl(list[0].final_price)})? Esta ação não pode ser desfeita.`
+        : `Apagar ${list.length} orçamentos (${list.map((p) => `#${p.number}`).join(", ")})? Esta ação não pode ser desfeita.`;
+    if (!confirm(text)) return;
+    const ids = list.map((p) => p.id);
+    const { error } = await supabase().from("proposals").delete().in("id", ids);
+    if (error) return toast.error(error.message);
+    setData((d) => (d ? { ...d, proposals: d.proposals.filter((p) => !ids.includes(p.id)) } : d));
+    toast.success(list.length === 1 ? "Orçamento apagado" : `${list.length} orçamentos apagados`);
+    void reload();
   };
 
   const remove = async () => {
@@ -256,7 +272,21 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
               title="Orçamentos"
               subtitle={data.proposals.length ? `${data.proposals.length} gerado${data.proposals.length > 1 ? "s" : ""}` : undefined}
               action={
-                <div className="flex gap-1.5">
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  {data.proposals.length > 1 && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        // Mantém o mais recente e os aceitos pelo cliente; apaga o resto.
+                        const keep = new Set([data.proposals[0].id, ...data.proposals.filter((p) => p.status === "aceita").map((p) => p.id)]);
+                        void removeProposals(data.proposals.filter((p) => !keep.has(p.id)));
+                      }}
+                      title="Apaga os orçamentos antigos e mantém só o mais recente (e os aceitos)"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Manter só o mais recente
+                    </Button>
+                  )}
                   <Link href={`/propostas/nova?lead=${lead.id}`}>
                     <Button size="sm" variant="secondary">
                       <Plus className="h-3.5 w-3.5" /> Solar
@@ -275,8 +305,8 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
             ) : (
               <ul className="divide-y divide-ink-100 border-t border-ink-100">
                 {data.proposals.map((p) => (
-                  <li key={p.id}>
-                    <Link href={`/propostas/${p.id}`} className="flex items-center gap-4 px-5 py-4 hover:bg-ink-50/60">
+                  <li key={p.id} className="flex items-center hover:bg-ink-50/60">
+                    <Link href={`/propostas/${p.id}`} className="flex min-w-0 flex-1 items-center gap-4 py-4 pl-5">
                       <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sun-50 font-display text-xs font-bold text-sun-700 ring-1 ring-sun-200/70">#{p.number}</div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -297,6 +327,9 @@ export default function LeadPage({ params }: { params: Promise<{ id: string }> }
                         <p className="tnum text-xs text-emerald-600">lucro {brl(p.profit_value, 0)}</p>
                       </div>
                     </Link>
+                    <button type="button" onClick={() => removeProposals([p])} aria-label={`Apagar orçamento #${p.number}`} title="Apagar orçamento" className="mx-2 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-ink-400 transition hover:bg-rose-50 hover:text-rose-600">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </li>
                 ))}
               </ul>
