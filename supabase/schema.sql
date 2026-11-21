@@ -2222,3 +2222,8 @@ notify pgrst, 'reload schema';
 alter table public.documents drop constraint if exists documents_status_check;
 alter table public.documents add constraint documents_status_check check (status in ('rascunho', 'enviado', 'assinado', 'cancelado', 'registrada'));
 notify pgrst, 'reload schema';
+
+-- Custos discriminados de cada venda (produto, frete, montagem, brindes, entrega,
+-- outros, impostos, comissão). Item vazio = usa o custo do cadastro do modelo.
+alter table public.moto_sale_info add column if not exists costs jsonb;
+notify pgrst, 'reload schema';

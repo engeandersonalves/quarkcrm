@@ -11,7 +11,7 @@ import { useLive } from "@/lib/live";
 import { closedAt, saleStage, signaturePending } from "@/lib/moto-board";
 import { clientHref, clientKey } from "@/lib/moto-clients";
 import { saveSaleInfo } from "@/lib/moto-customers-db";
-import { PAY_METHODS, ledgerRow, paymentsFromContract, type LedgerRow, type MotoPayment, type PayMethod } from "@/lib/moto-ledger";
+import { COST_FIELDS, PAY_METHODS, ledgerRow, paymentsFromContract, type CostBreakdown, type CostKey, type LedgerRow, type MotoPayment, type PayMethod } from "@/lib/moto-ledger";
 import type { MotoProduct } from "@/lib/moto-products";
 import { contractValue, motoPhoto, vehicleName, type MotoData } from "@/lib/moto-sale";
 import { relativeTime } from "@/lib/format";
@@ -61,7 +61,7 @@ export function useLedgerRows(sales: Sales, products: MotoProduct[], payments: R
         const d = sale(doc);
         const list = byDoc.get(doc.id) ?? [];
         const product = products.find((p) => p.slug === d.model) ?? null;
-        return { doc, d, at: closedAt(doc).slice(0, 10), delivered: doc.info?.delivered_at ?? null, payments: list, r: ledgerRow(d, list, product, doc.info?.cost ?? null) };
+        return { doc, d, at: closedAt(doc).slice(0, 10), delivered: doc.info?.delivered_at ?? null, payments: list, r: ledgerRow(d, list, product, doc.info?.cost ?? null, (doc.info?.costs as CostBreakdown | null) ?? null) };
       })
       .sort((a, b) => b.at.localeCompare(a.at));
   }, [sales.data, payments.data, products]);
@@ -254,7 +254,7 @@ export function SalesLedger({ sales, products }: { sales: Sales; products: MotoP
                           <p className="text-[12px] text-ink-500">{x.d.color || "—"}</p>
                         </td>
                         <td className="py-3 pr-3 text-right tabular-nums">{brl0(x.r.price)}</td>
-                        <td className="py-3 pr-3 text-right tabular-nums">{x.r.cost.source ? brl0(x.r.cost.total) : <span className="text-amber-600">sem custo</span>}</td>
+                        <td className="py-3 pr-3 text-right tabular-nums" title={x.r.cost.parts.map((p) => `${p.label}: ${brl(p.v)}`).join("\n")}>{x.r.cost.source ? brl0(x.r.cost.total) : <span className="text-amber-600">sem custo</span>}</td>
                         <td className="py-3 pr-3 text-right font-semibold tabular-nums">
                           {brl0(x.r.final)}
                           {x.r.estimated && <span className="block text-[11px] font-normal text-ink-400">estimado</span>}
@@ -630,50 +630,89 @@ function PaymentLine({ p, reload }: { p: MotoPayment; reload: () => void }) {
 }
 
 function Costs({ x, reload }: { x: Row; reload: () => void }) {
-  const [v, setV] = useState(money(x.doc.info?.cost));
+  const c = x.r.cost;
+  const saved = (x.doc.info?.costs ?? {}) as CostBreakdown;
+  const byKey = new Map(c.parts.map((p) => [p.k, p]));
+  // Valor exibido: o informado na venda ou o que veio do modelo (cinza, editável).
+  const [f, setF] = useState<Record<CostKey, string>>(() => Object.fromEntries(COST_FIELDS.map((k) => [k.k, saved[k.k] != null ? money(saved[k.k] as number) : ""])) as Record<CostKey, string>);
   const [busy, setBusy] = useState(false);
-  const save = async (cost: number | null) => {
+  const dirty = COST_FIELDS.some((k) => (f[k.k] === "" ? null : parseMoney(f[k.k])) !== (saved[k.k] ?? null));
+  const legacy = c.parts.length === 1 && c.parts[0].label === "Custo informado";
+
+  const save = async (next: CostBreakdown | null) => {
     setBusy(true);
     try {
-      await saveSaleInfo(x.doc.id, { cost });
-      toast.success(cost ? "Custo da venda salvo" : "Voltou a usar o custo do modelo");
+      await saveSaleInfo(x.doc.id, { costs: next, ...(next ? { cost: null } : {}) });
+      toast.success(next ? "Custos da venda salvos" : "Custos voltaram ao cadastro do modelo");
       reload();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível salvar");
+      toast.error(e instanceof Error ? (/costs/.test(e.message) ? "Rode o schema.sql no Supabase para salvar os custos detalhados." : e.message) : "Não foi possível salvar");
     } finally {
       setBusy(false);
     }
   };
-  const c = x.r.cost;
+  const submit = () => {
+    const next: CostBreakdown = {};
+    for (const k of COST_FIELDS) if (f[k.k].trim() !== "") next[k.k] = parseMoney(f[k.k]);
+    void save(Object.keys(next).length ? next : null);
+  };
+
   return (
     <Box title="Custos" icon={<Receipt className="h-4 w-4" />} right={<b className="text-[14px] tabular-nums">{c.source ? brl(c.total) : "—"}</b>}>
-      {c.parts.length ? (
-        <ul className="grid gap-1 text-[13px]">
-          {c.parts.map((p) => (
-            <li key={p.k} className="flex justify-between gap-2">
-              <span className="text-ink-500">{p.k}</span>
-              <span className="tabular-nums">{brl(p.v)}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-[13px] text-amber-700 dark:text-amber-300">Sem custo: cadastre os custos do modelo em Modelos ou informe o custo desta venda abaixo.</p>
-      )}
-      <label className="mt-3 block text-[12px] font-semibold text-ink-500">
-        Custo real desta venda (opcional)
-        <div className="mt-1 flex gap-2">
-          <input inputMode="decimal" value={v} onChange={(e) => setV(e.target.value)} placeholder="Ex.: 4.850,00" className={cx(INPUT, "tabular-nums")} />
-          <button type="button" disabled={busy} onClick={() => save(parseMoney(v) || null)} className="h-10 shrink-0 rounded-xl bg-[#0B1A12] px-3.5 text-[13px] font-semibold text-white disabled:opacity-60 dark:bg-white dark:text-[#0B1A12]">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
-          </button>
-        </div>
-      </label>
-      {c.source === "manual" && (
-        <button type="button" onClick={() => { setV(""); void save(null); }} className="mt-1.5 inline-flex items-center gap-1 text-[12px] font-semibold text-ink-500 hover:text-ink-800">
-          <X className="h-3.5 w-3.5" /> Usar o custo do modelo
+      {legacy && <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">Esta venda tem um custo único de {brl(c.total)}. Discrimine abaixo para substituir.</p>}
+      <div className="grid gap-1.5">
+        {COST_FIELDS.map((k) => {
+          const part = byKey.get(k.k);
+          const fromModel = !legacy && part?.from === "modelo";
+          return (
+            <label key={k.k} className="grid grid-cols-[minmax(0,1fr)_118px] items-center gap-2">
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium">{k.label}</span>
+                <span className="block truncate text-[11px] text-ink-400">{fromModel ? "do cadastro do modelo" : k.hint}</span>
+              </span>
+              <input
+                inputMode="decimal"
+                value={f[k.k]}
+                onChange={(e) => setF({ ...f, [k.k]: e.target.value })}
+                onBlur={() => f[k.k].trim() && setF({ ...f, [k.k]: money(parseMoney(f[k.k])) || "0,00" })}
+                placeholder={fromModel && part ? money(part.v) : "0,00"}
+                className={cx(INPUT, "h-9 text-right tabular-nums placeholder:text-ink-400")}
+                aria-label={k.label}
+              />
+            </label>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button type="button" disabled={busy || !dirty} onClick={submit} className="h-9 rounded-xl bg-[#0B1A12] px-4 text-[13px] font-semibold text-white disabled:opacity-40 dark:bg-white dark:text-[#0B1A12]">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar custos"}
         </button>
-      )}
-      <p className="mt-2 text-[11.5px] text-ink-400">Lucro = valor final − custos.</p>
+        {(Object.values(saved).some((v) => v != null) || legacy) && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setF(Object.fromEntries(COST_FIELDS.map((k) => [k.k, ""])) as Record<CostKey, string>);
+              void (async () => {
+                setBusy(true);
+                try {
+                  await saveSaleInfo(x.doc.id, { costs: null, cost: null });
+                  toast.success("Custos voltaram ao cadastro do modelo");
+                  reload();
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Não foi possível salvar");
+                } finally {
+                  setBusy(false);
+                }
+              })();
+            }}
+            className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink-500 hover:text-ink-800"
+          >
+            <X className="h-3.5 w-3.5" /> Usar o cadastro do modelo
+          </button>
+        )}
+      </div>
+      <p className="mt-2 text-[11.5px] text-ink-400">Campo vazio usa o custo do modelo (em cinza). Lucro = valor final − custos. Taxas de cartão e boleto ficam nos pagamentos.</p>
     </Box>
   );
 }

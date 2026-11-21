@@ -23,8 +23,24 @@ test("custo: modelo com impostos sobre o preço; custo informado tem prioridade"
   const c = costOf(d, { costs });
   assert.equal(c.source, "modelo");
   assert.equal(c.total, 4300 + 420);
+  assert.deepEqual(c.parts.map((p) => p.k), ["purchase", "freight", "assembly", "taxes"]);
   assert.equal(costOf(d, { costs }, 5000).total, 5000);
   assert.equal(costOf(d, null).source, null);
+});
+
+test("custo detalhado na venda: cada item informado substitui o do modelo, o resto vem do modelo", () => {
+  const d = sale();
+  const c = costOf(d, { costs }, null, { purchase: 4100, delivery: 80, commission: 200 });
+  assert.equal(c.source, "venda");
+  const by = Object.fromEntries(c.parts.map((p) => [p.k, [p.v, p.from]]));
+  assert.deepEqual(by.purchase, [4100, "venda"]);
+  assert.deepEqual(by.freight, [200, "modelo"]);
+  assert.deepEqual(by.delivery, [80, "venda"]);
+  assert.equal(c.total, 4100 + 200 + 100 + 80 + 420 + 200);
+  // Sem modelo, só o que foi informado na venda.
+  assert.equal(costOf(d, null, null, { purchase: 3000, freight: 150 }).total, 3150);
+  // Zerar um item na venda vale (não volta para o modelo).
+  assert.equal(costOf(d, { costs }, null, { taxes: 0 }).total, 4300);
 });
 
 test("pagamentos: misto, taxas, recebido, em aberto e atrasados", () => {

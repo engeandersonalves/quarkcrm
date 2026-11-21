@@ -20,6 +20,8 @@ export interface SaleInfo {
   /** Custo real da unidade informado na venda (substitui o custo do modelo). */
   cost?: number | null;
   cost_notes?: string | null;
+  /** Custos discriminados da venda (cada item vazio usa o cadastro do modelo). */
+  costs?: Partial<Record<string, number | null>> | null;
   updated_at?: string;
 }
 

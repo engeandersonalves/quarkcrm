@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import { Badge, Button, Card, Empty, PageHeader, Segmented, Skeleton, cx } from "@/components/ui";
-import { DOC_KINDS, DOC_STATUS, ROLE_LABEL, type DocKind } from "@/lib/documents";
+import { DOC_KINDS, ROLE_LABEL, docStatus, type DocKind } from "@/lib/documents";
 import { relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
 import { supabase } from "@/lib/supabase/client";
@@ -27,6 +27,7 @@ export default function DocumentsPage() {
 
   const rows = useMemo(() => (data ?? []).filter((d) => tab === "todos" || d.kind === tab), [data, tab]);
   const waiting = (data ?? []).filter((d) => d.status === "enviado").length;
+  const sold = (data ?? []).filter((d) => d.kind === "moto" && ["enviado", "assinado", "registrada"].includes(d.status) && (d.completed_at ?? d.updated_at) && new Date(d.completed_at ?? d.updated_at).getTime() >= new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime()).length;
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
   const signedMonth = (data ?? []).filter((d) => d.status === "assinado" && d.completed_at && new Date(d.completed_at).getTime() >= monthStart).length;
 
@@ -101,6 +102,7 @@ export default function DocumentsPage() {
         <div className="flex gap-2 text-xs font-semibold">
           <span className="rounded-full bg-amber-50 px-3 py-1.5 text-amber-800 ring-1 ring-amber-600/15">{waiting} aguardando assinatura</span>
           <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700 ring-1 ring-emerald-600/15">{signedMonth} assinados no mês</span>
+          {sold > 0 && <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700 ring-1 ring-emerald-600/15">{sold} scooters vendidas no mês</span>}
         </div>
       </div>
 
@@ -146,9 +148,9 @@ export default function DocumentsPage() {
                     </span>
                   </div>
                 )}
-                <Badge className={DOC_STATUS[d.status].cls}>
+                <Badge className={docStatus(d.kind, d.status).cls}>
                   {d.status === "assinado" && <ShieldCheck className="h-3 w-3" />}
-                  {DOC_STATUS[d.status].label}
+                  {docStatus(d.kind, d.status).label}
                 </Badge>
                 <ChevronRight className="h-4 w-4 shrink-0 text-ink-300" />
               </Link>

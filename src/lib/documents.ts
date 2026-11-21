@@ -1026,3 +1026,10 @@ export const DOC_STATUS: Record<DocStatus, { label: string; cls: string }> = {
   cancelado: { label: "Cancelado", cls: "bg-rose-50 text-rose-700 ring-rose-600/15" },
   registrada: { label: "Venda registrada", cls: "bg-sky-50 text-sky-800 ring-sky-600/20" },
 };
+
+/** Situação para exibir: na venda de scooter, contrato enviado já é venda fechada (falta só a assinatura). */
+export function docStatus(kind: DocKind, status: DocStatus) {
+  if (kind === "moto" && status === "enviado") return { label: "Vendida · falta assinar", cls: "bg-emerald-50 text-emerald-800 ring-emerald-600/20" };
+  if (kind === "moto" && status === "assinado") return { label: "Vendida · assinado", cls: DOC_STATUS.assinado.cls };
+  return DOC_STATUS[status];
+}

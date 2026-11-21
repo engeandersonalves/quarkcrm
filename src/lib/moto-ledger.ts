@@ -41,27 +41,68 @@ export interface MotoPayment {
 const n = (v: unknown) => Number(v) || 0;
 const r2 = (v: number) => Math.round(v * 100) / 100;
 
+/** Itens de custo de uma venda, na ordem em que aparecem. */
+export const COST_FIELDS = [
+  { k: "purchase", label: "Valor do produto", hint: "compra no fornecedor" },
+  { k: "freight", label: "Frete", hint: "até a loja" },
+  { k: "assembly", label: "Montagem", hint: "preparação e revisão" },
+  { k: "accessories", label: "Brindes e acessórios", hint: "capacete, cadeado…" },
+  { k: "delivery", label: "Entrega ao cliente", hint: "frete até a casa do cliente" },
+  { k: "other", label: "Outros", hint: "documentação, marketing…" },
+  { k: "taxes", label: "Impostos", hint: "sobre a venda" },
+  { k: "commission", label: "Comissão", hint: "vendedor ou parceiro" },
+] as const;
+export type CostKey = (typeof COST_FIELDS)[number]["k"];
+export type CostBreakdown = Partial<Record<CostKey, number | null>>;
+export const COST_LABEL = Object.fromEntries(COST_FIELDS.map((f) => [f.k, f.label])) as Record<CostKey, string>;
+
 export interface CostInfo {
   total: number;
-  parts: { k: string; v: number }[];
-  /** manual = informado na venda; modelo = calculado pelo cadastro do modelo; null = sem custo. */
-  source: "manual" | "modelo" | null;
+  /** Cada item com o valor e de onde veio (venda = informado nesta venda; modelo = cadastro do modelo). */
+  parts: { k: CostKey; label: string; v: number; from: "venda" | "modelo" }[];
+  /** venda = algum item informado na venda; modelo = tudo do cadastro; null = sem custo. */
+  source: "venda" | "modelo" | null;
 }
 
-export function costOf(d: MotoData, product?: Pick<MotoProduct, "costs"> | null, manual?: number | null): CostInfo {
-  if (manual != null && n(manual) > 0) return { total: r2(n(manual)), parts: [{ k: "Custo informado", v: r2(n(manual)) }], source: "manual" };
-  if (!product || !(unitCost(product.costs) > 0)) return { total: 0, parts: [], source: null };
+/** Custos padrão pelo cadastro do modelo (por unidade × quantidade; impostos e comissão sobre o preço). */
+export function modelCosts(d: MotoData, product?: Pick<MotoProduct, "costs"> | null): Record<CostKey, number> {
+  const zero = { purchase: 0, freight: 0, assembly: 0, accessories: 0, delivery: 0, other: 0, taxes: 0, commission: 0 };
+  if (!product) return zero;
+  const c = product.costs;
   const qty = Math.max(1, n(d.qty) || 1);
   const price = motoTotal(d);
-  const unit = r2(unitCost(product.costs) * qty);
-  const taxes = r2((price * n(product.costs.taxPct)) / 100);
-  const commission = r2((price * n(product.costs.commissionPct)) / 100);
-  const parts = [
-    { k: qty > 1 ? `Scooter (${qty} un.)` : "Scooter (compra, frete, montagem)", v: unit },
-    { k: "Impostos", v: taxes },
-    { k: "Comissão", v: commission },
-  ].filter((p) => p.v > 0);
-  return { total: r2(unit + taxes + commission), parts, source: "modelo" };
+  return {
+    purchase: r2(n(c.purchase) * qty),
+    freight: r2(n(c.freight) * qty),
+    assembly: r2(n(c.assembly) * qty),
+    accessories: r2(n(c.accessories) * qty),
+    delivery: 0,
+    other: r2(n(c.other) * qty),
+    taxes: r2((price * n(c.taxPct)) / 100),
+    commission: r2((price * n(c.commissionPct)) / 100),
+  };
+}
+
+/**
+ * Custos da venda, item a item: o que foi informado na venda vale; o resto vem do modelo.
+ * `manual` (custo único antigo) entra como "Outros" quando não há detalhamento.
+ */
+export function costOf(d: MotoData, product?: Pick<MotoProduct, "costs"> | null, manual?: number | null, breakdown?: CostBreakdown | null): CostInfo {
+  const base = modelCosts(d, product);
+  const own: CostBreakdown = { ...(breakdown ?? {}) };
+  if (manual != null && n(manual) > 0 && !Object.values(own).some((v) => v != null)) {
+    // Custo único informado antes do detalhamento: vale sozinho.
+    return { total: r2(n(manual)), parts: [{ k: "other", label: "Custo informado", v: r2(n(manual)), from: "venda" }], source: "venda" };
+  }
+  const hasModel = product ? unitCost(product.costs) > 0 : false;
+  const parts = COST_FIELDS.map((f) => {
+    const mine = own[f.k];
+    const v = mine != null ? r2(n(mine)) : base[f.k];
+    return { k: f.k as CostKey, label: f.label, v, from: (mine != null ? "venda" : "modelo") as "venda" | "modelo" };
+  }).filter((p) => p.v > 0);
+  const fromSale = parts.some((p) => p.from === "venda");
+  if (!fromSale && !hasModel) return { total: 0, parts: [], source: null };
+  return { total: r2(parts.reduce((t, p) => t + p.v, 0)), parts, source: fromSale ? "venda" : "modelo" };
 }
 
 export type PayStatus = "pago" | "parcial" | "pendente" | "sem";
@@ -113,12 +154,12 @@ export interface LedgerRow {
   pay: PaySummary;
 }
 
-export function ledgerRow(d: MotoData, payments: MotoPayment[], product?: Pick<MotoProduct, "costs"> | null, manualCost?: number | null): LedgerRow {
+export function ledgerRow(d: MotoData, payments: MotoPayment[], product?: Pick<MotoProduct, "costs"> | null, manualCost?: number | null, breakdown?: CostBreakdown | null): LedgerRow {
   const pay = paySummary(payments);
   const price = motoTotal(d);
   const estimated = pay.status === "sem";
   const final = estimated ? (d.payment.method === "cartao" && cardTotal(d) > 0 ? cardTotal(d) : price) : pay.net;
-  const cost = costOf(d, product, manualCost);
+  const cost = costOf(d, product, manualCost, breakdown);
   const profit = cost.source ? r2(final - cost.total) : null;
   return { price, final, estimated, cost, profit, margin: profit != null && final > 0 ? Math.round((profit / final) * 1000) / 10 : null, pay };
 }

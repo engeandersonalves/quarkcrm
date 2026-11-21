@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { cx } from "@/components/ui";
 import { dateBr } from "@/lib/br";
-import { PAY_LABEL, type PayMethod } from "@/lib/moto-ledger";
+import { COST_FIELDS, PAY_LABEL, type CostKey, type PayMethod } from "@/lib/moto-ledger";
 import type { MotoProduct } from "@/lib/moto-products";
 import { motoPhoto, vehicleName } from "@/lib/moto-sale";
 import { clientHref, clientKey } from "@/lib/moto-clients";
@@ -167,6 +167,8 @@ export function DashboardPanel({ sales, products }: { sales: Sales; products: Mo
           </div>
         </section>
       </div>
+
+      <CostBreakdownCard rows={rows} monthKey={s.cur.key} monthName={s.cur.full} since={s.months[0].key} />
 
       {/* modelos, entregas, últimas */}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-3">
@@ -407,6 +409,99 @@ function MonthsChart({ months }: { months: { key: string; label: string; full: s
               <td>{brl0(x.final)}</td>
               <td>{brl0(x.cost)}</td>
               <td>{brl0(x.profit)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+/** Para onde vai o dinheiro: cada item de custo somado no período, com o peso sobre o valor final. */
+function CostBreakdownCard({ rows, monthKey, monthName, since }: { rows: Row[]; monthKey: string; monthName: string; since: string }) {
+  const [range, setRange] = useState<"mes" | "6m">("mes");
+  const data = useMemo(() => {
+    const list = rows.filter((r) => (range === "mes" ? r.at.slice(0, 7) === monthKey : r.at.slice(0, 7) >= since));
+    const withCost = list.filter((r) => r.r.cost.source);
+    const sums = new Map<string, number>();
+    for (const r of withCost) for (const p of r.r.cost.parts) sums.set(p.k === "other" && p.label === "Custo informado" ? "informado" : p.k, (sums.get(p.k === "other" && p.label === "Custo informado" ? "informado" : p.k) ?? 0) + p.v);
+    const fees = list.reduce((t, r) => t + r.r.pay.fees, 0);
+    const final = withCost.reduce((t, r) => t + r.r.final, 0);
+    const revenue = final + withCost.reduce((t, r) => t + r.r.pay.fees, 0);
+    const items: { k: string; label: string; v: number }[] = [
+      ...COST_FIELDS.map((f) => ({ k: f.k as string, label: f.label, v: sums.get(f.k as CostKey) ?? 0 })),
+      { k: "informado", label: "Custo único (sem detalhar)", v: sums.get("informado") ?? 0 },
+      { k: "fees", label: "Taxas de pagamento", v: fees },
+    ].filter((x) => x.v > 0);
+    const cost = items.filter((x) => x.k !== "fees").reduce((t, x) => t + x.v, 0);
+    return { items: items.sort((a, b) => b.v - a.v), revenue, cost, fees, profit: final - cost, count: list.length, missing: list.length - withCost.length };
+  }, [rows, range, monthKey, since]);
+  const max = Math.max(1, ...data.items.map((x) => x.v));
+  const pct = (v: number) => (data.revenue > 0 ? Math.round((v / data.revenue) * 1000) / 10 : 0);
+
+  return (
+    <section className={cx(CARD, "p-5 sm:p-6")}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[13px] font-bold tracking-[0.08em] uppercase">Custos detalhados</p>
+          <p className="text-[12.5px] text-ink-500">Para onde vai o dinheiro das vendas · {range === "mes" ? monthName : "últimos 6 meses"}</p>
+        </div>
+        <div className="flex gap-1 rounded-full bg-ink-100 p-1 dark:bg-white/[0.06]">
+          {(
+            [
+              ["mes", "Este mês"],
+              ["6m", "6 meses"],
+            ] as const
+          ).map(([id, label]) => (
+            <button key={id} type="button" onClick={() => setRange(id)} className={cx("h-8 rounded-full px-3.5 text-[12.5px] font-semibold", range === id ? "bg-white text-ink-900 shadow-sm dark:bg-white/15 dark:text-white" : "text-ink-500")}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          ["Faturamento", brl0(data.revenue), ""],
+          ["Custos", brl0(data.cost), data.revenue ? `${pct(data.cost)}%` : ""],
+          ["Taxas", brl0(data.fees), data.revenue ? `${pct(data.fees)}%` : ""],
+          ["Lucro", brl0(data.profit), data.revenue ? `${pct(data.profit)}%` : ""],
+        ].map(([k, v, p], i) => (
+          <div key={k} className={cx("rounded-2xl px-3.5 py-3", i === 3 ? "bg-emerald-50 dark:bg-emerald-500/10" : "bg-ink-50 dark:bg-white/[0.04]")}>
+            <p className="text-[11px] font-bold tracking-[0.08em] text-ink-500 uppercase">{k}</p>
+            <p className={cx("mt-0.5 text-[17px] font-extrabold tabular-nums", i === 3 && "text-[#1A7F45] dark:text-[#5CC88A]")}>{v}</p>
+            {p && <p className="text-[11.5px] text-ink-500">{p} do faturamento</p>}
+          </div>
+        ))}
+      </div>
+
+      {data.items.length ? (
+        <div className="mt-5 grid gap-2.5" role="list">
+          {data.items.map((x, i) => (
+            <div key={x.k} role="listitem" className="grid grid-cols-[minmax(0,150px)_minmax(0,1fr)_auto] items-center gap-3 text-[13.5px] sm:grid-cols-[200px_minmax(0,1fr)_150px]">
+              <span className="truncate font-medium">{x.label}</span>
+              <div className="h-2.5 overflow-hidden rounded-full bg-ink-100 dark:bg-white/[0.07]">
+                <div className={cx("h-full rounded-full", i === 0 ? GREEN : x.k === "fees" ? GRAY : "bg-[#1F9D55]/60 dark:bg-[#33A366]/60")} style={{ width: `${(x.v / max) * 100}%` }} />
+              </div>
+              <span className="text-right tabular-nums">
+                <b>{brl0(x.v)}</b>
+                <span className="ml-1.5 text-[12px] text-ink-500">{pct(x.v)}%</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 text-[13.5px] text-ink-500">{data.count ? "Cadastre os custos dos modelos ou informe os custos de cada venda na aba Vendas." : "Sem vendas no período."}</p>
+      )}
+      {data.missing > 0 && <p className="mt-3 text-[12px] text-amber-700 dark:text-amber-300">{data.missing} {data.missing === 1 ? "venda sem custo cadastrado ficou fora" : "vendas sem custo cadastrado ficaram fora"} desta conta.</p>}
+      <table className="sr-only">
+        <caption>Custos detalhados</caption>
+        <tbody>
+          {data.items.map((x) => (
+            <tr key={x.k}>
+              <th>{x.label}</th>
+              <td>{brl0(x.v)}</td>
+              <td>{pct(x.v)}%</td>
             </tr>
           ))}
         </tbody>

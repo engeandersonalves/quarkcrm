@@ -32,6 +32,7 @@ import { moneyInWords } from "@/lib/br";
 import {
   DOC_KINDS,
   DOC_STATUS,
+  docStatus,
   POWERS,
   ROLE_LABEL,
   documentTitle,
@@ -228,7 +229,7 @@ export function DocEditor({ initial, onReload }: { initial: EditorDoc; onReload?
     }
   };
 
-  const status = DOC_STATUS[initial.status];
+  const status = docStatus(initial.kind, initial.status);
   const title = documentTitle(kind, data);
   const miss = missingFields(kind, data);
 
