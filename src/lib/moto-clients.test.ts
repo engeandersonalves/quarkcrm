@@ -30,15 +30,16 @@ test("clientes: agrupa por CPF e ordena por prioridade", () => {
     new Date("2026-11-20T12:00:00Z"),
   );
   assert.equal(list.length, 2);
-  // Quem está para assinar vem primeiro (é o que pede ação).
-  assert.equal(list[0].stage, "assinatura");
-  const maria = list[1];
+  // Link do contrato gerado já conta como venda fechada (cliente em garantia).
+  const joao = list.find((c) => c.name === "João")!;
+  assert.equal(joao.stage, "garantia");
+  const maria = list.find((c) => c.name === "Maria Lima")!;
   assert.equal(maria.name, "Maria Lima");
   assert.equal(maria.sales.length, 2);
   assert.equal(maria.stage, "garantia");
   assert.equal(maria.warrantyLeft, 82);
   assert.equal(matchClient(maria, "cappuccino"), true);
   assert.equal(matchClient(maria, "982.247"), true);
-  assert.equal(matchClient(list[0], "maria"), false);
+  assert.equal(matchClient(joao, "maria"), false);
   assert.match(portalMessage("Maria Lima", "https://x/cliente"), /4 últimos dígitos/);
 });

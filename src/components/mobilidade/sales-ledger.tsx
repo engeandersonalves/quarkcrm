@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { cx } from "@/components/ui";
 import { dateBr } from "@/lib/br";
 import { useLive } from "@/lib/live";
-import { closedAt, saleStage } from "@/lib/moto-board";
+import { closedAt, saleStage, signaturePending } from "@/lib/moto-board";
 import { clientHref, clientKey } from "@/lib/moto-clients";
 import { saveSaleInfo } from "@/lib/moto-customers-db";
 import { PAY_METHODS, ledgerRow, paymentsFromContract, type LedgerRow, type MotoPayment, type PayMethod } from "@/lib/moto-ledger";
@@ -124,7 +124,7 @@ export function SalesLedger({ sales, products }: { sales: Sales; products: MotoP
   if (payments.data?.missing)
     return <p className={cx(PANEL, "p-5 text-[14px] text-ink-600")}>Rode o arquivo supabase/schema.sql no Supabase (SQL Editor) para ativar o controle de vendas.</p>;
 
-  const pending = ((sales.data ?? []) as SaleDoc[]).filter((x) => saleStage(x) === "aguardando");
+  const pending = ((sales.data ?? []) as SaleDoc[]).filter((x) => signaturePending(x));
   const closeRegister = () => {
     setRegistering(false);
     if (params.get("registrar")) router.replace("/mobilidade?aba=vendas", { scroll: false });
@@ -159,7 +159,7 @@ export function SalesLedger({ sales, products }: { sales: Sales; products: MotoP
         <details className={cx(PANEL, "group px-4 py-3")}>
           <summary className="flex cursor-pointer list-none items-center gap-2 text-[13.5px] font-semibold [&::-webkit-details-marker]:hidden">
             <span className="grid h-6 min-w-6 place-items-center rounded-full bg-amber-100 px-1.5 text-[12px] font-bold text-amber-800">{pending.length}</span>
-            {pending.length === 1 ? "contrato aguardando assinatura" : "contratos aguardando assinatura"}
+            {pending.length === 1 ? "venda com contrato aguardando assinatura" : "vendas com contrato aguardando assinatura"}
             <ChevronDown className="ml-auto h-4 w-4 text-ink-400 transition group-open:rotate-180" />
           </summary>
           <ul className="mt-3 grid gap-2">
@@ -246,6 +246,7 @@ export function SalesLedger({ sales, products }: { sales: Sales; products: MotoP
                           <p className="text-[12px] text-ink-500">
                             {dateBr(x.at)}
                             {x.doc.status === "registrada" && <span className="ml-1.5 rounded bg-sky-50 px-1.5 py-px text-[10.5px] font-semibold text-sky-800 dark:bg-sky-500/10">registrada</span>}
+                            {signaturePending(x.doc) && <span className="ml-1.5 rounded bg-amber-50 px-1.5 py-px text-[10.5px] font-semibold text-amber-800 dark:bg-amber-500/10">falta assinar</span>}
                           </p>
                         </td>
                         <td className="py-3">

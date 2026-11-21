@@ -39,7 +39,7 @@ import { STAGE, brl0, useSaleActions, useSales, wa, type SaleActions, type SaleD
 import { Button, Empty, Field, Input, Skeleton, Textarea, cx } from "@/components/ui";
 import { dateBr, digits, formatCep, formatDoc } from "@/lib/br";
 import { formatPhone, relativeTime } from "@/lib/format";
-import { buyerOf, closedAt, saleStage, todos, warrantyOf, type SaleStage } from "@/lib/moto-board";
+import { buyerOf, closedAt, saleStage, signaturePending, todos, warrantyOf, type SaleStage } from "@/lib/moto-board";
 import { groupClients, portalMessage, type MotoClient } from "@/lib/moto-clients";
 import { fetchCustomerPhoto, saveCustomer, saveSaleInfo, toPortrait } from "@/lib/moto-customers-db";
 import { portalPin } from "@/lib/moto-overrides";
@@ -599,12 +599,12 @@ function DocsTab({ rows, actions, photo }: { rows: SaleDoc[]; actions: SaleActio
               {item(
                 <FileSignature className="h-5 w-5" />,
                 "Contrato de compra e venda",
-                stage === "vendida" ? `Assinado em ${dateBr(closedAt(r).slice(0, 10))}` : stage === "aguardando" ? "Enviado, aguardando a assinatura do cliente" : "Ainda é um orçamento",
+                signaturePending(r) ? "Venda fechada · contrato aguardando a assinatura do cliente" : r.status === "registrada" ? "Venda registrada, sem contrato digital" : stage === "vendida" ? `Assinado em ${dateBr(closedAt(r).slice(0, 10))}` : "Ainda é um orçamento",
                 <>
                   <Link href={`/documentos/${r.id}`} className={cx(BTN, "flex-1 sm:flex-none")}>
                     Abrir
                   </Link>
-                  {stage === "aguardando" && token && (
+                  {signaturePending(r) && token && (
                     <button type="button" onClick={() => copy(`${window.location.origin}/assinar/${token}`, "Link de assinatura copiado")} className={cx(BTN, "flex-1 sm:flex-none")}>
                       <Copy className="h-4 w-4" /> Link
                     </button>

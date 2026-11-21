@@ -10,7 +10,7 @@ import { cx } from "@/components/ui";
 import { brlPlain, dateBr, digits } from "@/lib/br";
 import { relativeTime } from "@/lib/format";
 import { must, useLive } from "@/lib/live";
-import { buyerOf, closedAt, saleStage, warrantyOf, type SaleStage } from "@/lib/moto-board";
+import { buyerOf, closedAt, saleStage, signaturePending, warrantyOf, type SaleStage } from "@/lib/moto-board";
 import { clientKey } from "@/lib/moto-clients";
 import { applyOverrides, type MotoCustomer, type SaleInfo } from "@/lib/moto-overrides";
 import { contractValue, motoPhoto, vehicleName, type MotoData } from "@/lib/moto-sale";
@@ -282,12 +282,13 @@ export function SaleRow({ doc, actions, hideClient, profit }: { doc: DocumentRow
   const model = vehicleName(d).replace(/^Scooter elétrica\s*/, "") || "Scooter";
   const { busy, pdf, remove, cancel, purge, revise } = actions;
   const signLink = buyer?.token && typeof window !== "undefined" ? `${window.location.origin}/assinar/${buyer.token}` : "";
-  const nudge = stage === "aguardando" ? wa(d.client.phone, `Olá, ${d.client.name.trim().split(/\s+/)[0]}! Seu contrato da scooter ${model} está pronto para assinar pelo celular, leva 1 minuto${signLink ? `: ${signLink}` : "."}`) : null;
+  const pendingSign = signaturePending(doc);
+  const nudge = pendingSign ? wa(d.client.phone, `Olá, ${d.client.name.trim().split(/\s+/)[0]}! Seu contrato da scooter ${model} está pronto para assinar pelo celular, leva 1 minuto${signLink ? `: ${signLink}` : "."}`) : null;
   const spin = (k: string) => busy === `${doc.id}-${k}`;
 
   let detail = "";
   if (stage === "orcamento") detail = `orçamento ${relativeTime(doc.updated_at)}`;
-  else if (stage === "aguardando") detail = `contrato enviado ${relativeTime(doc.updated_at)}`;
+  else if (pendingSign) detail = `vendida · falta assinar o contrato (enviado ${relativeTime(doc.updated_at)})`;
   else if (w) detail = w.state === "ativa" ? `garantia até ${dateBr(w.end)} · ${w.left} dias` : w.state === "entrega" ? (d.delivery?.date ? `garantia começa na entrega (${dateBr(d.delivery.date)})` : "garantia começa na entrega") : `garantia encerrada em ${dateBr(w.end)}`;
 
   const menu = [
@@ -335,7 +336,7 @@ export function SaleRow({ doc, actions, hideClient, profit }: { doc: DocumentRow
             {spin("orcamento") ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} Orçamento
           </button>
         )}
-        {stage === "aguardando" &&
+        {pendingSign &&
           (nudge ? (
             <a href={nudge} target="_blank" rel="noopener noreferrer" className={cx(BTN, "flex-1 sm:flex-none")}>
               <MessageCircle className="h-4 w-4 text-emerald-600" /> Cobrar assinatura

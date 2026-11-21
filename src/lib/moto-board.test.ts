@@ -20,7 +20,8 @@ function doc(id: string, status: BoardDoc["status"], signed: string | null, over
 
 test("board: comprador assinou = vendida, mesmo com testemunha pendente", () => {
   assert.equal(saleStage(doc("a", "enviado", "2026-11-10T12:00:00Z")), "vendida");
-  assert.equal(saleStage(doc("b", "enviado", null)), "aguardando");
+  // Link gerado já conta como vendida; a assinatura pendente é só um aviso.
+  assert.equal(saleStage(doc("b", "enviado", null)), "vendida");
   assert.equal(saleStage(doc("c", "rascunho", null)), "orcamento");
 });
 

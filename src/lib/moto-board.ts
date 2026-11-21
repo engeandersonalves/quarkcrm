@@ -31,12 +31,19 @@ export const saleData = (doc: BoardDoc) => doc.data as MotoData;
 export function saleStage(doc: BoardDoc): SaleStage {
   // Venda registrada direto no CRM continua vendida mesmo se depois gerar contrato para assinar.
   if (doc.status === "assinado" || doc.status === "registrada" || (doc.data as { registeredAt?: string } | null)?.registeredAt || buyerOf(doc)?.signed_at) return "vendida";
-  if (doc.status === "enviado") return "aguardando";
+  // Link do contrato gerado = venda fechada; a assinatura que falta vira só um aviso (signaturePending).
+  if (doc.status === "enviado") return "vendida";
   return "orcamento";
 }
 
-/** Data em que a venda fechou (assinatura do comprador ou conclusão do documento). */
-export const closedAt = (doc: BoardDoc) => buyerOf(doc)?.signed_at ?? doc.completed_at ?? doc.updated_at;
+/** Contrato enviado que o comprador ainda não assinou (a venda já conta como fechada). */
+export const signaturePending = (doc: BoardDoc) => doc.status === "enviado" && !buyerOf(doc)?.signed_at;
+
+/** Data em que a venda fechou: assinatura do comprador, conclusão, data do contrato ou última alteração. */
+export const closedAt = (doc: BoardDoc) => {
+  const date = (doc.data as { date?: string } | null)?.date;
+  return buyerOf(doc)?.signed_at ?? doc.completed_at ?? (date ? `${date}T12:00:00` : doc.updated_at);
+};
 
 export interface WarrantyInfo {
   state: WarrantyState;
@@ -77,7 +84,7 @@ export function todos(docs: BoardDoc[], now = new Date()): Todo[] {
     const d = saleData(doc);
     if (!d?.client) continue;
     const stage = saleStage(doc);
-    if (stage === "aguardando") out.push({ kind: "assinatura", doc });
+    if (signaturePending(doc)) out.push({ kind: "assinatura", doc });
     if (stage === "orcamento" && now.getTime() - new Date(doc.updated_at).getTime() > 7 * DAY && now.getTime() - new Date(doc.updated_at).getTime() < 60 * DAY) out.push({ kind: "parado", doc });
     if (stage !== "vendida") continue;
     const buyer = buyerOf(doc);
