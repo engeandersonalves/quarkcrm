@@ -43,6 +43,7 @@ const STORE = `quark-catalogo-${CATALOG_ID}`;
 /** Modelos exibidos: os cadastrados no CRM (quando houver) ou os de lançamento. */
 const ModelsCtx = createContext<Scooter[]>(LAUNCH_MODELS);
 const useModels = () => useContext(ModelsCtx);
+const countWord = (n: number) => ["", "Uma", "Duas", "Três", "Quatro", "Cinco", "Seis", "Sete", "Oito"][n] || String(n);
 
 /* =============================================================== ícones */
 
@@ -361,7 +362,7 @@ function Gate({ onAccess }: { onAccess: (a: Access) => void }) {
             <span className={GT}>Pague em 21x.</span>
           </h1>
           <p className="mt-5 max-w-lg text-[17px] leading-snug text-white/70 sm:text-[20px]">
-            Chega de ônibus lotado e posto de gasolina. Três scooters 1.000W com
+            Chega de ônibus lotado e posto de gasolina. {countWord(SCOOTERS.length)} scooters 1.000W com
             garantia e entrega montada, com preço de Black Friday.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
@@ -1057,7 +1058,7 @@ function Catalog({
             </h1>
             <div className="lg:pb-3">
               <p className="text-[17px] leading-snug text-white/70 sm:text-[19px]">
-                Chega de ônibus lotado e posto de gasolina. Três scooters 1.000W
+                Chega de ônibus lotado e posto de gasolina. {countWord(SCOOTERS.length)} scooters 1.000W
                 com garantia e entrega montada na sua casa.
               </p>
               <p className="mt-5 mb-2 text-[12px] font-bold tracking-[0.16em] text-white/50 uppercase">
@@ -1071,13 +1072,13 @@ function Catalog({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/mob/trio.jpg"
-            alt="Scooters T1, Cappuccino e MZ"
+            alt="Scooters elétricas Quark Mobilidade"
             className="mx-auto w-full max-w-6xl [mask-image:linear-gradient(180deg,transparent,#000_18%,#000_80%,transparent)]"
           />
         </div>
         <div
           id="modelos"
-          className="relative mx-auto -mt-4 grid max-w-6xl scroll-mt-24 grid-cols-3 gap-2 px-4 sm:gap-3 sm:px-6"
+          className="relative mx-auto -mt-4 grid max-w-6xl scroll-mt-24 grid-cols-3 gap-2 px-4 sm:gap-3 sm:px-6 lg:grid-cols-5"
         >
           {SCOOTERS.map((s) => (
             <button

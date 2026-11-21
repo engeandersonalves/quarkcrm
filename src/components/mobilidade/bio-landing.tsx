@@ -8,6 +8,7 @@ import {
   Camera,
   ChevronDown,
   CreditCard,
+  Disc,
   FileSignature,
   Gauge,
   IdCard,
@@ -21,8 +22,10 @@ import {
   ShieldCheck,
   Smartphone,
   Store,
+  Sparkles,
   Sun,
   Truck,
+  Weight,
   Wrench,
   Zap,
 } from "lucide-react";
@@ -483,11 +486,17 @@ function Doc({ icon: I, t, s, highlight }: { icon: typeof Zap; t: string; s: str
   );
 }
 
-const SPEC_ICON = { Motor: Zap, Bateria: BatteryCharging, Autonomia: Route, Velocidade: Gauge } as const;
+const SPEC_ICON = { Motor: Zap, Bateria: BatteryCharging, Autonomia: Route, Velocidade: Gauge, Freios: Disc, "Carga máx.": Weight, Destaque: Sparkles } as const;
+/** Valor preenchido de verdade ("—" ou vazio não entram). */
+const filled = (v: unknown) => typeof v === "string" && !!v.trim() && !/^[—–-]+$/.test(v.trim());
 
 function ModelCard({ m, extra, href }: { m: Scooter; extra: { url: string; caption: string | null }[]; href: string }) {
-  const rows = Object.entries(m.table).filter(([, v]) => v && String(v).trim());
-  const key = (["Motor", "Bateria", "Autonomia", "Velocidade"] as const).map((k) => [k, m.table[k]] as const).filter(([, v]) => v);
+  const rows = Object.entries(m.table).filter(([, v]) => filled(v));
+  // 4 destaques: os principais que o modelo tiver informados.
+  const key = (Object.keys(SPEC_ICON) as (keyof typeof SPEC_ICON)[])
+    .map((k) => [k, m.table[k]] as const)
+    .filter(([, v]) => filled(v))
+    .slice(0, 4);
   // Fotos do modelo (cadastro + fotos extras enviadas pelo CRM), sem repetir.
   const seen = new Set<string>();
   const shots: GalleryPhoto[] = [...m.gallery, ...extra.map((x) => ({ src: x.url, caption: x.caption ?? "", fit: "cover" as const }))].filter((g) => {
@@ -542,7 +551,7 @@ function ModelCard({ m, extra, href }: { m: Scooter; extra: { url: string; capti
           </ul>
         )}
 
-        {rows.length > 4 && (
+        {rows.length > key.length && (
           <details className="group mt-3">
             <summary className="flex cursor-pointer list-none items-center gap-1.5 py-1.5 text-[14px] font-semibold text-[#1F7A45] [&::-webkit-details-marker]:hidden">
               <Wrench className="h-4 w-4" /> Ficha técnica completa

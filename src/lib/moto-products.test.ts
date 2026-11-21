@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { firstNumber, installmentTable, installmentValue, parseMoney, parseProducts, priceForMargin, productToScooter, profitOf, seedProducts } from "./moto-products.ts";
+import { SCOOTERS } from "./catalog-mobilidade.ts";
 
 test("parcela na Tabela Price a 2,10% a.m.", () => {
   assert.equal(installmentValue(6799, 21, 2.1), 403.72);
@@ -101,12 +102,23 @@ Lítio 48V 15Ah
   assert.equal(list[1].product.specs.battery, "Lítio 48V 15Ah");
 });
 
-test("produto vira modelo do catálogo online com parcelas a 2,10%", () => {
-  const p = seedProducts()[0];
+test("produto vira modelo do catálogo online com a parcela do catálogo", () => {
+  const p = seedProducts().find((m) => m.slug === "t1")!;
   const s = productToScooter({ ...p, id: "x" });
   assert.equal(s.id, "t1");
   assert.equal(s.cash, 6799);
-  assert.equal(s.installment, installmentValue(6799, 21, 2.1));
+  assert.equal(Math.round(s.installment), 385);
   assert.equal(s.table.Bateria, "Lítio 64V 20Ah");
   assert.equal(s.specs.length, 6);
+});
+
+test("catálogo de 5 modelos: a taxa de cada modelo dá exatamente a parcela e o total do PDF", () => {
+  const models = seedProducts();
+  assert.deepEqual(models.map((m) => m.slug), ["a2", "t1", "city", "cappuccino", "mz"]);
+  for (const s of SCOOTERS) {
+    const p = models.find((m) => m.slug === s.id)!;
+    assert.equal(p.price, s.cash, s.id);
+    assert.equal(Math.round(installmentValue(p.price, 21, p.rate)), s.installment, s.id);
+    assert.equal(Math.round(installmentValue(p.price, 21, p.rate)) * 21, s.total, s.id);
+  }
 });

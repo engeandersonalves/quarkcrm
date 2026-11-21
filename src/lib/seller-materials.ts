@@ -7,10 +7,12 @@
 export interface SellerArt {
   src: string;
   label: string;
+  /** Modelo da arte (entra na legenda ao enviar). */
+  model?: string;
 }
 
-export interface SellerModelArts {
-  model: string;
+export interface SellerArtGroup {
+  title: string;
   tagline: string;
   arts: SellerArt[];
 }
@@ -19,14 +21,33 @@ export const SELLER_CAMPAIGN = {
   name: "Black Friday",
   /** Último dia da campanha (yyyy-mm-dd): depois disso a área avisa para conferir os preços. */
   until: "2026-11-27",
-  catalog: { src: "/mob/materiais/catalogo-quark-mobilidade.pdf", file: "Catalogo-Quark-Mobilidade.pdf", pages: 8, size: "5,7 MB" },
+  catalog: { src: "/mob/materiais/catalogo-quark-mobilidade-5-modelos.pdf", file: "Catalogo-Quark-Mobilidade-5-Modelos.pdf", pages: 10, size: "6,9 MB" },
 };
 
-export const SELLER_ARTS: SellerModelArts[] = [
-  { model: "City", tagline: "A estilosa de pneu largo", arts: [{ src: "/mob/materiais/city-capa.jpg", label: "Capa" }, { src: "/mob/materiais/city-ficha.jpg", label: "Ficha técnica" }] },
-  { model: "Cappuccino", tagline: "A clássica retrô", arts: [{ src: "/mob/materiais/cappuccino-capa.jpg", label: "Capa" }, { src: "/mob/materiais/cappuccino-ficha.jpg", label: "Ficha técnica" }] },
-  { model: "T1", tagline: "A prática do dia a dia", arts: [{ src: "/mob/materiais/t1-capa.jpg", label: "Capa" }, { src: "/mob/materiais/t1-ficha.jpg", label: "Ficha técnica" }] },
-  { model: "MZ", tagline: "A esportiva top de linha", arts: [{ src: "/mob/materiais/mz-capa.jpg", label: "Capa" }, { src: "/mob/materiais/mz-ficha.jpg", label: "Ficha técnica" }] },
+/** Páginas do catálogo de 5 modelos, uma arte por página. */
+export const SELLER_ARTS: SellerArtGroup[] = [
+  {
+    title: "Modelos",
+    tagline: "Ficha, preço e parcela de cada scooter",
+    arts: [
+      { src: "/mob/materiais/a2.jpg", label: "A2", model: "A2" },
+      { src: "/mob/materiais/t1.jpg", label: "T1", model: "T1" },
+      { src: "/mob/materiais/city.jpg", label: "City", model: "City" },
+      { src: "/mob/materiais/cappuccino.jpg", label: "Cappuccino", model: "Cappuccino" },
+      { src: "/mob/materiais/mz.jpg", label: "MZ", model: "MZ" },
+    ],
+  },
+  {
+    title: "Divulgação",
+    tagline: "Capa, comparativo e por que a Quark",
+    arts: [
+      { src: "/mob/materiais/capa.jpg", label: "Capa · 5 modelos" },
+      { src: "/mob/materiais/comparativo.jpg", label: "Comparativo" },
+      { src: "/mob/materiais/rotina.jpg", label: "Livre do trânsito" },
+      { src: "/mob/materiais/forca.jpg", label: "Mais força" },
+      { src: "/mob/materiais/quem-somos.jpg", label: "Quem somos" },
+    ],
+  },
 ];
 
 /** A campanha já acabou? (compara só a data, no fuso de Maceió). */

@@ -22,9 +22,9 @@ test("comprovante: itens, cortesia, frete e totais", () => {
   assert.equal(lines[3].label, "Acessório");
   assert.equal(lines[4].label, "Entrega");
   const t = receiptTotals(d);
-  assert.equal(t.subtotal, 7499 + 220 + 99 + 50);
-  assert.equal(t.cash, 7499 + 220 + 99 + 50 - 100);
-  assert.equal(t.paid, 21 * 446);
+  assert.equal(t.subtotal, 7197 + 220 + 99 + 50);
+  assert.equal(t.cash, 7197 + 220 + 99 + 50 - 100);
+  assert.equal(t.paid, 21 * 428);
   d.payment.method = "pix";
   assert.equal(receiptTotals(d).paid, t.cash);
   assert.equal(paymentSummary(d).title, "PIX / transferência");

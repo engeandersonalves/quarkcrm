@@ -7,10 +7,10 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: { absolute: "Catálogo Black Friday · Quark Mobilidade" },
-  description: "Scooters elétricas 1.000W com garantia e entrega montada: T1, Cappuccino e MZ em 21x no cartão. Preço de Black Friday até 27/11.",
+  description: "Scooters elétricas 1.000W com garantia e entrega montada: A2, T1, City, Cappuccino e MZ em 21x no cartão. Preço de Black Friday até 27/11.",
   openGraph: {
     title: "Escolha a sua. Pague em 21x. · Quark Mobilidade",
-    description: "Scooters elétricas 1.000W T1, Cappuccino e MZ com preço de Black Friday.",
+    description: "Scooters elétricas 1.000W A2, T1, City, Cappuccino e MZ com preço de Black Friday.",
     images: ["/mob/trio.jpg"],
   },
   robots: { index: false, follow: false },

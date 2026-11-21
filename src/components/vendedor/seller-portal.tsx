@@ -389,6 +389,7 @@ function Materials({ link }: { link: string }) {
   };
   const cat = SELLER_CAMPAIGN.catalog;
   const until = SELLER_CAMPAIGN.until.split("-").reverse().slice(0, 2).join("/");
+  const fileName = (a: { label: string }) => `Quark-${a.label.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]+/g, "-").replace(/-+$/, "")}.jpg`;
   const msg = (model?: string) => `${model ? `Scooter elétrica ${model}` : "Scooters elétricas Quark"}: sem CNH, sem placa e com garantia. Veja mais e fale comigo: ${link}`;
 
   return (
@@ -410,7 +411,7 @@ function Materials({ link }: { link: string }) {
           <div className="min-w-0 flex-1">
             <p className="text-[16.5px] font-bold">Catálogo completo</p>
             <p className="text-[13px] text-white/65">
-              T1, Cappuccino e MZ, com fichas e preços · {cat.pages} páginas · {cat.size}
+              A2, T1, City, Cappuccino e MZ, com fichas e preços · {cat.pages} páginas · {cat.size}
             </p>
           </div>
           <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
@@ -424,48 +425,46 @@ function Materials({ link }: { link: string }) {
         </div>
       </div>
 
-      {/* artes por modelo */}
-      <div className="grid gap-5 border-t border-[#0B1A12]/[0.06] p-5 sm:grid-cols-2 sm:p-6">
-        {SELLER_ARTS.map((g) => (
-          <div key={g.model}>
-            <div className="flex items-end justify-between gap-2">
-              <div>
-                <p className="text-[18px] leading-tight font-extrabold">{g.model}</p>
-                <p className="text-[12.5px] text-[#0B1A12]/55">{g.tagline}</p>
-              </div>
-              <button
-                type="button"
-                disabled={!!busy}
-                onClick={() => run(`all-${g.model}`, g.arts.map((a, i) => ({ src: a.src, name: `Quark-${g.model}-${i + 1}.jpg` })), msg(g.model))}
-                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-[12.5px] font-bold text-[#06210F] disabled:opacity-60"
-              >
-                {busy === `all-${g.model}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />} Enviar as 2
-              </button>
+      {/* artes do catálogo */}
+      {SELLER_ARTS.map((g) => (
+        <div key={g.title} className="border-t border-[#0B1A12]/[0.06] p-5 sm:p-6">
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <p className="text-[18px] leading-tight font-extrabold">{g.title}</p>
+              <p className="text-[12.5px] text-[#0B1A12]/55">{g.tagline}</p>
             </div>
-            <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-              {g.arts.map((a, i) => (
-                <figure key={a.src} className="overflow-hidden rounded-2xl bg-[#F4F6F2] ring-1 ring-[#0B1A12]/[0.06]">
-                  <a href={a.src} target="_blank" rel="noopener noreferrer" className="block">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={a.src} alt={`${g.model} · ${a.label}`} loading="lazy" className="aspect-[9/16] w-full object-cover" />
-                  </a>
-                  <figcaption className="p-2">
-                    <p className="text-center text-[12px] font-semibold text-[#0B1A12]/60">{a.label}</p>
-                    <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                      <a href={a.src} download={`Quark-${g.model}-${a.label.replace(/\s+/g, "-")}.jpg`} aria-label={`Baixar ${a.label} da ${g.model}`} className="flex h-9 items-center justify-center rounded-xl bg-white ring-1 ring-[#0B1A12]/10">
-                        <Download className="h-4 w-4" />
-                      </a>
-                      <button type="button" disabled={!!busy} onClick={() => run(`${g.model}-${i}`, [{ src: a.src, name: `Quark-${g.model}-${i + 1}.jpg` }], msg(g.model))} aria-label={`Enviar ${a.label} da ${g.model}`} className="flex h-9 items-center justify-center rounded-xl bg-[#0B1A12] text-white disabled:opacity-60">
-                        {busy === `${g.model}-${i}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
+            <button
+              type="button"
+              disabled={!!busy}
+              onClick={() => run(`all-${g.title}`, g.arts.map((a) => ({ src: a.src, name: fileName(a) })), msg())}
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-[12.5px] font-bold text-[#06210F] disabled:opacity-60"
+            >
+              {busy === `all-${g.title}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />} Enviar as {g.arts.length}
+            </button>
           </div>
-        ))}
-      </div>
+          <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+            {g.arts.map((a) => (
+              <figure key={a.src} className="overflow-hidden rounded-2xl bg-[#F4F6F2] ring-1 ring-[#0B1A12]/[0.06]">
+                <a href={a.src} target="_blank" rel="noopener noreferrer" className="block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={a.src} alt={a.label} loading="lazy" className="aspect-[9/16] w-full object-cover" />
+                </a>
+                <figcaption className="p-2">
+                  <p className="truncate text-center text-[12px] font-semibold text-[#0B1A12]/60">{a.label}</p>
+                  <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                    <a href={a.src} download={fileName(a)} aria-label={`Baixar ${a.label}`} className="flex h-9 items-center justify-center rounded-xl bg-white ring-1 ring-[#0B1A12]/10">
+                      <Download className="h-4 w-4" />
+                    </a>
+                    <button type="button" disabled={!!busy} onClick={() => run(a.src, [{ src: a.src, name: fileName(a) }], msg(a.model))} aria-label={`Enviar ${a.label}`} className="flex h-9 items-center justify-center rounded-xl bg-[#0B1A12] text-white disabled:opacity-60">
+                      {busy === a.src ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      ))}
       <p className="border-t border-[#0B1A12]/[0.06] px-5 py-3 text-[12px] text-[#0B1A12]/50 sm:px-6">
         No celular, “Enviar” abre o WhatsApp, o Instagram e outros apps com a imagem pronta e o seu link na legenda. As artes têm o tamanho certo para stories e status.
       </p>

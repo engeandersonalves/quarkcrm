@@ -9,14 +9,14 @@ const contractor = { name: "QUARK ENERGIA LTDA", doc: "12345678000195", address:
 test("venda de scooter: modelo do catálogo, totais e cartão", () => {
   const d = defaultMoto({ contractor, model: "cappuccino" });
   assert.equal(d.modelName, "Cappuccino");
-  assert.equal(d.price, 7499);
+  assert.equal(d.price, 7197);
   assert.equal(d.warrantyDays, 90);
   d.accessories = [{ id: "a", name: "Capacete", qty: 1, price: 150 }];
   d.discount = 100;
   d.freight = 50;
-  assert.equal(motoTotal(d), 7499 + 150 - 100 + 50);
-  assert.equal(cardTotal(d), 21 * 446);
-  assert.equal(contractValue(d), 21 * 446);
+  assert.equal(motoTotal(d), 7197 + 150 - 100 + 50);
+  assert.equal(cardTotal(d), 21 * 428);
+  assert.equal(contractValue(d), 21 * 428);
   d.payment.method = "pix";
   assert.equal(contractValue(d), motoTotal(d));
   const mz = applyModel(d, "mz");

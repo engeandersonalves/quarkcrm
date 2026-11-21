@@ -85,7 +85,7 @@ export function ModelsPanel() {
     setSeeding(true);
     try {
       await saveProducts(seedProducts());
-      toast.success("T1, Cappuccino e MZ salvos no seu cadastro. Agora complete os custos de cada um.");
+      toast.success("A2, T1, City, Cappuccino e MZ salvos no seu cadastro. Agora complete os custos de cada um.");
       reload();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro";
@@ -163,11 +163,11 @@ export function ModelsPanel() {
           <p className="min-w-0 flex-1 basis-[220px]">
             {tableMissing ? (
               <>
-                <b>Rode o supabase/schema.sql atualizado</b> no SQL Editor do Supabase para salvar modelos. Abaixo, os 3 modelos do catálogo de lançamento.
+                <b>Rode o supabase/schema.sql atualizado</b> no SQL Editor do Supabase para salvar modelos. Abaixo, os 5 modelos do catálogo.
               </>
             ) : (
               <>
-                Estes são os 3 modelos do catálogo de lançamento. <b>Salve-os no cadastro</b> para informar os custos e ver o lucro de cada um.
+                Estes são os 5 modelos do catálogo. <b>Salve-os no cadastro</b> para informar os custos e ver o lucro de cada um.
               </>
             )}
           </p>

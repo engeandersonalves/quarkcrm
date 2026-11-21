@@ -2227,3 +2227,65 @@ notify pgrst, 'reload schema';
 -- outros, impostos, comissão). Item vazio = usa o custo do cadastro do modelo.
 alter table public.moto_sale_info add column if not exists costs jsonb;
 notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- Migrações de dados que rodam uma vez só (o schema.sql pode ser rodado de novo
+-- sem desfazer o que a equipe editar depois).
+-- ---------------------------------------------------------------------------
+create table if not exists public.app_migrations (
+  id text primary key,
+  at timestamptz not null default now()
+);
+alter table public.app_migrations enable row level security;
+
+-- Catálogo oficial de 5 modelos (A2, T1, City, Cappuccino, MZ), conforme o PDF
+-- "Catálogo Quark Mobilidade · 5 modelos". Atualiza ficha, apresentação, preço,
+-- taxa do cartão (parcela exata em 21x), ordem, cores e fotos. Não mexe em custos.
+-- Fotos enviadas pelo CRM são mantidas.
+do $$
+declare
+  m jsonb;
+begin
+  if exists (select 1 from public.app_migrations where id = 'catalogo-5-modelos-2026-11') then
+    return;
+  end if;
+  for m in select * from jsonb_array_elements('[
+    {"slug":"a2","name":"A2","position":0,"accent":"#8E2C3A","kicker":"A charmosa do dia a dia","pitch":"Branca com banco bordô, para-brisa e encosto pra garupa.","for_who":"quer charme no dia a dia, com para-brisa e encosto pra garupa.","price":6399,"rate":2.1009,"colors":["Branca e bordô","Bege"],
+     "photo":"/mob/a2-perfil.webp","gallery":[{"src":"/mob/a2-perfil.webp","caption":"Perfil","fit":"contain"},{"src":"/mob/a2-frente.webp","caption":"De frente","fit":"contain"},{"src":"/mob/a2-perfil-bege.webp","caption":"Bege","fit":"contain"}],
+     "specs":{"power":"1.000W","battery":"Lítio","range":"","speed":"","recharge":"","load":"","brakes":"Disco dianteiro","weight":"","security":"Alarme","highlight":"Para-brisa, encosto e banco bordô"}},
+    {"slug":"t1","name":"T1","position":1,"kicker":"A prática do dia a dia","pitch":"Cesto, garupa e muita força pra rotina na cidade.","for_who":"trabalha, entrega ou estuda e quer economizar todo dia.","price":6799,"rate":1.6316,"colors":["Branca","Preta"],
+     "photo":"/mob/t1-perfil-branca.webp","gallery":[{"src":"/mob/t1-perfil-branca.webp","caption":"Perfil","fit":"contain"},{"src":"/mob/t1-frente-preta.webp","caption":"Preta, de frente","fit":"contain"},{"src":"/mob/t1-perfil.webp","caption":"Lateral","fit":"contain"},{"src":"/mob/t1-frente.webp","caption":"De frente","fit":"contain"}],
+     "specs":{"power":"1.000W","battery":"Lítio 64V 20Ah","range":"50 km","speed":"32 km/h","recharge":"6 a 7 h","load":"150 kg","brakes":"Hidráulico dianteiro","weight":"58 kg","security":"NFC + alarme","highlight":"Cesto e garupa"}},
+    {"slug":"city","name":"City","position":2,"accent":"#E5484D","kicker":"A estilosa de pneu largo","pitch":"Visual chopper, pneus largos e encosto pra garupa.","for_who":"quer chegar com estilo, conforto e estabilidade nos pneus largos.","price":7197,"rate":1.9277,"colors":["Vermelha"],
+     "photo":"/mob/city-lateral.jpg","gallery":[{"src":"/mob/city-lateral.jpg","caption":"Lateral","fit":"contain"},{"src":"/mob/city-frente.jpg","caption":"Frente","fit":"contain"},{"src":"/mob/city-traseira.jpg","caption":"Traseira","fit":"contain"}],
+     "specs":{"power":"1.000W","battery":"Lítio 60V 24Ah","range":"60 km","speed":"32 km/h","recharge":"~7 h","load":"150 kg","brakes":"Disco dianteiro","weight":"73,7 kg","security":"Alarme","highlight":"Pneus largos e suspensão dupla"}},
+    {"slug":"cappuccino","name":"Cappuccino","position":3,"kicker":"A clássica retrô","pitch":"Charme italiano, banco largo e encosto pra garupa.","for_who":"quer chegar com estilo e passear a dois com conforto.","price":7197,"rate":2.1151,"colors":["Creme"],
+     "photo":"/mob/cappuccino-34.webp","gallery":[{"src":"/mob/cappuccino-34.webp","caption":"Destaque","fit":"contain"},{"src":"/mob/cappuccino-estudio.png","caption":"Estúdio","fit":"contain"},{"src":"/mob/cappuccino-frente.jpg","caption":"De frente","fit":"cut"},{"src":"/mob/cappuccino-lateral.jpg","caption":"Vista lateral","fit":"cut"}],
+     "specs":{"power":"1.000W","battery":"Lítio 60V 20Ah","range":"60 a 80 km","speed":"32 km/h","recharge":"~6 h (bivolt)","load":"180 kg","brakes":"Disco dianteiro","weight":"66 kg","security":"NFC + alarme","highlight":"3 marchas"}},
+    {"slug":"mz","name":"MZ","position":4,"kicker":"A esportiva top de linha","pitch":"A maior autonomia da linha e freio hidráulico nas 2 rodas.","for_who":"roda muito por dia e quer a maior autonomia e frenagem da linha.","price":8799,"rate":2.0527,"colors":["Cinza e laranja"],
+     "photo":"/mob/mz-perfil.webp","gallery":[{"src":"/mob/mz-perfil.webp","caption":"Perfil","fit":"contain"},{"src":"/mob/mz-frente-laranja.webp","caption":"De frente","fit":"contain"},{"src":"/mob/mz-traseira.webp","caption":"Traseira","fit":"contain"}],
+     "specs":{"power":"1.000W","battery":"Grafeno 72V","range":"100 km","speed":"32 km/h","recharge":"~6 h (bivolt)","load":"185 kg","brakes":"Hidráulico nas 2 rodas","weight":"135 kg","security":"Alarme e painel LED","highlight":"Maior autonomia da linha"}}
+  ]'::jsonb) loop
+    insert into public.moto_products (slug, name, kicker, pitch, for_who, accent, photo, gallery, colors, specs, price, installments, rate, active, position)
+    values (m ->> 'slug', m ->> 'name', m ->> 'kicker', m ->> 'pitch', m ->> 'for_who', coalesce(m ->> 'accent', '#9FDB7C'), m ->> 'photo', m -> 'gallery',
+            array(select jsonb_array_elements_text(m -> 'colors')), m -> 'specs', (m ->> 'price')::numeric, 21, (m ->> 'rate')::numeric, true, (m ->> 'position')::int)
+    on conflict (slug) do update set
+      name = excluded.name,
+      kicker = excluded.kicker,
+      pitch = excluded.pitch,
+      for_who = excluded.for_who,
+      accent = case when m ? 'accent' then excluded.accent else public.moto_products.accent end,
+      photo = excluded.photo,
+      -- fotos do catálogo + as que a equipe enviou pelo CRM (endereços http)
+      gallery = excluded.gallery || coalesce((select jsonb_agg(e) from jsonb_array_elements(public.moto_products.gallery) e where e ->> 'src' like 'http%'), '[]'::jsonb),
+      colors = excluded.colors,
+      specs = public.moto_products.specs || excluded.specs,
+      price = excluded.price,
+      installments = 21,
+      rate = excluded.rate,
+      active = true,
+      position = excluded.position,
+      updated_at = now();
+  end loop;
+  insert into public.app_migrations (id) values ('catalogo-5-modelos-2026-11');
+end $$;

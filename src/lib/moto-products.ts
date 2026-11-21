@@ -243,7 +243,10 @@ const MANUAL_SEED: Record<string, Partial<MotoSpecsFull>> = {
   },
 };
 
-/** Os 3 modelos do catálogo de lançamento, como produtos (custos em branco). */
+/** Taxa mensal (%) que leva o preço à vista exatamente à parcela do catálogo em 21x. */
+export const CATALOG_RATES: Record<string, number> = { a2: 2.1009, t1: 1.6316, city: 1.9277, cappuccino: 2.1151, mz: 2.0527 };
+
+/** Os 5 modelos do catálogo, como produtos (custos em branco). Taxa do cartão = parcela exata do catálogo em 21x. */
 export function seedProducts(): MotoProduct[] {
   return SCOOTERS.map((s, i) =>
     newProduct({
@@ -255,7 +258,7 @@ export function seedProducts(): MotoProduct[] {
       accent: s.accent,
       photo: s.gallery.find((g) => g.fit === "contain")?.src ?? s.image,
       gallery: s.gallery,
-      colors: { t1: ["Branca", "Preta", "Prata"], cappuccino: ["Creme", "Branca", "Verde menta"], mz: ["Cinza e laranja", "Preta", "Branca"] }[s.id] ?? [],
+      colors: { a2: ["Branca e bordô", "Bege"], t1: ["Branca", "Preta"], city: ["Vermelha"], cappuccino: ["Creme"], mz: ["Cinza e laranja"] }[s.id] ?? [],
       specs: {
         power: s.table.Motor ?? "",
         battery: s.table.Bateria ?? "",
@@ -270,6 +273,7 @@ export function seedProducts(): MotoProduct[] {
         ...(MANUAL_SEED[s.id] ?? {}),
       },
       price: s.cash,
+      rate: CATALOG_RATES[s.id] ?? DEFAULT_RATE,
       position: i,
     }),
   );
