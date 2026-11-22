@@ -2372,3 +2372,22 @@ begin
     end loop;
   end if;
 end $$;
+
+-- Estoque de cada modelo no catálogo online (vazio = "estoque limitado", sem número).
+alter table public.moto_products add column if not exists stock int;
+create or replace function public.get_public_motos()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', id, 'slug', slug, 'name', name, 'kicker', kicker, 'pitch', pitch, 'forWho', for_who,
+    'accent', accent, 'photo', photo, 'gallery', gallery, 'colors', to_jsonb(colors), 'specs', specs,
+    'price', price, 'installments', installments, 'rate', rate, 'stock', stock
+  ) order by position, name), '[]'::jsonb)
+  from public.moto_products where active and price > 0;
+$$;
+revoke all on function public.get_public_motos() from public;
+grant execute on function public.get_public_motos() to anon, authenticated;

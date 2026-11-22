@@ -84,6 +84,8 @@ export interface MotoProduct {
   rate: number;
   active: boolean;
   position: number;
+  /** Unidades disponíveis no catálogo online (null = estoque limitado, sem número). */
+  stock: number | null;
 }
 
 export const DEFAULT_RATE = 2.1;
@@ -120,6 +122,7 @@ export function newProduct(p: Partial<MotoProduct> = {}): MotoProduct {
     rate: DEFAULT_RATE,
     active: true,
     position: 0,
+    stock: null,
     ...p,
   };
 }
@@ -180,7 +183,7 @@ export function priceForMargin(costs: MotoCosts, marginPct: number) {
 /* ---------------------------------------------------------------- catálogo público */
 
 /** Dados públicos (sem custos) que o catálogo online recebe. */
-export type PublicMoto = Omit<MotoProduct, "costs" | "active" | "position">;
+export type PublicMoto = Omit<MotoProduct, "costs" | "active" | "position" | "stock"> & { stock?: number | null };
 
 /** Converte o produto do CRM no formato do catálogo online. */
 export function productToScooter(p: PublicMoto): Scooter {
@@ -219,6 +222,8 @@ export function productToScooter(p: PublicMoto): Scooter {
     installment: each,
     cash: p.price,
     total: round2(each * p.installments),
+    stock: p.stock == null ? null : Math.max(0, Number(p.stock) || 0),
+    colors: p.colors ?? [],
   };
 }
 

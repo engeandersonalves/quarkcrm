@@ -47,6 +47,10 @@ export interface Scooter {
   installment: number;
   cash: number;
   total: number;
+  /** Unidades em estoque (null/ausente = estoque limitado, sem número). */
+  stock?: number | null;
+  /** Cores disponíveis. */
+  colors?: string[];
 }
 
 export const SCOOTERS: Scooter[] = [

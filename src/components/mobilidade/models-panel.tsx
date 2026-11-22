@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BookOpen, ClipboardList, Download, Plus, Sparkles, Wand2 } from "lucide-react";
+import { ArrowRight, BookOpen, ClipboardList, Download, Minus, Plus, Sparkles, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { Button, Modal, Skeleton, Textarea, cx } from "@/components/ui";
 import { brlPlain } from "@/lib/br";
 import { installmentValue, parseProducts, profitOf, seedProducts, unitCost, type MotoProduct } from "@/lib/moto-products";
 import { saveProducts, useMotoProducts } from "@/lib/moto-products-db";
+import { supabase } from "@/lib/supabase/client";
 import { ManualOwnerModal } from "./manual-owner-modal";
 import { downloadMotoArt } from "./moto-arts";
 import type { ManualOwner } from "./moto-manual";
@@ -213,6 +214,7 @@ export function ModelsPanel() {
                   </div>
                 </div>
               </Link>
+              {p.id && <StockStepper p={p} onSaved={reload} />}
               <div className="flex gap-2 border-t border-white/[0.07] px-4 py-3">
                 <button type="button" disabled={!!art} onClick={() => download(p, "venda")} className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-white/[0.07] text-[12px] font-semibold ring-1 ring-white/10 hover:bg-white/[0.12] disabled:opacity-50">
                   <Download className="h-3.5 w-3.5" /> {art === `${p.slug}-venda` ? "Gerando…" : "Arte"}
@@ -330,5 +332,45 @@ function ImportModal({ open, onClose, existing, onSaved }: { open: boolean; onCl
         </div>
       )}
     </Modal>
+  );
+}
+
+/** Estoque que aparece no catálogo online ("Últimas 3 unidades"). Vazio = "Estoque limitado". */
+function StockStepper({ p, onSaved }: { p: MotoProduct; onSaved: () => void }) {
+  const [v, setV] = useState<number | null>(p.stock);
+  const [busy, setBusy] = useState(false);
+  const set = async (next: number | null) => {
+    const prev = v;
+    setV(next);
+    setBusy(true);
+    const { error } = await supabase().from("moto_products").update({ stock: next }).eq("id", p.id);
+    setBusy(false);
+    if (error) {
+      setV(prev);
+      toast.error(/stock/.test(error.message) ? "Rode o supabase/schema.sql atualizado para ativar o estoque." : error.message);
+    } else onSaved();
+  };
+  const btn = "grid h-8 w-8 place-items-center rounded-full bg-white/[0.08] ring-1 ring-white/10 hover:bg-white/[0.14] disabled:opacity-40";
+  return (
+    <div className="flex items-center gap-2 border-t border-white/[0.07] px-4 py-2.5">
+      <span className="min-w-0 flex-1">
+        <span className="block text-[10px] font-bold tracking-[0.12em] text-white/45 uppercase">Estoque no catálogo</span>
+        <span className={cx("block text-[13px] font-semibold", v === 0 ? "text-[#FF8A80]" : v != null && v <= 3 ? "text-[#FFB547]" : "text-white/80")}>
+          {v == null ? "Estoque limitado (sem número)" : v === 0 ? "Esgotado" : `${v} ${v === 1 ? "unidade" : "unidades"}`}
+        </span>
+      </span>
+      <button type="button" aria-label="Diminuir estoque" disabled={busy || v === 0} onClick={() => set(Math.max(0, (v ?? 1) - 1))} className={btn}>
+        <Minus className="h-3.5 w-3.5" />
+      </button>
+      <span className="w-6 text-center text-[15px] font-bold tabular-nums">{v ?? "–"}</span>
+      <button type="button" aria-label="Aumentar estoque" disabled={busy} onClick={() => set((v ?? 0) + 1)} className={btn}>
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+      {v != null && (
+        <button type="button" disabled={busy} onClick={() => set(null)} className="text-[11px] font-semibold text-white/45 hover:text-white/80">
+          limpar
+        </button>
+      )}
+    </div>
   );
 }

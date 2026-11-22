@@ -22,6 +22,7 @@ type Row = {
   rate: number | string;
   active: boolean;
   position: number;
+  stock?: number | null;
 };
 
 export const rowToProduct = (r: Row): MotoProduct =>
@@ -43,6 +44,7 @@ export const rowToProduct = (r: Row): MotoProduct =>
     rate: Number(r.rate),
     active: r.active,
     position: r.position,
+    stock: r.stock == null ? null : Number(r.stock),
   });
 
 export const productToRow = (p: MotoProduct) => ({
@@ -62,6 +64,8 @@ export const productToRow = (p: MotoProduct) => ({
   rate: p.rate,
   active: p.active,
   position: p.position,
+  // Só manda o estoque quando informado (funciona antes de rodar o schema novo).
+  ...(p.stock != null ? { stock: p.stock } : {}),
   updated_at: new Date().toISOString(),
 });
 

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   other: { google: "notranslate" },
 };
 
-export const viewport: Viewport = { themeColor: "#050706" };
+export const viewport: Viewport = { themeColor: "#F6F7F5" };
 
 export default async function CatalogoMobilidadePage() {
   const [company, photos, models] = await Promise.all([loadCompany(), loadCatalogPhotos(), loadCatalogModels()]);
