@@ -2484,3 +2484,51 @@ begin
     alter publication supabase_realtime add table public.catalog_reservations;
   end if;
 end $$;
+
+-- Roleta de prêmios do catálogo: um giro por pessoa (acesso do catálogo = WhatsApp).
+-- O prêmio é sorteado no servidor; aqui só fica registrado e vira nota na ficha do lead.
+create table if not exists public.catalog_spins (
+  id uuid primary key default gen_random_uuid(),
+  catalog text not null,
+  access_id uuid unique references public.catalog_access (id) on delete cascade,
+  prize text not null,
+  label text not null,
+  code text unique not null,
+  used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+alter table public.catalog_spins enable row level security;
+drop policy if exists "catalog_spins_team" on public.catalog_spins;
+create policy "catalog_spins_team" on public.catalog_spins for all to authenticated using (public.is_member()) with check (public.is_member());
+
+create or replace function public.catalog_spin(p_token uuid, p_prize text, p_label text, p_code text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v public.catalog_access;
+  s public.catalog_spins;
+begin
+  select * into v from public.catalog_access where token = p_token;
+  if not found then return jsonb_build_object('ok', false, 'error', 'acesso'); end if;
+  select * into s from public.catalog_spins where access_id = v.id;
+  if found then
+    return jsonb_build_object('ok', true, 'existing', true, 'prize', s.prize, 'label', s.label, 'code', s.code);
+  end if;
+  if (select count(*) from public.catalog_spins where catalog = v.catalog and created_at > now() - interval '1 hour') >= 300 then
+    return jsonb_build_object('ok', false, 'error', 'limite');
+  end if;
+  insert into public.catalog_spins (catalog, access_id, prize, label, code)
+  values (v.catalog, v.id, left(p_prize, 30), left(p_label, 80), left(p_code, 20))
+  returning * into s;
+  if v.lead_id is not null then
+    insert into public.activities (lead_id, type, content)
+    values (v.lead_id, 'nota', 'Ganhou na roleta do catálogo: ' || s.label || ' (código ' || s.code || ')');
+  end if;
+  return jsonb_build_object('ok', true, 'prize', s.prize, 'label', s.label, 'code', s.code);
+end;
+$$;
+revoke all on function public.catalog_spin(uuid, text, text, text) from public;
+grant execute on function public.catalog_spin(uuid, text, text, text) to anon, authenticated;

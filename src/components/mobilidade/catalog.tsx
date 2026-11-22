@@ -9,6 +9,7 @@ import {
   ChevronRight,
   CreditCard,
   Flame,
+  Gift,
   Gauge,
   Loader2,
   Lock,
@@ -24,6 +25,9 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useBf } from "@/components/bf/badges";
+import { BF_END_SHORT } from "@/lib/black-friday";
+import { prizeByKey } from "@/lib/catalog-wheel";
+import { WheelButton, WheelModal, type WonPrize } from "./catalog-wheel";
 import { CATALOG_ID, MOB_HOURS, MOB_WHATSAPP, SCOOTERS as LAUNCH_MODELS, brl0, mergeGallery, type GalleryPhoto, type ModelId, type Scooter } from "@/lib/catalog-mobilidade";
 
 /**
@@ -38,6 +42,8 @@ const GREEN = "#1F9D55";
 const GOLD = "linear-gradient(100deg,#F7E7A1 0%,#E2C35C 45%,#C9A13B 100%)";
 const STORE = `quark-catalogo-${CATALOG_ID}`;
 const PROFILE = `${STORE}-cliente`;
+const PRIZE = `${STORE}-premio`;
+const WHEEL_SEEN = `${STORE}-roleta-vista`;
 const money = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const goldText = { background: GOLD, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" } as const;
 
@@ -87,6 +93,7 @@ function stockOf(n: number | null | undefined) {
   if (n <= 3) return { label: n === 1 ? "Última unidade no preço Black" : `Restam ${n} unidades no preço Black`, short: n === 1 ? "Última!" : `Restam ${n}`, tone: "red" as const, n, out: false };
   return { label: `${n} unidades no preço Black`, short: "", tone: "amber" as const, n, out: false };
 }
+const firstName = (v: string) => v.trim().split(" ")[0] ?? "";
 const blank = (v?: string) => !v || /^[—–-]+$/.test(v.trim());
 const subline = (s: Scooter) => [s.table.Motor, s.table.Bateria, s.table.Autonomia].filter((x) => !blank(x)).join(" · ");
 const rangeKm = (s: Scooter) => Math.max(0, ...((s.table.Autonomia ?? "").match(/\d+/g) ?? ["0"]).map(Number));
@@ -104,6 +111,8 @@ export function MobilidadeCatalog({ whatsapp, photos = {}, models }: { whatsapp:
   const [open, setOpen] = useState<Scooter | null>(null);
   const [sort, setSort] = useState<"destaque" | "parcela" | "autonomia">("destaque");
   const [alert, setAlert] = useState<Live["recent"][number] | null>(null);
+  const [won, setWon] = useState<WonPrize | null>(null);
+  const [wheel, setWheel] = useState(false);
   const seen = useRef<Set<string>>(new Set());
   const bf = useBf();
 
@@ -118,14 +127,24 @@ export function MobilidadeCatalog({ whatsapp, photos = {}, models }: { whatsapp:
     const a = load<Access>(STORE);
     setAccess(a);
     setProfile(load<Profile>(PROFILE));
-    if (!a || a.offline) return;
+    const w = load<WonPrize>(PRIZE);
+    setWon(w);
+    let first = false;
     try {
-      if (sessionStorage.getItem(`${STORE}-sessao`)) return;
+      first = !sessionStorage.getItem(`${STORE}-sessao`);
       sessionStorage.setItem(`${STORE}-sessao`, "1");
     } catch {
       /* navegação privada */
     }
-    void post({ action: "visit", token: a.token, device: device() }).catch(() => {});
+    if (a && !a.offline && first) void post({ action: "visit", token: a.token, device: device() }).catch(() => {});
+    // Primeira visita neste aparelho: a roleta se apresenta sozinha depois de alguns segundos.
+    if (!w && !load<boolean>(WHEEL_SEEN)) {
+      const t = setTimeout(() => {
+        if (!location.hash) setWheel(true);
+        store(WHEEL_SEEN, true);
+      }, 9000);
+      return () => clearTimeout(t);
+    }
   }, []);
 
   // Estoque e reservas ao vivo (a cada 30 s): reserva nova vira aviso na tela.
@@ -257,9 +276,14 @@ export function MobilidadeCatalog({ whatsapp, photos = {}, models }: { whatsapp:
                   <Countdown />
                 </div>
               )}
-              <button type="button" onClick={() => document.getElementById("vitrine")?.scrollIntoView({ behavior: "smooth" })} className="mt-7 inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-bold text-[#0B1A12]">
-                Ver as scooters <ArrowDown className="h-4 w-4" />
-              </button>
+              <div className="mt-7 flex flex-wrap gap-2">
+                <button type="button" onClick={() => document.getElementById("vitrine")?.scrollIntoView({ behavior: "smooth" })} className="inline-flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-bold text-[#0B1A12]">
+                  Ver as scooters <ArrowDown className="h-4 w-4" />
+                </button>
+                <button type="button" onClick={() => setWheel(true)} className="inline-flex h-12 items-center gap-2 rounded-full px-5 text-[15px] font-bold text-[#0B1A12]" style={{ background: GOLD }}>
+                  <Gift className="h-4 w-4" /> {won ? "Ver meu prêmio" : "Gire e ganhe até R$ 300"}
+                </button>
+              </div>
             </div>
             {hero && (
               <button type="button" onClick={() => show(hero)} className="group relative mx-auto mt-4 aspect-[5/4] w-full max-w-[520px] lg:mt-0" aria-label={`Ver ${hero.name}`}>
@@ -334,7 +358,7 @@ export function MobilidadeCatalog({ whatsapp, photos = {}, models }: { whatsapp:
       </main>
 
       {/* aviso de reserva real */}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 sm:justify-start sm:px-6">
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 top-[72px] z-40 flex justify-center px-4 sm:top-auto sm:bottom-6 sm:justify-start sm:px-6">
         {alert && (
           <div className="bf-rise pointer-events-auto flex max-w-sm items-center gap-3 rounded-[20px] bg-white/95 p-2.5 pr-4 shadow-[0_24px_50px_-20px_rgba(11,26,18,0.55)] ring-1 ring-black/[0.06] backdrop-blur">
             <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-[#F1F3EE]">
@@ -357,8 +381,42 @@ export function MobilidadeCatalog({ whatsapp, photos = {}, models }: { whatsapp:
         )}
       </div>
 
+      <WheelButton won={won} onOpen={() => setWheel(true)} />
+      <WheelModal
+        open={wheel}
+        onClose={() => setWheel(false)}
+        won={won}
+        profile={profile}
+        until={BF_END_SHORT}
+        spin={async (name, phone) => {
+          let owner = "";
+          try {
+            owner = new URLSearchParams(window.location.search).get("v") ?? "";
+          } catch {
+            /* sem parâmetros */
+          }
+          const r = await post({ action: "spin", catalog: CATALOG_ID, name, phone, owner, device: device() });
+          const j = (await r.json().catch(() => null)) as { prize?: string; label?: string; code?: string; token?: string; existing?: boolean; error?: string } | null;
+          if (!r.ok || !j?.prize || !j.code) throw new Error(j?.error || "Não foi possível girar agora. Tente de novo.");
+          return { prize: j.prize, label: j.label ?? prizeByKey(j.prize)?.label ?? "", code: j.code, token: j.token, existing: j.existing };
+        }}
+        onWon={(w, p, token) => {
+          setWon(w);
+          store(PRIZE, w);
+          setProfile(p);
+          store(PROFILE, p);
+          store(WHEEL_SEEN, true);
+          if (token) {
+            const a = { token, name: firstName(p.name), visits: 1 };
+            setAccess(a);
+            store(STORE, a);
+          }
+        }}
+      />
+
       {current && (
         <ProductSheet
+          won={won}
           s={current}
           photos={photos[current.id] ?? []}
           black={!!bf}
@@ -484,6 +542,7 @@ function ProductCard({ s, black, onOpen }: { s: Scooter; black: boolean; onOpen:
 const SPEC_ICONS: Record<string, LucideIcon> = { bolt: Zap, battery: BatteryCharging, route: Route, brake: Gauge, weight: Weight, lock: Lock, shield: ShieldCheck, gear: Gauge };
 
 function ProductSheet({
+  won,
   s,
   photos,
   black,
@@ -493,6 +552,7 @@ function ProductSheet({
   onClose,
   onReserved,
 }: {
+  won: WonPrize | null;
   s: Scooter;
   photos: { url: string; caption: string | null }[];
   black: boolean;
@@ -538,7 +598,9 @@ function ProductSheet({
 
   const go = (d: number) => setI((x) => (x + d + shots.length) % shots.length);
   const payText = pay === "cartao" ? `cartão em ${s.installments}x de ${money(s.installment)}` : `PIX à vista (${brl0(s.cash)})`;
-  const message = () => `Olá! Sou ${name.trim() || "cliente"} e reservei a scooter elétrica ${s.name}${color ? ` na cor ${color}` : ""}, no ${payText}. Pode confirmar a disponibilidade e a entrega?`;
+  const prize = prizeByKey(won?.prize);
+  const prizeText = won && prize ? ` Ganhei na roleta: ${won.label} (código ${won.code}).` : "";
+  const message = () => `Olá! Sou ${name.trim() || "cliente"} e reservei a scooter elétrica ${s.name}${color ? ` na cor ${color}` : ""}, no ${payText}.${prizeText} Pode confirmar a disponibilidade e a entrega?`;
 
   const reserve = async () => {
     if (!valid || busy) return;
@@ -553,7 +615,7 @@ function ProductSheet({
       } catch {
         /* sem parâmetros */
       }
-      const r = await post({ action: "reserve", catalog: CATALOG_ID, token, name: name.trim(), phone, model: s.id, modelName: s.name, color, pay: pay === "cartao" ? `cartão ${s.installments}x` : "PIX à vista", owner, device: device(), website });
+      const r = await post({ action: "reserve", catalog: CATALOG_ID, token, name: name.trim(), phone, model: s.id, modelName: s.name, color, pay: pay === "cartao" ? `cartão ${s.installments}x` : "PIX à vista", coupon: won ? `${won.code} ${prize?.kind === "cupom" ? `R$${prize.value}` : (prize?.short[0] ?? "")}`.trim() : "", owner, device: device(), website });
       const j = (await r.json().catch(() => null)) as { ok?: boolean; token?: string; stock?: number | null; error?: string } | null;
       if (!r.ok) {
         tab?.close();
@@ -638,6 +700,20 @@ function ProductSheet({
                 <p className="mt-2 text-[15px] text-white/80">
                   ou <b className="text-white">{brl0(s.cash)}</b> à vista no PIX
                 </p>
+                {won && prize && (
+                  <p className="mt-3 flex items-center gap-2 rounded-[12px] bg-white/[0.08] px-3 py-2 text-[13.5px] ring-1 ring-white/10">
+                    <Gift className="h-4 w-4 shrink-0 text-[#E2C35C]" />
+                    {prize.kind === "cupom" ? (
+                      <span>
+                        Com o seu cupom: <b style={goldText}>{brl0(Math.max(0, s.cash - prize.value))}</b> à vista
+                      </span>
+                    ) : (
+                      <span>
+                        + <b style={goldText}>{won.label}</b> de brinde
+                      </span>
+                    )}
+                  </p>
+                )}
                 <div className="mt-4 rounded-[14px] bg-white p-3">
                   <StockBar n={s.stock} />
                 </div>
@@ -722,6 +798,11 @@ function ProductSheet({
                       </button>
                     ))}
                   </div>
+                  {won && prize && (
+                    <p className="mt-4 flex items-center gap-2 rounded-[14px] bg-[#FBF5DF] px-3 py-2.5 text-[13.5px] ring-1 ring-[#E2C35C]/50">
+                      <Gift className="h-4 w-4 shrink-0 text-[#A8821E]" /> Prêmio aplicado: <b>{won.label}</b> · {won.code}
+                    </p>
+                  )}
                   {err && <p className="mt-3 rounded-[12px] bg-[#FDECEA] px-3 py-2 text-[13.5px] text-[#A12A17]">{err}</p>}
                 </div>
               )}

@@ -1,5 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { drawPrize, prizeCode } from "@/lib/catalog-wheel";
 import { notifyNewLead } from "@/lib/notifications";
 import { adminSupabase, anonSupabase } from "@/lib/supabase/server";
 import { fireWebhook, leadPayload } from "@/lib/webhooks";
@@ -11,6 +12,7 @@ import { fireWebhook, leadPayload } from "@/lib/webhooks";
  *  - { action: "track", token, kind, detail, value }          → seção vista, tempo, clique ou interesse
  *  - { action: "live", catalog }                              → estoque atual e últimas reservas (sem dados pessoais)
  *  - { action: "reserve", name, phone, model, color, pay }    → cadastra/reaproveita o lead, reserva e desconta do estoque
+ *  - { action: "spin", name, phone }                          → roleta: sorteia o prêmio no servidor (1 giro por WhatsApp)
  */
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -35,27 +37,11 @@ export async function POST(req: Request) {
     const modelName = str(body.modelName, 60) || model;
     const color = str(body.color, 40);
     const pay = str(body.pay, 20);
-    // Mesmo cadastro do catálogo: cria o lead (ou reaproveita pelo telefone) e devolve o token.
-    let token = uuid(body.token);
-    const reg = await anon.rpc("catalog_register", { p: { catalog, name, phone, email: str(body.email, 160), owner: uuid(body.owner) ?? "", device: str(body.device, 20), segment: "mobilidade", source: "Catálogo Mobilidade" } });
-    if (!reg.error && reg.data) {
-      const r = reg.data as { token: string; lead?: Record<string, unknown> & { duplicate?: boolean } };
-      token = r.token;
-      if (r.lead && !r.lead.duplicate) {
-        const admin = adminSupabase();
-        await Promise.all([
-          notifyNewLead(admin ?? anon, r.lead as never, admin ? undefined : "").catch(() => {}),
-          fireWebhook(anon, "lead.created", leadPayload(r.lead as never, "captura")).catch(() => {}),
-        ]);
-      }
-    } else {
-      console.error("[catalogo] reserva sem cadastro do catálogo:", reg.error?.message);
-      await anon.rpc("create_public_lead", { p: { name, phone, segment: "mobilidade", source: "Catálogo Mobilidade", temperature: "quente", notes: `Reservou a scooter ${modelName}${color ? ` (${color})` : ""} · ${pay}` } });
-      return NextResponse.json({ ok: true, offline: true });
-    }
+    const token = await catalogLead(anon, { catalog, name, phone, email: str(body.email, 160), owner: uuid(body.owner) ?? "", device: str(body.device, 20) }, `Reservou a scooter ${modelName}${color ? ` (${color})` : ""} · ${pay}`);
     if (!token) return NextResponse.json({ ok: true, offline: true });
     // Nota na ficha do lead + lead quente
-    await anon.rpc("catalog_track", { p_token: token, p_kind: "interest", p_detail: `${modelName}${color ? ` (${color})` : ""} · reserva · ${pay}`.slice(0, 80), p_value: 0 });
+    const coupon = str(body.coupon, 20);
+    await anon.rpc("catalog_track", { p_token: token, p_kind: "interest", p_detail: `${modelName}${color ? ` (${color})` : ""} · reserva · ${pay}${coupon ? ` · ${coupon}` : ""}`.slice(0, 80), p_value: 0 });
     const res = await anon.rpc("catalog_reserve", { p_token: token, p_model: model, p_color: color || null, p_pay: pay || null });
     if (res.error) {
       console.error("[catalogo] catalog_reserve:", res.error.message);
@@ -64,6 +50,27 @@ export async function POST(req: Request) {
     const out = res.data as { ok: boolean; error?: string; stock?: number | null; duplicate?: boolean };
     if (!out.ok && out.error === "esgotado") return NextResponse.json({ error: "Esse modelo acabou de esgotar. Fale com a gente no WhatsApp para a próxima remessa.", stock: 0, token }, { status: 409 });
     return NextResponse.json({ ok: true, token, stock: out.stock ?? null, duplicate: !!out.duplicate });
+  }
+
+  if (body.action === "spin") {
+    if (str(body.website)) return NextResponse.json({ error: "Tente novamente." }, { status: 400 });
+    const name = str(body.name, 120);
+    const phone = str(body.phone, 30);
+    if (name.length < 2 || phone.replace(/\D/g, "").length < 10) return NextResponse.json({ error: "Informe seu nome e o WhatsApp com DDD." }, { status: 400 });
+    const catalog = str(body.catalog, 60) || "mobilidade-black";
+    const token = await catalogLead(anon, { catalog, name, phone, email: "", owner: uuid(body.owner) ?? "", device: str(body.device, 20) }, "Girou a roleta do catálogo");
+    // Sorteio no servidor (o navegador só anima a roleta até o prêmio que veio daqui).
+    const prize = drawPrize(randomBytes(4).readUInt32BE(0) / 2 ** 32);
+    const code = prizeCode(new Uint8Array(randomBytes(5)));
+    if (!token) return NextResponse.json({ ok: true, prize: prize.key, label: prize.label, code, offline: true });
+    const { data, error } = await anon.rpc("catalog_spin", { p_token: token, p_prize: prize.key, p_label: prize.label, p_code: code });
+    if (error || !data) {
+      console.error("[catalogo] catalog_spin:", error?.message);
+      return NextResponse.json({ ok: true, token, prize: prize.key, label: prize.label, code, offline: true });
+    }
+    const r = data as { ok: boolean; prize?: string; label?: string; code?: string; existing?: boolean; error?: string };
+    if (!r.ok) return NextResponse.json({ error: "A roleta está com muitos acessos agora. Tente em instantes." }, { status: 429 });
+    return NextResponse.json({ ok: true, token, prize: r.prize, label: r.label, code: r.code, existing: !!r.existing });
   }
 
   if (body.action === "register") {
@@ -122,4 +129,26 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ error: "invalid" }, { status: 400 });
+}
+
+/**
+ * Cadastro do catálogo (lead novo ou o mesmo pelo telefone) e o token do acesso.
+ * Sem as funções do catálogo no banco, cria só o lead pelo formulário público e devolve null.
+ */
+async function catalogLead(anon: ReturnType<typeof anonSupabase>, p: { catalog: string; name: string; phone: string; email: string; owner: string; device: string }, note: string): Promise<string | null> {
+  const reg = await anon.rpc("catalog_register", { p: { ...p, segment: "mobilidade", source: "Catálogo Mobilidade" } });
+  if (!reg.error && reg.data) {
+    const r = reg.data as { token: string; lead?: Record<string, unknown> & { duplicate?: boolean } };
+    if (r.lead && !r.lead.duplicate) {
+      const admin = adminSupabase();
+      await Promise.all([
+        notifyNewLead(admin ?? anon, r.lead as never, admin ? undefined : "").catch(() => {}),
+        fireWebhook(anon, "lead.created", leadPayload(r.lead as never, "captura")).catch(() => {}),
+      ]);
+    }
+    return r.token;
+  }
+  console.error("[catalogo] cadastro do catálogo indisponível:", reg.error?.message);
+  await anon.rpc("create_public_lead", { p: { name: p.name, phone: p.phone, segment: "mobilidade", source: "Catálogo Mobilidade", temperature: "quente", notes: note } });
+  return null;
 }
