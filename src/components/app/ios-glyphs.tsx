@@ -455,6 +455,7 @@ const BY_PATH: [string, GlyphId][] = [
   ["/propostas", "propostas"],
   ["/tarefas", "tarefas"],
   ["/orcamento-rapido", "raio"],
+  ["/projetos", "pacote"],
   ["/documentos", "documentos"],
   ["/contratos", "contratos"],
   ["/recibos", "recibos"],

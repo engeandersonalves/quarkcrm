@@ -2302,3 +2302,73 @@ begin
   end loop;
   insert into public.app_migrations (id) values ('catalogo-5-modelos-2026-11');
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- Projetos fotovoltaicos: a pasta que vai para a distribuidora (formulário,
+-- RG, TRT, diagramas, memorial e datasheet) e a biblioteca de equipamentos.
+-- Arquivos ficam no bucket privado "projetos" (só a equipe abre, por link temporário).
+-- ---------------------------------------------------------------------------
+create table if not exists public.solar_projects (
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid references public.leads (id) on delete set null,
+  proposal_id uuid references public.proposals (id) on delete set null,
+  title text not null default '',
+  status text not null default 'rascunho' check (status in ('rascunho', 'pronto', 'enviado', 'aprovado', 'vistoria', 'concluido')),
+  data jsonb not null default '{}'::jsonb,
+  files jsonb not null default '{}'::jsonb,
+  created_by uuid references public.profiles (id) on delete set null default auth.uid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists solar_projects_updated on public.solar_projects (updated_at desc);
+create index if not exists solar_projects_lead on public.solar_projects (lead_id);
+alter table public.solar_projects enable row level security;
+drop policy if exists "solar_projects_team" on public.solar_projects;
+create policy "solar_projects_team" on public.solar_projects for all to authenticated using (public.is_member()) with check (public.is_member());
+drop trigger if exists touch_solar_projects on public.solar_projects;
+create trigger touch_solar_projects before update on public.solar_projects for each row execute function public.touch_updated_at();
+
+create table if not exists public.solar_equipment (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('modulo', 'inversor')),
+  brand text not null default '',
+  model text not null default '',
+  specs jsonb not null default '{}'::jsonb,
+  datasheet jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists solar_equipment_model on public.solar_equipment (kind, lower(brand), lower(model));
+alter table public.solar_equipment enable row level security;
+drop policy if exists "solar_equipment_team" on public.solar_equipment;
+create policy "solar_equipment_team" on public.solar_equipment for all to authenticated using (public.is_member()) with check (public.is_member());
+drop trigger if exists touch_solar_equipment on public.solar_equipment;
+create trigger touch_solar_equipment before update on public.solar_equipment for each row execute function public.touch_updated_at();
+
+do $$
+begin
+  if exists (select 1 from information_schema.schemata where schema_name = 'storage') then
+    insert into storage.buckets (id, name, public) values ('projetos', 'projetos', false)
+    on conflict (id) do update set public = false;
+    drop policy if exists "projetos_team_read" on storage.objects;
+    create policy "projetos_team_read" on storage.objects for select to authenticated using (bucket_id = 'projetos' and public.is_member());
+    drop policy if exists "projetos_team_insert" on storage.objects;
+    create policy "projetos_team_insert" on storage.objects for insert to authenticated with check (bucket_id = 'projetos' and public.is_member());
+    drop policy if exists "projetos_team_update" on storage.objects;
+    create policy "projetos_team_update" on storage.objects for update to authenticated using (bucket_id = 'projetos' and public.is_member());
+    drop policy if exists "projetos_team_delete" on storage.objects;
+    create policy "projetos_team_delete" on storage.objects for delete to authenticated using (bucket_id = 'projetos' and public.is_member());
+  end if;
+end $$;
+
+do $$
+declare t text;
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    foreach t in array array['solar_projects', 'solar_equipment'] loop
+      if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+        execute format('alter publication supabase_realtime add table public.%I', t);
+      end if;
+    end loop;
+  end if;
+end $$;

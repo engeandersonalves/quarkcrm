@@ -2,7 +2,7 @@
 
 import type { User } from "@supabase/supabase-js";
 import { BrandLogo } from "./brand";
-import { BarChart3, CheckSquare, LayoutGrid, ChevronRight, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, Search, Sun, Trophy, Users, Calculator, Receipt, ScrollText, Moon, Activity } from "lucide-react";
+import { BarChart3, CheckSquare, LayoutGrid, ChevronRight, ChevronsLeft, ChevronsRight, FileSignature, Megaphone, Zap, Clock, FileText, Flame, LayoutDashboard, LogOut, Plus, Search, Sun, Trophy, Users, Calculator, Receipt, ScrollText, Moon, Activity, FolderKanban } from "lucide-react";
 import { CommandPalette } from "./command";
 import { RewardProvider, useReward } from "./rewards";
 import { levelOf } from "@/lib/gamification";
@@ -54,6 +54,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     title: "Ferramentas",
     items: [
       { href: "/orcamento-rapido", label: "Orçamento rápido", icon: Zap, glyph: "raio" },
+      { href: "/projetos", label: "Projetos FV", icon: FolderKanban, glyph: "pacote" },
       { href: "/mobilidade", label: "Mobilidade elétrica", icon: Zap, glyph: "scooter", badge: "catalog", hint: "acessos ao catálogo hoje" },
       { href: "/documentos", label: "Documentos", icon: FileSignature, glyph: "documentos", badge: "documents", hint: "aguardando assinatura" },
       { href: "/contratos", label: "Contratos", icon: ScrollText, glyph: "contratos" },
@@ -77,6 +78,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
 const MENU_SECTIONS = SECTIONS.map((sec) => ({ ...sec, items: sec.items.filter((i) => !["/", "/leads", "/propostas", "/tarefas"].includes(i.href)) })).filter((sec) => sec.items.length);
 const MENU_HINTS: Record<string, string> = {
   "/orcamento-rapido": "Imagem pronta para o WhatsApp",
+  "/projetos": "Formulário, memorial e pasta para a distribuidora",
   "/mobilidade": "Vendas, clientes e modelos de scooter",
   "/documentos": "Procurações, aluguéis e assinaturas",
   "/contratos": "Contratos solares",

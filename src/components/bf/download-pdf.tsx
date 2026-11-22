@@ -51,6 +51,11 @@ async function ensureImages(root: HTMLElement) {
  * e baixa um PDF. Tudo no navegador: não abre link nem a caixa de impressão.
  */
 export async function downloadPagesPdf(node: ReactNode, fileName: string, opts: { background?: string; onProgress?: (done: number, total: number) => void } = {}) {
+  saveBlob(await pagesPdf(node, opts), fileName);
+}
+
+/** Mesmo processo, devolvendo o PDF (para juntar com outros arquivos). */
+export async function pagesPdf(node: ReactNode, opts: { background?: string; onProgress?: (done: number, total: number) => void } = {}): Promise<Blob> {
   const host = document.createElement("div");
   host.setAttribute("aria-hidden", "true");
   host.style.cssText = `position:fixed;left:-20000px;top:0;width:${PDF_PAGE_W}px;pointer-events:none;z-index:-1;`;
@@ -76,15 +81,7 @@ export async function downloadPagesPdf(node: ReactNode, fileName: string, opts: 
     }
     opts.onProgress?.(pages.length, pages.length);
 
-    const blob = new Blob([jpegPagesToPdf(shots).buffer as ArrayBuffer], { type: "application/pdf" });
-    const href = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = href;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(href), 60_000);
+    return new Blob([jpegPagesToPdf(shots).buffer as ArrayBuffer], { type: "application/pdf" });
   } finally {
     root.unmount();
     host.remove();
