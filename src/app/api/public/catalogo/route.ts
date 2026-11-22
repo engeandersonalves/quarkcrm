@@ -9,6 +9,8 @@ import { fireWebhook, leadPayload } from "@/lib/webhooks";
  *  - { action: "register", catalog, name, phone, email, owner } → cria/reaproveita o lead e devolve o token
  *  - { action: "visit", token }                                → conta mais uma visita
  *  - { action: "track", token, kind, detail, value }          → seção vista, tempo, clique ou interesse
+ *  - { action: "live", catalog }                              → estoque atual e últimas reservas (sem dados pessoais)
+ *  - { action: "reserve", name, phone, model, color, pay }    → cadastra/reaproveita o lead, reserva e desconta do estoque
  */
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
@@ -16,6 +18,53 @@ export async function POST(req: Request) {
   const anon = anonSupabase();
   const str = (v: unknown, max = 200) => (typeof v === "string" ? v.trim().slice(0, max) : "");
   const uuid = (v: unknown) => (typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v) ? v : null);
+
+  if (body.action === "live") {
+    const { data, error } = await anon.rpc("catalog_live", { p_catalog: str(body.catalog, 60) || "mobilidade-black" });
+    if (error || !data) return NextResponse.json({ stock: {}, recent: [] });
+    return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
+  }
+
+  if (body.action === "reserve") {
+    if (str(body.website)) return NextResponse.json({ error: "Tente novamente." }, { status: 400 });
+    const name = str(body.name, 120);
+    const phone = str(body.phone, 30);
+    if (name.length < 2 || phone.replace(/\D/g, "").length < 10) return NextResponse.json({ error: "Informe seu nome e o WhatsApp com DDD." }, { status: 400 });
+    const catalog = str(body.catalog, 60) || "mobilidade-black";
+    const model = str(body.model, 60);
+    const modelName = str(body.modelName, 60) || model;
+    const color = str(body.color, 40);
+    const pay = str(body.pay, 20);
+    // Mesmo cadastro do catálogo: cria o lead (ou reaproveita pelo telefone) e devolve o token.
+    let token = uuid(body.token);
+    const reg = await anon.rpc("catalog_register", { p: { catalog, name, phone, email: str(body.email, 160), owner: uuid(body.owner) ?? "", device: str(body.device, 20), segment: "mobilidade", source: "Catálogo Mobilidade" } });
+    if (!reg.error && reg.data) {
+      const r = reg.data as { token: string; lead?: Record<string, unknown> & { duplicate?: boolean } };
+      token = r.token;
+      if (r.lead && !r.lead.duplicate) {
+        const admin = adminSupabase();
+        await Promise.all([
+          notifyNewLead(admin ?? anon, r.lead as never, admin ? undefined : "").catch(() => {}),
+          fireWebhook(anon, "lead.created", leadPayload(r.lead as never, "captura")).catch(() => {}),
+        ]);
+      }
+    } else {
+      console.error("[catalogo] reserva sem cadastro do catálogo:", reg.error?.message);
+      await anon.rpc("create_public_lead", { p: { name, phone, segment: "mobilidade", source: "Catálogo Mobilidade", temperature: "quente", notes: `Reservou a scooter ${modelName}${color ? ` (${color})` : ""} · ${pay}` } });
+      return NextResponse.json({ ok: true, offline: true });
+    }
+    if (!token) return NextResponse.json({ ok: true, offline: true });
+    // Nota na ficha do lead + lead quente
+    await anon.rpc("catalog_track", { p_token: token, p_kind: "interest", p_detail: `${modelName}${color ? ` (${color})` : ""} · reserva · ${pay}`.slice(0, 80), p_value: 0 });
+    const res = await anon.rpc("catalog_reserve", { p_token: token, p_model: model, p_color: color || null, p_pay: pay || null });
+    if (res.error) {
+      console.error("[catalogo] catalog_reserve:", res.error.message);
+      return NextResponse.json({ ok: true, token });
+    }
+    const out = res.data as { ok: boolean; error?: string; stock?: number | null; duplicate?: boolean };
+    if (!out.ok && out.error === "esgotado") return NextResponse.json({ error: "Esse modelo acabou de esgotar. Fale com a gente no WhatsApp para a próxima remessa.", stock: 0, token }, { status: 409 });
+    return NextResponse.json({ ok: true, token, stock: out.stock ?? null, duplicate: !!out.duplicate });
+  }
 
   if (body.action === "register") {
     // Anti-robô: só o campo invisível (o preenchimento automático do celular é rápido demais para medir tempo)

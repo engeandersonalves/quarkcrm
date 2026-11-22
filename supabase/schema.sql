@@ -2391,3 +2391,96 @@ as $$
 $$;
 revoke all on function public.get_public_motos() from public;
 grant execute on function public.get_public_motos() to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Reservas pelo catálogo online: cada reserva desconta 1 do estoque do modelo
+-- e aparece (sem dados pessoais) no aviso "acabou de ser reservada" do catálogo.
+-- ---------------------------------------------------------------------------
+create table if not exists public.catalog_reservations (
+  id uuid primary key default gen_random_uuid(),
+  catalog text not null,
+  access_id uuid references public.catalog_access (id) on delete set null,
+  model text not null,
+  model_name text not null default '',
+  color text,
+  pay text,
+  status text not null default 'nova' check (status in ('nova', 'confirmada', 'cancelada')),
+  created_at timestamptz not null default now()
+);
+create index if not exists catalog_reservations_recent on public.catalog_reservations (catalog, created_at desc);
+alter table public.catalog_reservations enable row level security;
+drop policy if exists "catalog_reservations_team" on public.catalog_reservations;
+create policy "catalog_reservations_team" on public.catalog_reservations for all to authenticated using (public.is_member()) with check (public.is_member());
+
+create or replace function public.catalog_reserve(p_token uuid, p_model text, p_color text default null, p_pay text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v public.catalog_access;
+  m public.moto_products;
+  v_stock int;
+begin
+  select * into v from public.catalog_access where token = p_token;
+  if not found then return jsonb_build_object('ok', false, 'error', 'acesso'); end if;
+  select * into m from public.moto_products where slug = left(p_model, 60) and active;
+  -- Mesma pessoa, mesmo modelo, em 24 h: conta uma reserva só.
+  if exists (select 1 from public.catalog_reservations where access_id = v.id and model = left(p_model, 60) and status <> 'cancelada' and created_at > now() - interval '24 hours') then
+    return jsonb_build_object('ok', true, 'duplicate', true, 'stock', m.stock);
+  end if;
+  -- Proteção contra abuso: no máximo 40 reservas por hora no catálogo.
+  if (select count(*) from public.catalog_reservations where catalog = v.catalog and created_at > now() - interval '1 hour') >= 40 then
+    return jsonb_build_object('ok', false, 'error', 'limite');
+  end if;
+  if m.id is not null and m.stock is not null and m.stock <= 0 then
+    return jsonb_build_object('ok', false, 'error', 'esgotado', 'stock', 0);
+  end if;
+  insert into public.catalog_reservations (catalog, access_id, model, model_name, color, pay)
+  values (v.catalog, v.id, left(p_model, 60), coalesce(m.name, left(p_model, 60)), left(nullif(trim(p_color), ''), 40), left(nullif(trim(p_pay), ''), 20));
+  if m.id is not null and m.stock is not null then
+    update public.moto_products set stock = greatest(0, stock - 1) where id = m.id returning stock into v_stock;
+  end if;
+  return jsonb_build_object('ok', true, 'stock', coalesce(v_stock, m.stock));
+end;
+$$;
+revoke all on function public.catalog_reserve(uuid, text, text, text) from public;
+grant execute on function public.catalog_reserve(uuid, text, text, text) to anon, authenticated;
+
+-- Últimas reservas (só modelo e horário, sem dados de quem reservou) e o estoque atual.
+create or replace function public.catalog_live(p_catalog text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'stock', (select coalesce(jsonb_object_agg(slug, stock), '{}'::jsonb) from public.moto_products where active),
+    'recent', (select coalesce(jsonb_agg(jsonb_build_object('id', r.id, 'model', r.model, 'name', r.model_name, 'at', r.created_at) order by r.created_at desc), '[]'::jsonb)
+                 from (select * from public.catalog_reservations where catalog = p_catalog and status <> 'cancelada' and created_at > now() - interval '3 days' order by created_at desc limit 8) r)
+  );
+$$;
+revoke all on function public.catalog_live(text) from public;
+grant execute on function public.catalog_live(text) to anon, authenticated;
+
+-- Cota inicial da Black Friday (unidades no preço promocional), uma vez só e só onde
+-- o estoque ainda está vazio. Ajuste em Mobilidade → Modelos.
+do $$
+begin
+  if not exists (select 1 from public.app_migrations where id = 'cota-black-2026-11') then
+    update public.moto_products set stock = q.n
+      from (values ('a2', 5), ('t1', 4), ('city', 3), ('cappuccino', 4), ('mz', 2)) as q(slug, n)
+     where moto_products.slug = q.slug and moto_products.stock is null;
+    insert into public.app_migrations (id) values ('cota-black-2026-11');
+  end if;
+end $$;
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'catalog_reservations') then
+    alter publication supabase_realtime add table public.catalog_reservations;
+  end if;
+end $$;
